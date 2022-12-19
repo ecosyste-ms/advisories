@@ -1,0 +1,8 @@
+{
+  "cron": [
+    {
+      "command": "bundle exec rake advisories:sync",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

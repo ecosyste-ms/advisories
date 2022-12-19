@@ -108,7 +108,6 @@ GEM
       faraday (~> 2.0)
       typhoeus (~> 1.4)
     ffi (1.15.5)
-    fuzzy_match (2.1.0)
     globalid (1.0.0)
       activesupport (>= 5.0)
     google-protobuf (3.21.12)
@@ -245,8 +244,7 @@ GEM
     shoulda-context (2.0.0)
     shoulda-matchers (4.5.1)
       activesupport (>= 4.2.0)
-    spdx (2.0.12)
-      fuzzy_match (~> 2.1)
+    spdx (4.1.2)
       treetop (~> 1.6)
     sprockets (4.1.1)
       concurrent-ruby (~> 1.0)
@@ -317,7 +315,7 @@ DEPENDENCIES
   semantic
   semantic_range
   shoulda
-  spdx (= 2.0.12)
+  spdx (= 4.1.2)
   sprockets-rails
   tzinfo-data
   web-console

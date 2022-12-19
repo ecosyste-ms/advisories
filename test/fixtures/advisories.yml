@@ -1,0 +1,41 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  uuid: MyString
+  url: MyString
+  title: MyString
+  description: MyText
+  origin: MyString
+  severity: MyString
+  published_at: 2022-12-19 15:50:44
+  withdrawn_at: 2022-12-19 15:50:44
+  classification: MyString
+  cvss_score: 1.5
+  cvss_vector: MyString
+  references: MyString
+  ecosystem: MyString
+  vulnerable_version_range: MyString
+  first_patched_version: MyString
+  package_name: MyString
+  source_kind: MyString
+  identifiers: MyString
+
+two:
+  uuid: MyString
+  url: MyString
+  title: MyString
+  description: MyText
+  origin: MyString
+  severity: MyString
+  published_at: 2022-12-19 15:50:44
+  withdrawn_at: 2022-12-19 15:50:44
+  classification: MyString
+  cvss_score: 1.5
+  cvss_vector: MyString
+  references: MyString
+  ecosystem: MyString
+  vulnerable_version_range: MyString
+  first_patched_version: MyString
+  package_name: MyString
+  source_kind: MyString
+  identifiers: MyString

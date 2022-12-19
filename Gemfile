@@ -33,6 +33,7 @@ gem "groupdate"
 gem 'jquery-rails'
 gem 'faraday-typhoeus'
 gem 'packageurl-ruby'
+gem 'octokit'
 
 group :development, :test do
   gem "debug", platforms: %i[ mri mingw x64_mingw ]

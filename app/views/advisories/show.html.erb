@@ -1,0 +1,56 @@
+<div class="container-sm">
+  <h2> <%= link_to 'Advisroies', advisories_path %>: <%= @advisory %></h2>
+
+  <p><%= @advisory.title %> </p>
+
+  <p><%= simple_format @advisory.description %></p>
+
+  Permalink: <%= link_to @advisory.url, @advisory.url, target: :_blank %><br>
+  <br>
+  Source: <%= @advisory.source %><br>
+  Origin: <%= @advisory.origin.humanize %><br>
+  Severity: <%= @advisory.severity.humanize %><br>
+  Classification: <%= @advisory.classification.humanize %><br>
+  Published: <span title="<%= @advisory.published_at %>"><%= time_ago_in_words @advisory.published_at %> ago</span><br>
+  Updated: <span title="<%= @advisory.updated_at %>"><%= time_ago_in_words @advisory.updated_at %> ago</span><br>
+  
+  <% if @advisory.withdrawn_at %>
+    Widthdrawn: <span title="<%= @advisory.withdrawn_at %>"><%= time_ago_in_words @advisory.withdrawn_at %> ago</span><br>
+  <% end %><br>
+  
+  CVSS Score: <%= @advisory.cvss_score %><br>
+  CVSS vector: <%= @advisory.cvss_vector %><br><br>
+
+  Identifiers: <%= @advisory.identifiers.join(', ') %><br>
+  References: 
+    <ul>
+      <% @advisory.references.each do |url| %>
+        <li><%= link_to(url, url, target: :_blank) %></li>
+      <% end %>
+    </ul>
+    
+  
+  <h3 class='mt-3'>Affected Packages</h3>
+  
+  <% @advisory.packages.each do |package| %>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h5 class="card-title">
+          <%= package['ecosystem'] %>:<%= package['package_name'] %>
+        </h5>
+        
+        <small class='text-muted'>
+          <%=%>
+          Versions: <%= package['versions'].map{|v| v['vulnerable_version_range']}.join(',') %><br>
+          
+          <% if package['versions'].map{|v| v['first_patched_version']}.any? %>
+            Fixed in: <%=  package['versions'].map{|v| v['first_patched_version']}.join(',') %>  
+          <% else %>
+            No known fixed version
+          <% end %>
+        </small>
+      </div>
+    </div>
+
+  <% end %>
+</div>

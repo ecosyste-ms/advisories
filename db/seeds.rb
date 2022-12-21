@@ -1,5 +1,5 @@
 default_sources = [
-  {name: 'Github', kind: 'github', url: 'https://github.com/advisories'},
+  {name: 'GitHub Advisory Database', kind: 'github', url: 'https://github.com/advisories'},
 ]
 
 default_sources.each do |source|

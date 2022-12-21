@@ -1,0 +1,21 @@
+<div class="card mb-3">
+  <div class="card-body">
+    <% if advisory.severity %>
+      <small class='badge bg-<%= severity_class(advisory.severity) %> float-end'>
+        <%= advisory.severity.humanize %>
+      </small>
+    <% end %>
+    <h5 class="card-title">
+      <%= link_to advisory, advisory_path(advisory) %>
+    </h5>
+
+    <%= advisory.title %><br>
+
+    <small class='text-muted'>
+      Ecosystems: <%= advisory.ecosystems.join(', ') %><br>
+      Packages: <%= advisory.package_names.join(', ') %><br>
+      Source: <%= advisory.source %><br>
+      <span title="<%= advisory.published_at %>">Published: <%= time_ago_in_words advisory.published_at %> ago</span>
+    </small>
+  </div>
+</div>

@@ -1,6 +1,10 @@
 class Source < ApplicationRecord
   has_many :advisories
 
+  def to_s
+    name
+  end
+
   def source_instance
     @source_instance ||= source_class.new(self)
   end
@@ -9,10 +13,10 @@ class Source < ApplicationRecord
     Sources::Base.find(kind)
   end
 
-  def sync_advsiories
+  def sync_advisories
     source_instance.list_advisories.each do |advisory|
       a = advisories.find_or_initialize_by(uuid: advisory[:uuid])
-      a.update(advisory)
+      a.update!(advisory)
     end
   end
 end

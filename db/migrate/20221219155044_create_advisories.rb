@@ -17,7 +17,7 @@ class CreateAdvisories < ActiveRecord::Migration[7.0]
       t.string :source_kind
       t.string :identifiers, array: true, default: []
 
-      t.json :packages, default: {}
+      t.jsonb :packages, default: []
       t.timestamps
     end
   end

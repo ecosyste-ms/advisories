@@ -1,0 +1,12 @@
+<div class="container-sm">
+  <h2>
+    Advisroies
+  </h2>
+
+  <!-- TODO graph -->
+
+  <!--TODO filters -->
+
+  <%= render @advisories %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
+</div>

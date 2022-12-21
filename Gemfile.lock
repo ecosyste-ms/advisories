@@ -92,6 +92,10 @@ GEM
     debug (1.7.0)
       irb (>= 1.5.0)
       reline (>= 0.3.1)
+    dotenv (2.8.1)
+    dotenv-rails (2.8.1)
+      dotenv (= 2.8.1)
+      railties (>= 3.2)
     erubi (1.11.0)
     ethon (0.16.0)
       ffi (>= 1.15.0)
@@ -298,6 +302,7 @@ DEPENDENCIES
   chartkick
   counter_culture
   debug
+  dotenv-rails
   faraday
   faraday-follow_redirects
   faraday-retry

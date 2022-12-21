@@ -28,12 +28,9 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_19_155044) do
     t.float "cvss_score"
     t.string "cvss_vector"
     t.string "references", default: [], array: true
-    t.string "ecosystem"
-    t.string "vulnerable_version_range"
-    t.string "first_patched_version"
-    t.string "package_name"
     t.string "source_kind"
     t.string "identifiers", default: [], array: true
+    t.json "packages", default: {}
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["source_id"], name: "index_advisories_on_source_id"

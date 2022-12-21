@@ -14,13 +14,10 @@ class CreateAdvisories < ActiveRecord::Migration[7.0]
       t.float :cvss_score
       t.string :cvss_vector
       t.string :references, array: true, default: []
-      t.string :ecosystem
-      t.string :vulnerable_version_range
-      t.string :first_patched_version
-      t.string :package_name
       t.string :source_kind
       t.string :identifiers, array: true, default: []
 
+      t.json :packages, default: {}
       t.timestamps
     end
   end

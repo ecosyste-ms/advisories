@@ -4,7 +4,7 @@ module Sources
     def fetch_advisories
       advisories = []
       cursor = 'null'
-      3.times do
+      loop do
         res = fetch_advisories_page(cursor)
         advisories += res[:data][:securityVulnerabilities][:edges]
         break unless res[:data][:securityVulnerabilities][:pageInfo][:hasNextPage]
@@ -14,7 +14,7 @@ module Sources
     end
 
     def map_advisories(advisories)
-      advisories.map do |advisory|
+      vulns = advisories.map do |advisory|
         {
           uuid: advisory[:node][:advisory][:id],
           url: advisory[:node][:advisory][:permalink],
@@ -38,6 +38,25 @@ module Sources
           first_patched_version: advisory[:node].dig(:firstPatchedVersion, :identifier),
           package_name: advisory[:node][:package][:name],
         }
+      end
+
+      vulns.group_by { |v| v[:uuid] }.map do |uuid, vulns|
+        advisory = vulns.first.except(:ecosystem, :vulnerable_version_range, :first_patched_version, :package_name)
+
+        packages = vulns.group_by{ |v| [v[:ecosystem], v[:package_name]] }.map do |pkg, vulns|
+          {
+            ecosystem: pkg[0],
+            package_name: pkg[1],
+            versions: vulns.map do |v|
+              {
+                vulnerable_version_range: v[:vulnerable_version_range],
+                first_patched_version: v[:first_patched_version]
+              }
+            end
+          }
+        end
+        advisory[:packages] = packages
+        advisory
       end
     end
 

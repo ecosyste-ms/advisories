@@ -21,7 +21,7 @@ paths:
       summary: "list advisories"
       operationId: "getAdvisories"
       tags:
-        - "advisories"
+        - advisories
       parameters:
         - name: ecosystem
           in: query
@@ -56,12 +56,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Advisory'
-  /advisories/{advisoriesName}:
+  /advisories/{advisoryUUID}:
     get:
       summary: get a advisories by uuid
       operationId: getAdvisory
       tags:
-        - registries
+        - advisories
       parameters:
         - in: path
           name: advisoryUUID
@@ -100,7 +100,7 @@ components:
         classification:
           type: string
         cvss_score:
-          type: float
+          type: number
         cvss_vector:
           type: string
         references:

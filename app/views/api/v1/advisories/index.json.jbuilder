@@ -1,0 +1,1 @@
+json.array! @advisories, partial: 'api/v1/advisories/advisory', as: :advisory

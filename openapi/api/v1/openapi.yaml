@@ -1,0 +1,120 @@
+openapi: 3.0.1
+info:
+  title: "Ecosyste.ms: Advisories"
+  description: "An open API service providing security vulnerability metadata for many open source software ecosystems."
+  contact:
+    name: Ecosyste.ms
+    email: support@ecosyste.ms
+    url: https://ecosyste.ms 
+  version: 1.0.0
+  license:
+    name: CC-BY-SA-4.0
+    url: https://creativecommons.org/licenses/by-sa/4.0/
+externalDocs:
+  description: GitHub Repository
+  url: https://github.com/ecosyste-ms/advisories
+servers:
+- url: https://advisories.ecosyste.ms/api/v1
+paths:
+  /advisories:
+    get: 
+      summary: "list advisories"
+      operationId: "getAdvisories"
+      tags:
+        - "advisories"
+      parameters:
+        - name: ecosystem
+          in: query
+          description: "Ecosystem to filter by"
+          required: false
+          schema:
+            type: string
+        - name: package_name
+          in: query
+          description: "Package to filter by"
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: pagination page number 
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of records to return 
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Advisory'
+  /advisories/{advisoriesName}:
+    get:
+      summary: get a advisories by uuid
+      operationId: getAdvisory
+      tags:
+        - registries
+      parameters:
+        - in: path
+          name: advisoryUUID
+          schema:
+            type: string
+          required: true
+          description: uuid of the advisory
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Advisory'
+components:
+  schemas:
+    Advisory:
+      type: object
+      properties:
+        uuid:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        origin:
+          type: string
+        severity:
+          type: string
+        published_at:
+          type: string
+        withdrawn_at:
+          type: string
+        classification:
+          type: string
+        cvss_score:
+          type: float
+        cvss_vector:
+          type: string
+        references:
+          type: array
+          items:
+            type: string
+        source_kind:
+          type: string
+        identifiers:
+          type: array
+          items:
+            type: string
+        packages:
+          type: array
+          items:
+            type: object
+        

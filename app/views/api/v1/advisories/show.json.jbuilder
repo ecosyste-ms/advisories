@@ -1,0 +1,1 @@
+json.partial! 'api/v1/advisories/advisory', advisory: @advisory

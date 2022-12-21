@@ -1,0 +1,1 @@
+json.extract! advisory, :uuid, :url, :title, :description, :origin, :severity, :published_at, :withdrawn_at, :classification, :cvss_score, :cvss_vector, :references, :source_kind, :identifiers, :packages

@@ -39,7 +39,7 @@ For access the rails console use the following command:
 
 Runing rake tasks in docker follows a similar pattern:
 
-`docker-compose exec app rake advisories:sync_recent`
+`docker-compose exec app rake advisories:sync`
 
 ## Importing data
 

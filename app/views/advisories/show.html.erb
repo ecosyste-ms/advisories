@@ -18,8 +18,10 @@
     Widthdrawn: <span title="<%= @advisory.withdrawn_at %>"><%= time_ago_in_words @advisory.withdrawn_at %> ago</span><br>
   <% end %><br>
   
+  <% if @advisory.cvss_score && @advisory.cvss_score > 0 %>
   CVSS Score: <%= @advisory.cvss_score %><br>
   CVSS vector: <%= @advisory.cvss_vector %><br><br>
+  <% end %>
 
   Identifiers: <%= @advisory.identifiers.join(', ') %><br>
   References: 

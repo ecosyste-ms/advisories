@@ -3,7 +3,7 @@
 
   <p><%= @advisory.title %> </p>
 
-  <p><%= simple_format @advisory.description %></p>
+  <p><%== render_markdown @advisory.description %></p>
 
   Permalink: <%= link_to @advisory.url, @advisory.url, target: :_blank %><br>
   <br>
@@ -42,10 +42,10 @@
         
         <small class='text-muted'>
           <%=%>
-          Versions: <%= package['versions'].map{|v| v['vulnerable_version_range']}.join(',') %><br>
+          Versions: <%= package['versions'].map{|v| v['vulnerable_version_range']}.join(', ') %><br>
           
           <% if package['versions'].map{|v| v['first_patched_version']}.any? %>
-            Fixed in: <%=  package['versions'].map{|v| v['first_patched_version']}.join(',') %>  
+            Fixed in: <%=  package['versions'].map{|v| v['first_patched_version']}.join(', ') %>  
           <% else %>
             No known fixed version
           <% end %>

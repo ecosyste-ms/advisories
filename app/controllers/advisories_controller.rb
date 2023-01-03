@@ -1,6 +1,6 @@
 class AdvisoriesController < ApplicationController
   def index
-    scope = Advisory.all.order('published_at DESC')
+    scope = Advisory.all.includes(:source).order('published_at DESC')
     
     scope = scope.ecosystem(params[:ecosystem]) if params[:ecosystem].present?
     scope = scope.package_name(params[:package_name]) if params[:package_name].present?

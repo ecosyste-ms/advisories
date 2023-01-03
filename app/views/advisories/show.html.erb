@@ -37,7 +37,9 @@
     <div class="card mb-3">
       <div class="card-body">
         <h5 class="card-title">
-          <%= package['ecosystem'] %>:<%= package['package_name'] %>
+          <%= link_to Registry.package_html_link_for(package), target: :_blank do %>
+            <%= package['ecosystem'] %>:<%= package['package_name'] %>
+          <% end %>
         </h5>
         
         <small class='text-muted'>

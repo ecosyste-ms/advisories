@@ -12,6 +12,8 @@ Rails.application.routes.draw do
 
   resources :advisories, only: [:index, :show]
 
+  get :recent_advisories_data, to: 'advisories#recent_advisories_data'
+
   resources :exports, only: [:index], path: 'open-data'
 
   get '/404', to: 'errors#not_found'

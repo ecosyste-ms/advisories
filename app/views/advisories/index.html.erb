@@ -3,10 +3,58 @@
     Advisories
   </h2>
 
-  <!-- TODO graph -->
+  <div class='mb-5'>
+    <%= line_chart recent_advisories_data_path %>
+  </div>
 
-  <!--TODO filters -->
+  <div class="row">
+    <div class="col-lg-8">
+      <%= render @advisories %>
+      <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
+    </div>
+  
+    <div class='col-lg-4'>
+      <div class="card mb-3">
+        <div class="card-header">
+          Filter by Severity
+        </div>
+        <div class="list-group list-group-flush">
+          <% @severities.each do |severity,count| %>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(severity: (params[:severity] == severity ? nil : severity), page: nil) %>">
+              <%= severity.humanize %>
+              <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count%></span>
+            </a>
+          <% end %>
+        </div>
+      </div>
 
-  <%= render @advisories %>
-  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
+      <div class="card mb-3">
+        <div class="card-header">
+          Filter by Ecosystem
+        </div>
+        <div class="list-group list-group-flush">
+          <% @ecosystems.each do |ecosystem,count| %>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:ecosystem] == ecosystem %>" href="<%= url_for(ecosystem: (params[:ecosystem] == ecosystem ? nil : ecosystem), page: nil) %>">
+              <%= ecosystem %>
+              <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count%></span>
+            </a>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          Filter by Package
+        </div>
+        <div class="list-group list-group-flush">
+          <% @packages.first(300).each do |package,count| %>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:package_name] == package['package_name'] %>" href="<%= url_for(package_name: (params[:package_name] == package['package_name'] ? nil : package['package_name']), page: nil) %>">
+              <%= package['package_name'] %>
+              <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count%></span>
+            </a>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

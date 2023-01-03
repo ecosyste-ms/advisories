@@ -35,6 +35,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: severity
+          in: query
+          description: "Severity to filter by"
+          required: false
+          schema:
+            type: string
         - name: page
           in: query
           description: pagination page number 

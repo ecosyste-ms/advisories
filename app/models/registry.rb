@@ -34,7 +34,7 @@ class Registry < ApplicationRecord
   end
 
   def self.package_html_link_for(package)
-    find_by_ecosystem(package['ecosystem']).package_html_link_for(package)
+    find_by_ecosystem(package['ecosystem']).try(:package_html_link_for, package)
   end
 
   def package_html_link_for(package)

@@ -34,7 +34,7 @@ gem 'jquery-rails'
 gem 'faraday-typhoeus'
 gem 'packageurl-ruby'
 gem 'octokit'
-gem "nokogiri", '1.14.0.rc1'
+gem "nokogiri", '1.14.0'
 gem 'commonmarker'
 
 group :development, :test do

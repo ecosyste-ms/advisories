@@ -80,7 +80,7 @@ GEM
     bugsnag (6.25.1)
       concurrent-ruby (~> 1.0)
     builder (3.2.4)
-    chartkick (4.2.1)
+    chartkick (5.0.0)
     commonmarker (0.23.6)
     concurrent-ruby (1.1.10)
     counter_culture (3.3.0)

@@ -81,7 +81,7 @@ GEM
       concurrent-ruby (~> 1.0)
     builder (3.2.4)
     chartkick (5.0.1)
-    commonmarker (0.23.7)
+    commonmarker (0.23.8)
     concurrent-ruby (1.2.0)
     counter_culture (3.3.0)
       activerecord (>= 4.2)

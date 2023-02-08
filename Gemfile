@@ -27,7 +27,6 @@ gem 'rswag-ui'
 gem 'spdx', '2.0.12'
 gem "semantic"
 gem "semantic_range"
-gem "bugsnag"
 gem "chartkick"
 gem "groupdate"
 gem 'jquery-rails'

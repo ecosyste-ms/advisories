@@ -35,6 +35,7 @@ gem 'packageurl-ruby'
 gem 'octokit'
 gem "nokogiri", '1.14.1'
 gem 'commonmarker'
+gem 'sitemap_generator'
 
 group :development, :test do
   gem "debug", platforms: %i[ mri mingw x64_mingw ]

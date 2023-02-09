@@ -1,5 +1,8 @@
+<% @meta_title = "#{@advisory} |  Security Advisories"%>
+<% @meta_description = "#{@advisory.title}. #{@advisory.description}" %>
+
 <div class="container-sm">
-  <h2> <%= link_to 'Advisories', advisories_path %>: <%= @advisory %></h2>
+  <h2><%= link_to 'Security Advisories', advisories_path %>: <%= @advisory %></h2>
 
   <p><%= @advisory.title %> </p>
 

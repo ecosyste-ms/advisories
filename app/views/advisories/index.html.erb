@@ -1,6 +1,6 @@
 <div class="container-sm">
   <h2>
-    Advisories
+    <%= @meta_title = "#{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} Security Advisories"%>
   </h2>
 
   <div class='mb-5'>

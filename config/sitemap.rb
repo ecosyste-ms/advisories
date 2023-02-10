@@ -1,4 +1,5 @@
 SitemapGenerator::Sitemap.default_host = "https://advisories.ecosyste.ms"
+SitemapGenerator::Sitemap.sitemaps_path = 'sitemap/'
 SitemapGenerator::Sitemap.create do
   add root_path, priority: 1, changefreq: 'daily'
 

@@ -33,7 +33,7 @@ gem 'jquery-rails'
 gem 'faraday-typhoeus'
 gem 'packageurl-ruby'
 gem 'octokit'
-gem "nokogiri", '1.14.1'
+gem "nokogiri", '1.14.2'
 gem 'commonmarker'
 gem 'sitemap_generator'
 

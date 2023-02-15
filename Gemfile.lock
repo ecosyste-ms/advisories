@@ -89,8 +89,6 @@ GEM
     crass (1.0.6)
     date (3.3.3)
     debug (1.7.1)
-      irb (>= 1.5.0)
-      reline (>= 0.3.1)
     dotenv (2.8.1)
     dotenv-rails (2.8.1)
       dotenv (= 2.8.1)
@@ -120,9 +118,6 @@ GEM
     hashdiff (1.0.1)
     i18n (1.12.0)
       concurrent-ruby (~> 1.0)
-    io-console (0.6.0)
-    irb (1.6.2)
-      reline (>= 0.3.0)
     jbuilder (2.11.5)
       actionview (>= 5.0.0)
       activesupport (>= 5.0.0)
@@ -223,8 +218,6 @@ GEM
       thor (~> 1.0)
       zeitwerk (~> 2.5)
     rake (13.0.6)
-    reline (0.3.2)
-      io-console (~> 0.5)
     rexml (3.2.5)
     rswag-api (2.8.0)
       railties (>= 3.1, < 7.1)
@@ -245,12 +238,9 @@ GEM
       faraday (>= 0.17.3, < 3)
     semantic (1.6.1)
     semantic_range (3.0.0)
-    shoulda (4.0.0)
-      shoulda-context (~> 2.0)
-      shoulda-matchers (~> 4.0)
     shoulda-context (2.0.0)
-    shoulda-matchers (4.5.1)
-      activesupport (>= 4.2.0)
+    shoulda-matchers (5.3.0)
+      activesupport (>= 5.2.0)
     sitemap_generator (6.3.0)
       builder (~> 3.0)
     spdx (2.0.12)
@@ -309,7 +299,7 @@ DEPENDENCIES
   jbuilder
   jquery-rails
   mocha
-  nokogiri (= 1.14.2)
+  nokogiri
   octokit
   packageurl-ruby
   pagy
@@ -327,7 +317,8 @@ DEPENDENCIES
   sassc-rails
   semantic
   semantic_range
-  shoulda
+  shoulda-context
+  shoulda-matchers
   sitemap_generator
   spdx (= 2.0.12)
   sprockets-rails
@@ -336,7 +327,7 @@ DEPENDENCIES
   webmock
 
 RUBY VERSION
-   ruby 3.2.0p0
+   ruby 3.2.1p31
 
 BUNDLED WITH
    2.4.5

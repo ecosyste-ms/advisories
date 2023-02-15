@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.2.0"
+ruby "3.2.1"
 
 gem "rails", "~> 7.0.4"
 gem "sprockets-rails"
@@ -33,7 +33,7 @@ gem 'jquery-rails'
 gem 'faraday-typhoeus'
 gem 'packageurl-ruby'
 gem 'octokit'
-gem "nokogiri", '1.14.2'
+gem "nokogiri"
 gem 'commonmarker'
 gem 'sitemap_generator'
 
@@ -47,7 +47,8 @@ group :development do
 end
 
 group :test do
-  gem "shoulda"
+  gem "shoulda-matchers"
+  gem "shoulda-context"
   gem "webmock"
   gem "mocha"
   gem "rails-controller-testing"

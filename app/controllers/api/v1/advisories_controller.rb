@@ -1,6 +1,6 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   def index
-    scope = Advisory.all.order('published_at DESC')
+    scope = Advisory.all
     
     scope = scope.severity(params[:severity]) if params[:severity].present?
     scope = scope.ecosystem(params[:ecosystem]) if params[:ecosystem].present?

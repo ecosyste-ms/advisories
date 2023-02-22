@@ -123,4 +123,7 @@ components:
           type: array
           items:
             type: object
-        
+        created_at:
+          type: string
+        updated_at:
+          type: string

@@ -88,6 +88,21 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Advisory'
+  /advisories/packages:
+    get:
+      summary: "list packages that have advisories"
+      operationId: "getAdvisoriesPackages"
+      tags:
+        - advisories
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Package'
   /advisories/{advisoryUUID}:
     get:
       summary: get a advisories by uuid
@@ -152,4 +167,11 @@ components:
         created_at:
           type: string
         updated_at:
+          type: string
+    Package:
+      type: object
+      properties:
+        ecosystem:
+          type: string
+        package_name:
           type: string

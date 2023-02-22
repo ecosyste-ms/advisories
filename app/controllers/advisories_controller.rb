@@ -11,7 +11,17 @@ class AdvisoriesController < ApplicationController
     @packages = scope.select(:packages).map{|a| a.packages.map{|p| p.except("versions") } }.flatten.inject(Hash.new(0)) { |h, e| h[e] += 1 ; h }.to_a.sort_by{|a| a[1]}.reverse 
     scope = scope.package_name(params[:package_name]) if params[:package_name].present?
 
-    @pagy, @advisories = pagy(scope.includes(:source).order('published_at DESC'))
+    scope = scope.created_after(params[:created_after]) if params[:created_after].present?
+    scope = scope.updated_after(params[:updated_after]) if params[:updated_after].present?
+
+    if params[:sort].present? || params[:order].present?
+      sort = params[:sort] || 'published_at'
+      order = params[:order] || 'desc'
+      sort_options = sort.split(',').zip(order.split(',')).to_h
+      scope = scope.order(sort_options)
+    end
+
+    @pagy, @advisories = pagy(scope.includes(:source))
   end
 
   def recent_advisories_data

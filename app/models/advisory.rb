@@ -6,6 +6,8 @@ class Advisory < ApplicationRecord
   scope :ecosystem, ->(ecosystem) { where("? <@ ANY ( ARRAY(select jsonb_array_elements ( packages )) )",{ecosystem:ecosystem}.to_json) }
   scope :package_name, ->(package_name) { where("? <@ ANY ( ARRAY(select jsonb_array_elements ( packages )) )",{package_name:package_name}.to_json) }
   scope :severity, ->(severity) { where(severity: severity) }
+  scope :created_after, ->(created_at) { where('created_at > ?', created_at) }
+  scope :updated_after, ->(updated_at) { where('updated_at > ?', updated_at) }
 
   def to_s
     uuid

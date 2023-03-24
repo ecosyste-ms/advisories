@@ -1,6 +1,8 @@
 class Advisory < ApplicationRecord
   belongs_to :source
 
+  validates :uuid, presence: true, uniqueness: true
+
   counter_culture :source
 
   scope :ecosystem, ->(ecosystem) { where("? <@ ANY ( ARRAY(select jsonb_array_elements ( packages )) )",{ecosystem:ecosystem}.to_json) }

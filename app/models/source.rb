@@ -1,7 +1,7 @@
 class Source < ApplicationRecord
   has_many :advisories
 
-  validates :name,, :kind, :url, presence: true
+  validates :name, :kind, :url, presence: true
 
   def to_s
     name

@@ -37,11 +37,23 @@ class Registry < ApplicationRecord
     find_by_ecosystem(package['ecosystem']).try(:package_html_link_for, package)
   end
 
+  def self.package_api_link_for(package)
+    find_by_ecosystem(package['ecosystem']).try(:package_api_link_for, package)
+  end
+
+  def self.package_versions_api_link_for(package)
+    find_by_ecosystem(package['ecosystem']).try(:package_versions_api_link_for, package)
+  end
+
   def package_html_link_for(package)
-    "http://packages.ecosyste.ms/registries/#{name}/packages/#{package['package_name']}"
+    "https://packages.ecosyste.ms/registries/#{name}/packages/#{package['package_name']}"
   end
 
   def package_api_link_for(package)
-    "http://packages.ecosyste.ms/api/v1/registries/#{name}/packages/#{package['package_name']}"
+    "https://packages.ecosyste.ms/api/v1/registries/#{name}/packages/#{package['package_name']}"
+  end
+
+  def package_versions_api_link_for(package)
+    "https://packages.ecosyste.ms/api/v1/registries/#{name}/packages/#{package['package_name']}/versions"
   end
 end

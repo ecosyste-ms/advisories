@@ -68,7 +68,7 @@ class Advisory < ApplicationRecord
     vulns = affected_versions_for_package(package)
     version_numbers = version_numbers(package)
 
-    resp = Faraday.get(dependent_packages_api_url(package)) # TODO pagination
+    resp = Faraday.get(dependent_packages_api_url(package)) # TODO pagination if headers next link is present
     return [] unless resp.success?
     json = JSON.parse(resp.body)
     json.select do |dep|
@@ -95,4 +95,6 @@ class Advisory < ApplicationRecord
       affected_dependent_versions(p)
     end.flatten(1).uniq.count
   end
+
+  # TODO store affected_dependent_packages_count and affected_dependent_versions_count in the database and sync on a regular basis
 end

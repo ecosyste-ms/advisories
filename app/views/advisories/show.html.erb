@@ -6,16 +6,17 @@
 
   <p><%= @advisory.title %> </p>
 
-  <p><%== render_markdown @advisory.description %></p>
+  <p><%== render_markdown @advisory.description %>
 
   Permalink: <%= link_to @advisory.url, @advisory.url, target: :_blank %><br>
-  <br>
+  JSON: <%= link_to api_v1_advisory_url(@advisory), api_v1_advisory_url(@advisory) %><br>
   Source: <%= @advisory.source %><br>
   Origin: <%= @advisory.origin.humanize %><br>
   Severity: <%= @advisory.severity.humanize %><br>
   Classification: <%= @advisory.classification.humanize %><br>
   Published: <span title="<%= @advisory.published_at %>"><%= time_ago_in_words @advisory.published_at %> ago</span><br>
-  Updated: <span title="<%= @advisory.updated_at %>"><%= time_ago_in_words @advisory.updated_at %> ago</span><br>
+  Updated: <span title="<%= @advisory.updated_at %>"><%= time_ago_in_words @advisory.updated_at %> ago</span>
+  </p>
   
   <% if @advisory.withdrawn_at %>
     Widthdrawn: <span title="<%= @advisory.withdrawn_at %>"><%= time_ago_in_words @advisory.withdrawn_at %> ago</span><br>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_01_03_135507) do
+ActiveRecord::Schema[7.0].define(version: 2023_08_23_133218) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -34,6 +34,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_01_03_135507) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["source_id"], name: "index_advisories_on_source_id"
+  end
+
+  create_table "exports", force: :cascade do |t|
+    t.string "date"
+    t.string "bucket_name"
+    t.integer "advisories_count"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "registries", force: :cascade do |t|

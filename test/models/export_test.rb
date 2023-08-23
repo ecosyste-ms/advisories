@@ -1,7 +1,9 @@
 require "test_helper"
 
 class ExportTest < ActiveSupport::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+  context 'validations' do
+    should validate_presence_of(:date)
+    should validate_presence_of(:bucket_name)
+    should validate_presence_of(:advisories_count)
+  end
 end

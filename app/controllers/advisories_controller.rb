@@ -15,10 +15,12 @@ class AdvisoriesController < ApplicationController
     scope = scope.updated_after(params[:updated_after]) if params[:updated_after].present?
 
     if params[:sort].present? || params[:order].present?
-      sort = params[:sort] || 'published_at'
+      sort = params[:sort] || 'created_at'
       order = params[:order] || 'desc'
       sort_options = sort.split(',').zip(order.split(',')).to_h
       scope = scope.order(sort_options)
+    else
+      scope = scope.order("published_at DESC")
     end
 
     @pagy, @advisories = pagy(scope.includes(:source))

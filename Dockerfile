@@ -1,4 +1,4 @@
-FROM ruby:3.2.2-alpine
+FROM ruby:3.2.2-slim-bullseye
 
 ENV APP_ROOT /usr/src/app
 ENV DATABASE_PORT 5432
@@ -12,21 +12,21 @@ COPY Gemfile Gemfile.lock $APP_ROOT/
 
 # * Setup system
 # * Install Ruby dependencies
-RUN apk add --update \
-    build-base \
-    netcat-openbsd \
-    git \
-    nodejs \
-    postgresql-dev \
-    tzdata \
-    curl-dev \
-    libc6-compat \
- && rm -rf /var/cache/apk/* \
+RUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -yq dist-upgrade && apt-get install -yq --no-install-recommends \
+  curl \
+  build-essential \
+  libpq-dev \
+  tzdata \
+  netcat \
+  libclang-dev \
  && gem update --system \
  && gem install bundler foreman \
  && bundle config --global frozen 1 \
  && bundle config set without 'test' \
  && bundle install --jobs 2
+
+RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - && \
+    apt-get install -y nodejs
 
 # ========================================================
 # Application layer

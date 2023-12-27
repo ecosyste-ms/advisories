@@ -17,7 +17,7 @@ module ApplicationHelper
   end
 
   def render_markdown(str)
-    Commonmarker.render_html(str, :GITHUB_PRE_LANG, [:tagfilter, :autolink, :table, :strikethrough])
+    Commonmarker.to_html(str)
   end
 
   def meta_title

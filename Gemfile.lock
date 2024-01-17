@@ -95,7 +95,7 @@ GEM
     commonmarker (1.0.4-arm64-darwin)
     commonmarker (1.0.4-x86_64-darwin)
     commonmarker (1.0.4-x86_64-linux)
-    concurrent-ruby (1.2.2)
+    concurrent-ruby (1.2.3)
     connection_pool (2.4.1)
     counter_culture (3.5.1)
       activerecord (>= 4.2)

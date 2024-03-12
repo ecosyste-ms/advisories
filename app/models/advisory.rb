@@ -8,6 +8,7 @@ class Advisory < ApplicationRecord
   scope :ecosystem, ->(ecosystem) { where("? <@ ANY ( ARRAY(select jsonb_array_elements ( packages )) )",{ecosystem:ecosystem}.to_json) }
   scope :package_name, ->(package_name) { where("? <@ ANY ( ARRAY(select jsonb_array_elements ( packages )) )",{package_name:package_name}.to_json) }
   scope :severity, ->(severity) { where(severity: severity) }
+  scope :repository_url, ->(repository_url) { where(repository_url: repository_url) }
   scope :created_after, ->(created_at) { where('created_at > ?', created_at) }
   scope :updated_after, ->(updated_at) { where('updated_at > ?', updated_at) }
 
@@ -103,11 +104,16 @@ class Advisory < ApplicationRecord
   end
 
   def repository_urls
-    references.reject{|u| invalid_repository_urls.any?{|r| u.include?(r) }  }.map{|u| URLParser.try_all(u) }.compact.uniq
+    references.map.reject{|u| invalid_repository_urls.any?{|r| u.downcase.include?(r) }  }.map{|u| URLParser.try_all(u) }.compact.uniq
   end 
 
   def invalid_repository_urls
-    ['github.com/advisories', 'github.io', 'gist.github.com', 'docs.github.com', 'github.com/dependabot']
+    [
+      'github.com/advisories', 'github.io', 'gist.github.com', 'docs.github.com', 'github.com/dependabot', 'github.com/FriendsOfPHP/security-advisories',
+      'github.com/pypa/advisory-database', 'github.com/rubysec/ruby-advisory-db', 'github.com/dotnet/announcements', 'github.com/aspnet/Announcements',
+      'github.com/google/security-research', 'github.com/JacksonGL/NPM-Vuln-PoC', 'github.com/rustsec/advisory-db', 'github.com/nodejs/security-wg',
+      'github.com/jenkins-infra/update-center2'
+    ]
   end
 
   # TODO store affected_dependent_packages_count and affected_dependent_versions_count in the database and sync on a regular basis

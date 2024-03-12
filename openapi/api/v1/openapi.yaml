@@ -41,6 +41,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: repository_url
+          in: query
+          description: "Repository URL to filter by"
+          required: false
+          schema:
+            type: string
         - name: page
           in: query
           description: pagination page number 

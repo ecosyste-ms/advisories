@@ -5,6 +5,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
     scope = scope.severity(params[:severity]) if params[:severity].present?
     scope = scope.ecosystem(params[:ecosystem]) if params[:ecosystem].present?
     scope = scope.package_name(params[:package_name]) if params[:package_name].present?
+    scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
     scope = scope.updated_after(params[:updated_after]) if params[:updated_after].present?

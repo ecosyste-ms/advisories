@@ -104,14 +104,14 @@ class Advisory < ApplicationRecord
   end
 
   def repository_urls
-    references.map.reject{|u| invalid_repository_urls.any?{|r| u.downcase.include?(r) }  }.map{|u| URLParser.try_all(u) }.compact.uniq
+    references.map.reject{|u| invalid_repository_urls.any?{|r| u.downcase.include?(r.downcase) }  }.map{|u| URLParser.try_all(u) }.compact.uniq
   end 
 
   def invalid_repository_urls
     [
       'github.com/advisories', 'github.io', 'gist.github.com', 'docs.github.com', 'github.com/dependabot', 'github.com/FriendsOfPHP/security-advisories',
       'github.com/pypa/advisory-database', 'github.com/rubysec/ruby-advisory-db', 'github.com/dotnet/announcements', 'github.com/aspnet/Announcements',
-      'github.com/google/security-research', 'github.com/JacksonGL/NPM-Vuln-PoC', 'github.com/rustsec/advisory-db', 'github.com/nodejs/security-wg',
+      'github.com/google/security-research', 'github.com/jacksongl/NPM-Vuln-PoC', 'github.com/rustsec/advisory-db', 'github.com/nodejs/security-wg',
       'github.com/jenkins-infra/update-center2'
     ]
   end

@@ -160,6 +160,8 @@ components:
           type: array
           items:
             type: string
+        repository_url:
+          type: string
         packages:
           type: array
           items:

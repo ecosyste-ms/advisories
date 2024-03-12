@@ -11,6 +11,8 @@ class Advisory < ApplicationRecord
   scope :created_after, ->(created_at) { where('created_at > ?', created_at) }
   scope :updated_after, ->(updated_at) { where('updated_at > ?', updated_at) }
 
+  before_save :set_repository_url
+
   def to_s
     uuid
   end
@@ -94,6 +96,18 @@ class Advisory < ApplicationRecord
     packages.map do |p|
       affected_dependent_versions(p)
     end.flatten(1).uniq.count
+  end
+
+  def set_repository_url
+    self.repository_url = repository_urls.first
+  end
+
+  def repository_urls
+    references.reject{|u| invalid_repository_urls.any?{|r| u.include?(r) }  }.map{|u| URLParser.try_all(u) }.compact.uniq
+  end 
+
+  def invalid_repository_urls
+    ['github.com/advisories', 'github.io', 'gist.github.com', 'docs.github.com', 'github.com/dependabot']
   end
 
   # TODO store affected_dependent_packages_count and affected_dependent_versions_count in the database and sync on a regular basis

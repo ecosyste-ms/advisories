@@ -30,6 +30,10 @@ class Advisory < ApplicationRecord
     all.select(:packages).map{|a| a.packages.map{|p| p['ecosystem'] } }.flatten.uniq
   end
 
+  def self.repositories
+    group(:repository_url).count
+  end
+
   def ecosystems
     packages.map{|p| p['ecosystem'] }.uniq
   end

@@ -16,6 +16,18 @@
     <div class='col-lg-4'>
       <div class="card mb-3">
         <div class="card-header">
+          Statistics
+        </div>
+        <div class='card-body'>
+          Advisories: <%= number_with_delimiter Advisory.count %><br/>
+          Packages: <%= number_with_delimiter Advisory.packages.length %><br/>
+          Repositories: <%= number_with_delimiter @repository_urls.count %><br/>
+          Ecosystems: <%= number_with_delimiter Advisory.ecosystems.length %><br/>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">
           Filter by Severity
         </div>
         <div class="list-group list-group-flush">

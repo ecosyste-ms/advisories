@@ -128,4 +128,29 @@ class Advisory < ApplicationRecord
   end
 
   # TODO store affected_dependent_packages_count and affected_dependent_versions_count in the database and sync on a regular basis
+
+  def sync_packages
+    packages.each do |package|
+      pkg = Package.find_or_create_by(ecosystem: package['ecosystem'], name: package['package_name'])
+      pkg.sync if pkg.last_synced_at.nil? || pkg.last_synced_at < 1.day.ago
+    end
+  end
+
+  def package_records
+    packages.map do |package|
+      Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
+    end
+  end
+
+  def total_dependent_packages_count
+    package_records.map(&:dependent_packages_count).sum
+  end
+
+  def total_dependent_repos_count
+    package_records.map(&:dependent_repos_count).sum
+  end
+
+  def total_downloads
+    package_records.map(&:downloads).sum
+  end
 end

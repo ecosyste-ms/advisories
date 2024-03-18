@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_03_12_170444) do
+ActiveRecord::Schema[7.1].define(version: 2024_03_18_155010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -41,6 +41,24 @@ ActiveRecord::Schema[7.1].define(version: 2024_03_12_170444) do
     t.string "date"
     t.string "bucket_name"
     t.integer "advisories_count"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "packages", force: :cascade do |t|
+    t.string "ecosystem"
+    t.string "name"
+    t.string "description"
+    t.string "registry_url"
+    t.datetime "last_synced_at"
+    t.integer "dependent_packages_count"
+    t.integer "dependent_repos_count"
+    t.bigint "downloads"
+    t.string "downloads_period"
+    t.string "latest_release_number"
+    t.string "repository_url"
+    t.integer "versions_count"
+    t.string "version_numbers", default: [], array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end

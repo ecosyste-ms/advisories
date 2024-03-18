@@ -16,6 +16,10 @@
       Packages: <%= advisory.package_names.join(', ') %><br>
       Source: <%= advisory.source %><br>
       <span title="<%= advisory.published_at %>">Published: <%= time_ago_in_words advisory.published_at %> ago</span>
+      <% if advisory.withdrawn? %>
+        <br>
+        <span title="<%= advisory.withdrawn_at %>">Withdrawn: <%= time_ago_in_words advisory.withdrawn_at %> ago</span>
+      <% end %>
     </small>
   </div>
 </div>

@@ -12,6 +12,9 @@ class Advisory < ApplicationRecord
   scope :created_after, ->(created_at) { where('created_at > ?', created_at) }
   scope :updated_after, ->(updated_at) { where('updated_at > ?', updated_at) }
 
+  scope :withdrawn, -> { where.not(withdrawn_at: nil) }
+  scope :not_withdrawn, -> { where(withdrawn_at: nil) }
+
   before_save :set_repository_url
 
   def to_s
@@ -20,6 +23,10 @@ class Advisory < ApplicationRecord
 
   def to_param
     uuid
+  end
+
+  def withdrawn?
+    withdrawn_at.present?
   end
 
   def self.packages

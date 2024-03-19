@@ -2,6 +2,8 @@ class Package < ApplicationRecord
   validates :ecosystem, presence: true
   validates :name, presence: true, uniqueness: { scope: :ecosystem }
 
+  scope :ecosystem, ->(ecosystem) { where(ecosystem: ecosystem) }
+
   def registry
     @registry = Registry.find_by_ecosystem(ecosystem)
   end
@@ -39,5 +41,17 @@ class Package < ApplicationRecord
 
   def advisories
     Advisory.ecosystem(ecosystem).package_name(name)
+  end
+
+  def affected_versions(range)
+    v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact
+    v.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
+  end
+
+  def fixed_versions(range)
+    av = affected_versions(range)
+    v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact - av
+    # ignore prerelease versions for now
+    v.reject {|v| v.include?('-') }
   end
 end

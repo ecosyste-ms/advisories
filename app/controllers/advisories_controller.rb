@@ -1,6 +1,6 @@
 class AdvisoriesController < ApplicationController
   def index
-    scope = Advisory.all
+    scope = Advisory.not_withdrawn
 
     @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?

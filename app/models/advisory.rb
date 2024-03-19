@@ -156,16 +156,16 @@ class Advisory < ApplicationRecord
   end
 
   def calculate_blast_radius
-    packages.map do |package|
-      score = 1
-      package['versions'].map{|v| v['first_patched_version']}.any? ? score = 0.5 : score = 1
-      pkg_record = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
-      if pkg_record && pkg_record.dependent_repos_count && pkg_record.dependent_repos_count > 0
-        Math.log10(pkg_record.dependent_repos_count) * score
+    # take the most depended upon package in each ecosystem and sum the dependent repos count and multiply by the cvss score
+    ecosystems.map do |ecosystem|
+      packages = package_records.select{|p| p.ecosystem == ecosystem }
+      package = packages.max_by{|p| p.dependent_repos_count || 0}
+      if package && package.dependent_repos_count && package.dependent_repos_count > 0
+        Math.log10(package.dependent_repos_count) * cvss_score
       else
-        score
+        1
       end
-    end.sum * cvss_score
+    end.sum
   end
 
   def set_blast_radius

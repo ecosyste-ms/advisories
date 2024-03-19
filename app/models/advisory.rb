@@ -140,7 +140,7 @@ class Advisory < ApplicationRecord
   def package_records
     packages.map do |package|
       Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
-    end
+    end.compact
   end
 
   def total_dependent_packages_count

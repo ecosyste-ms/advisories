@@ -45,13 +45,22 @@ class Package < ApplicationRecord
 
   def affected_versions(range)
     v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact
-    v.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
+    sort_versions v.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
   end
 
   def fixed_versions(range)
     av = affected_versions(range)
     v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact - av
     # ignore prerelease versions for now
-    v.reject {|v| v.include?('-') }
+    sort_versions v.reject {|v| v.include?('-') }
+  end
+
+  def sort_versions(versions)
+    # split by major, minor, patch, prerelease and sort each part
+    versions.sort_by do |v|
+      v.split('.').map do |part|
+        part.split(/(\d+)|(\D+)/).map { |p| p.match?(/\d+/) ? p.to_i : p }
+      end
+    end
   end
 end

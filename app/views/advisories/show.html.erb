@@ -66,9 +66,9 @@
           <% end %>
 
           <% if package_record && package_record.last_synced_at %>
-            <br>All affected versions: <%= package_record.affected_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(', ')).join(', ') %>
+            <br>All affected versions: <%= package_record.affected_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(' || ')).join(', ') %>
             <% if package['versions'].map{|v| v['first_patched_version']}.any? %>
-              <br>All fixed versions: <%= package_record.fixed_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(', ')).join(', ') %>
+              <br>All fixed versions: <%= package_record.fixed_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(' || ')).join(', ') %>
             <% end %>
           <% end %>
         </small>

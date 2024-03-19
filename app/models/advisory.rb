@@ -16,6 +16,7 @@ class Advisory < ApplicationRecord
   scope :not_withdrawn, -> { where(withdrawn_at: nil) }
 
   before_save :set_repository_url
+  before_save :set_blast_radius
 
   def to_s
     uuid
@@ -152,5 +153,26 @@ class Advisory < ApplicationRecord
 
   def total_downloads
     package_records.map(&:downloads).sum
+  end
+
+  def calculate_blast_radius
+    packages.map do |package|
+      score = 1
+      package['versions'].map{|v| v['first_patched_version']}.any? ? score = 0.5 : score = 1
+      pkg_record = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
+      if pkg_record && pkg_record.dependent_repos_count && pkg_record.dependent_repos_count > 0
+        Math.log10(pkg_record.dependent_repos_count) * score
+      else
+        score
+      end
+    end.sum * cvss_score
+  end
+
+  def set_blast_radius
+    self.blast_radius = calculate_blast_radius
+  end
+
+  def update_blast_radius
+    update_column(:blast_radius, calculate_blast_radius)
   end
 end

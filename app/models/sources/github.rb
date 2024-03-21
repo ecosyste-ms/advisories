@@ -93,7 +93,6 @@ module Sources
                   origin
                   permalink
                   references {
-                    type
                     url
                   }
                   severity

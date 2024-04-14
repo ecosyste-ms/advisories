@@ -15,6 +15,7 @@
       Ecosystems: <%= advisory.ecosystems.join(', ') %><br>
       Packages: <%= advisory.package_names.join(', ') %><br>
       Source: <%= advisory.source %><br>
+      Blast Radius: <%= advisory.blast_radius %><br>
       <span title="<%= advisory.published_at %>">Published: <%= time_ago_in_words advisory.published_at %> ago</span>
       <% if advisory.withdrawn? %>
         <br>

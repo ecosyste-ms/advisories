@@ -168,6 +168,8 @@ components:
             type: string
         repository_url:
           type: string
+        blast_radius:
+          type: number
         packages:
           type: array
           items:

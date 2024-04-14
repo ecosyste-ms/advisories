@@ -9,6 +9,7 @@ class Package < ApplicationRecord
   end
 
   def sync
+    return if registry.nil?
     conn = Faraday.new('https://packages.ecosyste.ms') do |f|
       f.request :json
       f.request :retry

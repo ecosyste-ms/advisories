@@ -7,6 +7,11 @@
     <%= line_chart recent_advisories_data_path %>
   </div>
 
+  <ul class="nav nav-tabs my-3">
+
+    <%= render 'sort' %>
+  </ul>
+
   <div class="row">
     <div class="col-lg-8">
       <%= render @advisories %>

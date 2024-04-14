@@ -1,0 +1,12 @@
+<li class="nav-item ms-auto">
+  <div class="dropdown">
+    <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      Sort
+    </button>
+    <ul class="dropdown-menu">
+      <% [['severity', 'desc', 'Highest Severity'],['severity', 'asc', 'Lowest Severity'],['blast_radius', 'desc', 'Blast Radius'],['published_at', 'desc', 'Recently Published'],['cvss_score','desc','CVSS Score']].each do |sort, order, name| %>
+        <li><a class="dropdown-item <%= 'active' if params[:sort] == sort %>" href="<%= url_for(request.params.merge(sort: sort, order: order)) %>"><%= name %></a></li>
+      <% end %>
+    </ul>
+  </div>
+</li>

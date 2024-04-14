@@ -18,6 +18,7 @@ class Registry < ApplicationRecord
         r.packages_count = registry['packages_count']
         r.github = registry['github']
         r.metadata = registry['metadata']
+        r.purl_type = registry['purl_type']
         r.created_at = registry['created_at']
         r.updated_at = registry['updated_at']
         r.save
@@ -26,7 +27,7 @@ class Registry < ApplicationRecord
   end
 
   def self.find_by_ecosystem(ecosystem)
-    Registry.where(ecosystem: ecosystem, default: true).first || Registry.where(ecosystem: ecosystem).first
+    Registry.where(ecosystem: ecosystem, default: true).first || Registry.where(ecosystem: ecosystem).first || Registry.where(purl_type: ecosystem).first
   end
 
   def self.ecosystems

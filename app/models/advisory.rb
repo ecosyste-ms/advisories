@@ -17,6 +17,7 @@ class Advisory < ApplicationRecord
 
   before_save :set_repository_url
   before_save :set_blast_radius
+  after_create :sync_packages
 
   def to_s
     uuid

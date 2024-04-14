@@ -9,6 +9,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "command": "bundle exec rake packages:sync_packages",
+      "schedule": "0 9 * * *"
+    },
+    {
       "command": "bundle exec rake sitemap:refresh",
       "schedule": "30 * * * *"
     }

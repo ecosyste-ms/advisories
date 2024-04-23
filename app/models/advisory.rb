@@ -75,6 +75,12 @@ class Advisory < ApplicationRecord
     affected_versions(package, affected_range_for(package))
   end
 
+  def total_affected_versions
+    packages.map do |package|
+      affected_versions_for_package(package).count
+    end.sum
+  end
+
   def latest_resolved_version(package, version_numbers, range)
     v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact
     v.select {|v| SemanticRange.satisfies?(v, range, platform: package['ecosystem'].humanize, loose: true) }.max

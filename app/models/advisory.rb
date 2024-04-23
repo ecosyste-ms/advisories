@@ -151,11 +151,11 @@ class Advisory < ApplicationRecord
   end
 
   def total_dependent_packages_count
-    package_records.map(&:dependent_packages_count).sum
+    package_records.map(&:dependent_packages_count).compact.sum
   end
 
   def total_dependent_repos_count
-    package_records.map(&:dependent_repos_count).sum
+    package_records.map(&:dependent_repos_count).compact.sum
   end
 
   def total_downloads

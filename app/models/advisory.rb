@@ -100,13 +100,13 @@ class Advisory < ApplicationRecord
     affected_dependencies(package).map{|d| d['package'] }.uniq
   end
 
-  def affected_dependent_packages
+  def all_affected_dependent_packages
     packages.map do |p|
       affected_dependent_packages(p)
     end.flatten.uniq.count
   end
 
-  def affected_dependent_versions
+  def all_affected_dependent_versions
     packages.map do |p|
       affected_dependent_versions(p)
     end.flatten(1).uniq.count

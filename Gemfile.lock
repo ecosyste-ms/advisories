@@ -268,7 +268,7 @@ GEM
     rb_sys (0.9.97)
     rdoc (6.6.3.1)
       psych (>= 4.0.0)
-    reline (0.5.4)
+    reline (0.5.5)
       io-console (~> 0.5)
     rexml (3.2.6)
     rswag-api (2.13.0)

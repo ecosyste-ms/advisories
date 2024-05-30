@@ -273,7 +273,7 @@ GEM
     rb_sys (0.9.97)
     rdoc (6.7.0)
       psych (>= 4.0.0)
-    reline (0.5.7)
+    reline (0.5.8)
       io-console (~> 0.5)
     rexml (3.2.8)
       strscan (>= 3.0.9)

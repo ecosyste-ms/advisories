@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby "3.3.1"
+ruby "3.3.3"
 
 gem "rails", "~> 7.1.3"
 gem "sprockets-rails"
@@ -37,6 +37,7 @@ gem "nokogiri"
 gem 'commonmarker'
 gem 'sitemap_generator'
 gem 'librariesio-url-parser'
+gem "net-pop", github: "ruby/net-pop" # temporary fix for net-pop until ruby 3.3.4
 
 group :development, :test do
   gem "debug", platforms: %i[ mri mingw x64_mingw ]

@@ -1,3 +1,10 @@
+GIT
+  remote: https://github.com/ruby/net-pop.git
+  revision: e8d0afe2773b9eb6a23c39e9e437f6fc0fc7c733
+  specs:
+    net-pop (0.1.2)
+      net-protocol
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -132,7 +139,6 @@ GEM
     ffi (1.17.0-aarch64-linux-musl)
     ffi (1.17.0-arm64-darwin)
     ffi (1.17.0-x86_64-darwin)
-    ffi (1.17.0-x86_64-linux-gnu)
     ffi (1.17.0-x86_64-linux-musl)
     fuzzy_match (2.1.0)
     globalid (1.2.1)
@@ -189,8 +195,6 @@ GEM
       uri
     net-imap (0.4.14)
       date
-      net-protocol
-    net-pop (0.1.2)
       net-protocol
     net-protocol (0.2.2)
       timeout
@@ -346,9 +350,9 @@ GEM
 PLATFORMS
   aarch64-linux-musl
   arm64-darwin-21
+  arm64-darwin-23
   ruby
   x86_64-darwin-20
-  x86_64-linux
   x86_64-linux-musl
 
 DEPENDENCIES
@@ -368,6 +372,7 @@ DEPENDENCIES
   jquery-rails
   librariesio-url-parser
   mocha
+  net-pop!
   nokogiri
   octokit
   packageurl-ruby
@@ -396,7 +401,7 @@ DEPENDENCIES
   webmock
 
 RUBY VERSION
-   ruby 3.3.1p31
+   ruby 3.3.3p31
 
 BUNDLED WITH
    2.5.14

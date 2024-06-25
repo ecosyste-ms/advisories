@@ -19,6 +19,7 @@ RUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -yq dist-upgrad
   tzdata \
   netcat \
   libclang-dev \
+  git \
  && gem update --system \
  && gem install bundler foreman \
  && bundle config --global frozen 1 \

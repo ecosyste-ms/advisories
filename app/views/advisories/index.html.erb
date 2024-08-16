@@ -1,7 +1,13 @@
+<% @meta_description = "Browse all Security Advisories for #{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]}" %>
+
 <div class="container-sm">
   <h2>
     <%= @meta_title = "#{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} Security Advisories"%>
   </h2>
+
+  <p class='lead'>
+    <%= @meta_description %>
+  </p>
 
   <div class='mb-5'>
     <%= line_chart recent_advisories_data_path %>

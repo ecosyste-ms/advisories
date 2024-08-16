@@ -1,7 +1,12 @@
 <% @meta_title = "Open Data Releases" %>
+<% @meta_description = "Access the latest open data releases from the security advisory database, providing crucial information on vulnerabilities and security updates." %>
 
 <div class="container-sm">
   <h1>Open Data Releases</h1>
+
+  <p class='lead'>
+    Access the latest open data releases from the security advisory database, providing crucial information on vulnerabilities and security updates.
+  </p>
 
   <% if @exports.any? %>
     <%= render @exports %>

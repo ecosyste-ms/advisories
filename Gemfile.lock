@@ -165,7 +165,7 @@ GEM
       railties (>= 4.2.0)
       thor (>= 0.14, < 2.0)
     librariesio-url-parser (1.0.10)
-    logger (1.6.0)
+    logger (1.6.1)
     loofah (2.22.0)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)

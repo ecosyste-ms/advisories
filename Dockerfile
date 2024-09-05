@@ -1,4 +1,4 @@
-FROM ruby:3.3.4-slim-bullseye
+FROM ruby:3.3.5-slim-bullseye
 
 ENV APP_ROOT /usr/src/app
 ENV DATABASE_PORT 5432

@@ -118,6 +118,8 @@ GEM
       logger
     faraday-follow_redirects (0.3.0)
       faraday (>= 1, < 3)
+    faraday-multipart (1.0.4)
+      multipart-post (~> 2)
     faraday-net_http (3.3.0)
       net-http
     faraday-retry (2.2.1)
@@ -181,6 +183,7 @@ GEM
     mocha (2.4.5)
       ruby2_keywords (>= 0.0.5)
     msgpack (1.7.2)
+    multipart-post (2.4.1)
     net-http (0.4.1)
       uri
     net-imap (0.4.16)
@@ -207,6 +210,7 @@ GEM
     octokit (9.1.0)
       faraday (>= 1, < 3)
       sawyer (~> 0.9)
+    ostruct (0.6.0)
     packageurl-ruby (0.1.0)
     pagy (9.0.9)
     pg (1.5.8)
@@ -357,6 +361,7 @@ DEPENDENCIES
   dotenv-rails
   faraday
   faraday-follow_redirects
+  faraday-multipart
   faraday-retry
   faraday-typhoeus
   groupdate
@@ -366,6 +371,7 @@ DEPENDENCIES
   mocha
   nokogiri
   octokit
+  ostruct
   packageurl-ruby
   pagy
   pg (~> 1.5)
@@ -392,7 +398,7 @@ DEPENDENCIES
   webmock
 
 RUBY VERSION
-   ruby 3.3.4p31
+   ruby 3.3.5p31
 
 BUNDLED WITH
    2.5.18

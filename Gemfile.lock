@@ -84,7 +84,7 @@ GEM
       autoprefixer-rails (>= 9.1.0)
       popper_js (>= 2.11.8, < 3)
     builder (3.3.0)
-    chartkick (5.1.0)
+    chartkick (5.1.1)
     commonmarker (1.1.5)
       rb_sys (~> 0.9)
     commonmarker (1.1.5-aarch64-linux)

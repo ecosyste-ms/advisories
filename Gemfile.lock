@@ -170,7 +170,7 @@ GEM
     json (2.7.4)
     librariesio-url-parser (1.0.10)
     logger (1.6.1)
-    loofah (2.23.0)
+    loofah (2.23.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
     mail (2.8.1)

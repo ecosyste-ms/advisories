@@ -280,7 +280,7 @@ GEM
     rb_sys (0.9.102)
     rdoc (6.7.0)
       psych (>= 4.0.0)
-    reline (0.5.10)
+    reline (0.5.11)
       io-console (~> 0.5)
     rexml (3.3.9)
     rswag-api (2.15.0)

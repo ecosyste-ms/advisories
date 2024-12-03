@@ -4,7 +4,7 @@
       Sort
     </button>
     <ul class="dropdown-menu">
-      <% [['severity', 'desc', 'Highest Severity'],['severity', 'asc', 'Lowest Severity'],['blast_radius', 'desc', 'Blast Radius'],['published_at', 'desc', 'Recently Published'],['cvss_score','desc','CVSS Score']].each do |sort, order, name| %>
+      <% [['severity', 'desc', 'Highest Severity'],['severity', 'asc', 'Lowest Severity'],['blast_radius', 'desc', 'Blast Radius'],['published_at', 'desc', 'Recently Published'],['cvss_score','desc','CVSS Score'], ['epss_percentage', 'desc', 'EPSS Percentage'], ['epss_percentile', 'desc', 'EPSS Percentile']].each do |sort, order, name| %>
         <li><a class="dropdown-item <%= 'active' if params[:sort] == sort %>" href="<%= url_for(request.params.merge(sort: sort, order: order)) %>"><%= name %></a></li>
       <% end %>
     </ul>

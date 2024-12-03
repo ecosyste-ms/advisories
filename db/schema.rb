@@ -10,9 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2024_04_14_232918) do
+ActiveRecord::Schema[8.0].define(version: 2024_12_03_120748) do
   # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
+  enable_extension "pg_catalog.plpgsql"
 
   create_table "advisories", force: :cascade do |t|
     t.bigint "source_id", null: false
@@ -35,6 +35,8 @@ ActiveRecord::Schema[7.1].define(version: 2024_04_14_232918) do
     t.datetime "updated_at", null: false
     t.string "repository_url"
     t.float "blast_radius", default: 0.0
+    t.float "epss_percentage"
+    t.float "epss_percentile"
     t.index ["source_id"], name: "index_advisories_on_source_id"
   end
 

@@ -31,6 +31,8 @@ module Sources
           references: advisory[:node][:advisory][:references].map { |r| r[:url] },
           source_kind: 'github',
           identifiers: advisory[:node][:advisory][:identifiers].map { |i|i[:value] },
+          epss_percentage: advisory[:node][:advisory][:epss][:percentage],
+          epss_percentile: advisory[:node][:advisory][:epss][:percentile],
 
           # advisories need to be grouped by uuid and the following fields added together
           ecosystem: correct_ecosystem(advisory[:node][:package][:ecosystem]),
@@ -104,6 +106,10 @@ module Sources
                     vectorString
                   }
                   classification
+                  epss{
+                    percentage
+                    percentile
+                  }
                 }
                 firstPatchedVersion {
                   identifier

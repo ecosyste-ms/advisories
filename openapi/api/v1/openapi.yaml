@@ -178,6 +178,10 @@ components:
           type: string
         updated_at:
           type: string
+        epss_percentage:
+          type: number
+        epss_percentile:
+          type: number
     Package:
       type: object
       properties:

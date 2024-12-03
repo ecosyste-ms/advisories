@@ -27,6 +27,11 @@
   CVSS vector: <%= @advisory.cvss_vector %><br><br>
   <% end %>
 
+  <% if @advisory.epss_percentage %>
+  EPSS Percentage: <%= @advisory.epss_percentage %><br>
+  EPSS Percentile: <%= @advisory.epss_percentile %><br><br>
+  <% end %>
+
   Identifiers: <%= @advisory.identifiers.join(', ') %><br>
   References: 
     <ul>

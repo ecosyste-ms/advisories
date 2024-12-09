@@ -216,7 +216,7 @@ GEM
       sawyer (~> 0.9)
     ostruct (0.6.1)
     packageurl-ruby (0.1.0)
-    pagy (9.3.2)
+    pagy (9.3.3)
     pg (1.5.9)
     pg_query (6.0.0)
       google-protobuf (>= 3.25.3)

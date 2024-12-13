@@ -171,7 +171,7 @@ GEM
       thor (>= 0.14, < 2.0)
     json (2.9.0)
     librariesio-url-parser (1.0.10)
-    logger (1.6.2)
+    logger (1.6.3)
     loofah (2.23.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)

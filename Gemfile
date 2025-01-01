@@ -34,7 +34,7 @@ gem 'faraday-typhoeus'
 gem 'packageurl-ruby'
 gem 'octokit'
 gem "nokogiri"
-gem 'commonmarker'
+gem 'commonmarker', '2.0.1'
 gem 'sitemap_generator'
 gem 'librariesio-url-parser'
 gem 'ostruct'

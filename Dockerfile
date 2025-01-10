@@ -1,7 +1,7 @@
-FROM ruby:3.4.1-slim-bullseye
+FROM ruby:3.4.1-slim
 
-ENV APP_ROOT /usr/src/app
-ENV DATABASE_PORT 5432
+ENV APP_ROOT=/usr/src/app
+ENV DATABASE_PORT=5432
 WORKDIR $APP_ROOT
 
 # =============================================
@@ -17,7 +17,6 @@ RUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -yq dist-upgrad
   build-essential \
   libpq-dev \
   tzdata \
-  netcat \
   libclang-dev \
   git \
  && gem update --system \

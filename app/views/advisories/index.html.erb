@@ -43,7 +43,7 @@
         </div>
         <div class="list-group list-group-flush">
           <% @severities.each do |severity,count| %>
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(params.permit!.to_h.merge(severity: (params[:severity] == severity ? nil : severity), page: nil)) %>">
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(request.params.merge(severity: (params[:severity] == severity ? nil : severity), page: nil)) %>">
               <%= severity.humanize %>
               <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
             </a>
@@ -57,7 +57,7 @@
         </div>
         <div class="list-group list-group-flush">
           <% @ecosystems.each do |ecosystem,count| %>
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:ecosystem] == ecosystem %>" href="<%= url_for(params.permit!.to_h.merge(ecosystem: (params[:ecosystem] == ecosystem ? nil : ecosystem), page: nil)) %>">
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:ecosystem] == ecosystem %>" href="<%= url_for(request.params.merge(ecosystem: (params[:ecosystem] == ecosystem ? nil : ecosystem), page: nil)) %>">
               <%= ecosystem %>
               <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
             </a>
@@ -71,7 +71,7 @@
         </div>
         <div class="list-group list-group-flush">
           <% @packages.first(200).each do |package,count| %>
-            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:package_name] == package['package_name'] %>" href="<%= url_for(params.permit!.to_h.merge(package_name: (params[:package_name] == package['package_name'] ? nil : package['package_name']), page: nil)) %>">
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:package_name] == package['package_name'] %>" href="<%= url_for(request.params.merge(package_name: (params[:package_name] == package['package_name'] ? nil : package['package_name']), page: nil)) %>">
               <%= package['package_name'] %>
               <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
             </a>

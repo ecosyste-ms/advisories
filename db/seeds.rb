@@ -7,3 +7,5 @@ default_sources.each do |source|
   s.assign_attributes(source)
   s.save
 end
+
+Registry.sync_all

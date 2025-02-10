@@ -2,18 +2,127 @@
 <% @meta_description = "#{@advisory.title}. #{@advisory.description}" %>
 
 <div class="container-sm">
-  <h2><%= link_to 'Security Advisories', advisories_path %>: <%= @advisory %></h2>
 
-  <p><%= @advisory.title %> </p>
+	<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="#">ecosyste.ms</a></li>
+      <li class="breadcrumb-item"><%= link_to 'Security Advisories', advisories_path %></li>
+      <li class="breadcrumb-item active" aria-current="page"><%= @advisory.ecosystems.join(', ') %></li>
+    </ol>
+	</nav>
 
-  <p><%== render_markdown @advisory.description %>
+  <h2 class="h3"><%= @advisory %></h2>
 
   Permalink: <%= link_to @advisory.url, @advisory.url, target: :_blank %><br>
-  JSON: <%= link_to api_v1_advisory_url(@advisory), api_v1_advisory_url(@advisory) %><br>
-  Source: <%= @advisory.source %><br>
-  Origin: <%= @advisory.origin.humanize %><br>
-  Severity: <%= @advisory.severity.humanize %><br>
-  Classification: <%= @advisory.classification.humanize %><br>
+   JSON: <%= link_to api_v1_advisory_url(@advisory), api_v1_advisory_url(@advisory) %>
+    Severity: <%= @advisory.severity.humanize %><br>
+    <% if @advisory.cvss_score && @advisory.cvss_score > 0 %>
+    CVSS Score: <%= @advisory.cvss_score %><br>
+    <% end %>
+    <% if @advisory.epss_percentage %>
+    EPSS Percentage: <%= @advisory.epss_percentage %><br>
+    <% end %>
+      Blast Radius: <%= @advisory.blast_radius.round(1) %><br>
+  <h1 class="h2"><%= @advisory.title %> </h1>
+
+
+  <h3>Affected Packages</h3>
+    <table class="table table-bordered">
+      <thead class="table-light">
+        <tr>
+          <th>Package</th>
+          <th>Affected Versions</th>
+          <th>Fixed Versions</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      <% @advisory.packages.each_with_index do |package, index| %>
+        <% package_record = Package.ecosystem(package['ecosystem']).where(name: package['package_name']).first %>
+
+        <tr>
+          <td>
+            <%= link_to Registry.package_html_link_for(package), target: :_blank do %>
+              <%= package['ecosystem'] %>:<%= package['package_name'] %>
+            <% end %>
+          </td>
+          <td>
+            <%= package['versions'].map{|v| v['vulnerable_version_range']}.join(', ') %>
+          </td>
+          <td>
+            <% if package['versions'].map{|v| v['first_patched_version']}.any? %>
+              <%=  package['versions'].map{|v| v['first_patched_version']}.join(', ') %>  
+            <% else %>
+              No known fixed version
+            <% end %>
+          </td>
+          <td><button class="btn btn-link p-0" data-bs-toggle="collapse" data-bs-target="#details<%= index %>">Expand</button></td>
+        </tr>
+        <tr class="collapse-row">
+          <td colspan="4" class="p-0">
+            <div id="details<%= index %>" class="collapse">
+              <div class="p-3">
+              <% if package_record && package_record.last_synced_at %>
+                Dependent packages: <%= number_with_delimiter package_record.dependent_packages_count %><br>
+                Dependent repositories: <%= number_with_delimiter package_record.dependent_repos_count %><br>
+                Downloads: <%= number_with_delimiter package_record.downloads %> <%= package_record.downloads_period.try(:gsub, '-', ' ') %><br>
+              <% end %>
+
+            <% if package_record && package_record.last_synced_at %>
+              Affected Version Ranges: <br>
+              <br>All affected versions: <%= package_record.affected_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(' || ')).join(', ') %>
+              <% if package['versions'].map{|v| v['first_patched_version']}.any? %>
+                <br>All unaffected versions: <%= package_record.fixed_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(' || ')).join(', ') %>
+              <% end %>
+            <% end %>        
+                <button class="btn btn-link p-0" data-bs-toggle="collapse" data-bs-target="#details<%= index %>">Minimise</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      <% end %>
+      </tbody>
+    </table>
+
+
+<div class="row">
+<div class="col-lg-8">
+<%== render_markdown @advisory.description %>
+  References: 
+    <ul>
+      <% @advisory.references.each do |url| %>
+        <li><%= link_to(url, url, target: :_blank) %></li>
+      <% end %>
+    </ul>
+</div>
+<div class="col-lg-4">
+  <h2>Identifiers</h2>
+  <%= @advisory.identifiers.join(', ') %><br>
+  <h2>Risk</h2>
+  <h3>Blast radius</h3>
+    <%= @advisory.blast_radius.round(1) %><br>
+  <h3>Severity</h3>
+  <% if @advisory.cvss_score && @advisory.cvss_score > 0 %>
+    <h3>CVSS</h3>
+    CVSS Score: <%= @advisory.cvss_score %><br>
+    CVSS vector: <%= @advisory.cvss_vector %><br><br>
+  <% end %>
+  <% if @advisory.epss_percentage %>
+    <h3>EPSS</h3>
+    EPSS Percentage: <%= @advisory.epss_percentage %><br>
+    EPSS Percentile: <%= @advisory.epss_percentile %><br><br>
+  <% end %>
+  <h2>Classification</h2>
+  <%= @advisory.classification.humanize %><br>
+  <h2>Source</h2>
+  <%= @advisory.source %><br>
+  <h2>Origin</h2>
+  <%= @advisory.origin.humanize %><br>
+  <% if @advisory.repository_url.present? %>
+  <h2>Repository</h2>
+  <%= link_to @advisory.repository_url, @advisory.repository_url, target: :_blank %><br>
+  <% end %>
+  <h2>Published</h2>
   Published: <span title="<%= @advisory.published_at %>"><%= time_ago_in_words @advisory.published_at %> ago</span><br>
   Updated: <span title="<%= @advisory.updated_at %>"><%= time_ago_in_words @advisory.updated_at %> ago</span>
   </p>
@@ -22,65 +131,19 @@
     Widthdrawn: <span title="<%= @advisory.withdrawn_at %>"><%= time_ago_in_words @advisory.withdrawn_at %> ago</span><br>
   <% end %><br>
   
-  <% if @advisory.cvss_score && @advisory.cvss_score > 0 %>
-  CVSS Score: <%= @advisory.cvss_score %><br>
-  CVSS vector: <%= @advisory.cvss_vector %><br><br>
-  <% end %>
+ 
 
-  <% if @advisory.epss_percentage %>
-  EPSS Percentage: <%= @advisory.epss_percentage %><br>
-  EPSS Percentile: <%= @advisory.epss_percentile %><br><br>
-  <% end %>
 
-  Identifiers: <%= @advisory.identifiers.join(', ') %><br>
-  References: 
-    <ul>
-      <% @advisory.references.each do |url| %>
-        <li><%= link_to(url, url, target: :_blank) %></li>
-      <% end %>
-    </ul>
 
-  <% if @advisory.repository_url.present? %>
-    Repository: <%= link_to @advisory.repository_url, @advisory.repository_url, target: :_blank %><br>
-  <% end %>
+</div>
+</div>
 
-  Blast Radius: <%= @advisory.blast_radius.round(1) %><br>
+
+
+
+  
 
   <h3 class='mt-3'>Affected Packages</h3>
   
-  <% @advisory.packages.each do |package| %>
-    <% package_record = Package.ecosystem(package['ecosystem']).where(name: package['package_name']).first %>
-    <div class="card mb-3">
-      <div class="card-body">
-        <h5 class="card-title">
-          <%= link_to Registry.package_html_link_for(package), target: :_blank do %>
-            <%= package['ecosystem'] %>:<%= package['package_name'] %>
-          <% end %>
-        </h5>
-        
-        <small class='text-muted'>
-          <% if package_record && package_record.last_synced_at %>
-            Dependent packages: <%= number_with_delimiter package_record.dependent_packages_count %><br>
-            Dependent repositories: <%= number_with_delimiter package_record.dependent_repos_count %><br>
-            Downloads: <%= number_with_delimiter package_record.downloads %> <%= package_record.downloads_period.try(:gsub, '-', ' ') %><br>
-          <% end %>
-          Affected Version Ranges: <%= package['versions'].map{|v| v['vulnerable_version_range']}.join(', ') %><br>
-          
-          <% if package['versions'].map{|v| v['first_patched_version']}.any? %>
-            Fixed in: <%=  package['versions'].map{|v| v['first_patched_version']}.join(', ') %>  
-          <% else %>
-            No known fixed version
-          <% end %>
-
-          <% if package_record && package_record.last_synced_at %>
-            <br>All affected versions: <%= package_record.affected_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(' || ')).join(', ') %>
-            <% if package['versions'].map{|v| v['first_patched_version']}.any? %>
-              <br>All unaffected versions: <%= package_record.fixed_versions( package['versions'].map{|v| v['vulnerable_version_range']}.join(' || ')).join(', ') %>
-            <% end %>
-          <% end %>
-        </small>
-      </div>
-    </div>
-
-  <% end %>
+  
 </div>

@@ -1,9 +1,5 @@
-$font-family-base: "Inter", sans-serif;
-$font-size-base: 1.125rem; //18px
-$line-height-base: 1.3334;
-$body-font-weight: 400;
-
 @import "bootstrap"; 
+@import "ecosystems"; 
 
 .text-decoration-hover{
   text-decoration: none;
@@ -29,42 +25,21 @@ pre code.hljs{
   }
 }
 
-/* Variables */
-$color-purple: #7878EF;
-$color-purple-light: #BBBBFF;
-$color-purple-dark: #5C5CCF;
-
-$color-orange: #FF807D;
-$color-orange-light: #FEBDB9;
-$color-orange-dark: #C65568;
-
-$color-green: #45E56E;
-$color-green-light: #75D293;
-$color-green-dark: #2EAF6B;
-
-$color-black: #1D1D28;
-$color-white: #FFFFFF;
-
-
 .header {
   display: flex;
   align-items: center;
 }
 
 .site-logo {
-  font-size: 0;
-  line-height: 0;
-  color: transparent;
-
-  background-image: asset-url('ecosystems-logo.svg');
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-
-  display: inline-block;
-  width: 246px;
+  background-image: asset-url('ecosystems-advisories-logo.svg');
+  width: 425px;
   height: 50px;
 }
+
+.site-logo--white {
+	background-image: asset-url('ecosystems-logo-white.svg');
+  width: 246px;
+  }
 
 .site-name {
   line-height: 50px;
@@ -76,59 +51,152 @@ $color-white: #FFFFFF;
   padding-top: 70px;
 }
 
-.site-logo--white {
-  background-image: asset-url('ecosystems-logo-white.svg');
+.advisory-listing {
+  border: 0;
+  border-radius: 0;
+  border-bottom: 3px solid $color-purple-light;
+  padding: 0;
 }
 
-.header {
-  h1{
-    margin: 0;
-  }
-}
+.advisory-listing
 
-.dark-section {
-  background-color: $color-purple-dark;
-  color: $color-white;
+.advisory-listing__title {
+	@include font-size(1rem);
   a {
-    color: $color-white;
+    text-decoration: none;
+    color: $color-black;
     &:hover,
     &:active,
-    &:focus 
-    &:visited {
-      color: $color-white;
+    &:focus {
+      
     }
+  }
+}
+
+.advisory-listing__id {
+	font-weight: normal;
+	color: $color-grey-dark;
+	@include font-size(0.875rem);
+}
+
+.advisory-listing__details {
+  @include font-size(0.875rem);
+}
+
+.advisory-listing__time {
+  margin-top: 0.3888888889; //gross number but it aligns the baseline with the severity badge
+  @include font-size(0.7777777778rem);
+}
+
+// TODO - this is a mess, bootstrap config is ignoring this in the main file
+
+.badge-warning {
+  background-color: $bootstrap-warning;
+}
+
+.badge-danger {
+  background-color: $bootstrap-danger;
+  color: $color-white;
+}
+
+.badge-dark {
+  background-color: $color-black;
+  color: $color-white;
+}
+
+.badge-light {
+  background-color: $color-grey-light;
+}
+
+.listing-filters {
+  .list-group-item {
+    @include font-size(0.875rem);
+    border-color: $color-grey;
+    word-break: break-word;
+  }
+}
+
+.listing-controls {
+  .dropdown-item.active,
+  .dropdown-item:active {
+    background-color: $color-purple;
+  }
+}
+
+.advisory-header__meta__text {
+  @include font-size(1rem);
+  line-height: 1.4rem;
+}
+
+.advisory-header__title {
+  line-break: anywhere;
+}
+
+.ecosystems-table {
+  border: 0;
+  border-width: 0;
+  border-color: transparent;
+  tbody {
+    border: 0;
+  }
+  th {
+    border: 0;
+    border-bottom: 3px solid $color-purple-light;;
+  }
+  tr {
+    border-bottom: 1px solid $color-purple-light;
+  }
+  td {
+    border: 0;
+  }
+  tr:has(+ .collapse-row) {
+	border-bottom: 1px solid transparent;
+  }
+}
+
+.sidebar {
+	background-color: $color-grey-light;
+	p { 
+		@include font-size(1rem);
+	}
+	h2 {
+		@include font-size(1.25rem);
+
+    border-top: 1px solid $color-purple-light;
+    padding-top: 1rem;
+    &:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+	}
+
+	h3 {
+		@include font-size(1rem);
     
+	}
+
+  code {
+    color: $color-purple-dark;
   }
-}
 
-/*  Header */
-.header {
-  padding: 2em 0 1em;
-}
-
-/*  Footer */
-.footer {
-  padding: 2em 0;
-  margin-top: 4em;
-}
-
-.footer-links {
-  margin-top: 1rem;
-  @include media-breakpoint-up(md) {
-    text-align: right;
-  }
   a {
-    text-decoration: none;
-  }
-  li {
-    margin-bottom: 0.25rem;
+    @include spesh-link();
   }
 }
 
-.footer-icons {
-  margin-top: 1em;
+.page-content {
   a {
-    margin: 0 0.5em;
-    text-decoration: none;
+    line-break: loose;
+  }
+}
+
+.purple-grad-bg {
+  a {
+    color: $color-white;
+  }
+  .breadcrumb,
+  .breadcrumb-item + .breadcrumb-item::before {
+    color: $color-white;
+    
   }
 }

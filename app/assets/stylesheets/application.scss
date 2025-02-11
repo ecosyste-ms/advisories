@@ -123,3 +123,80 @@ pre code.hljs{
   }
 }
 
+.advisory-header__meta__text {
+  @include font-size(1rem);
+  line-height: 1.4rem;
+}
+
+.advisory-header__title {
+  line-break: anywhere;
+}
+
+.ecosystems-table {
+  border: 0;
+  border-width: 0;
+  border-color: transparent;
+  tbody {
+    border: 0;
+  }
+  th {
+    border: 0;
+    border-bottom: 3px solid $color-purple-light;;
+  }
+  tr {
+    border-bottom: 1px solid $color-purple-light;
+  }
+  td {
+    border: 0;
+  }
+  tr:has(+ .collapse-row) {
+	border-bottom: 1px solid transparent;
+  }
+}
+
+.sidebar {
+	background-color: $color-grey-light;
+	p { 
+		@include font-size(1rem);
+	}
+	h2 {
+		@include font-size(1.25rem);
+
+    border-top: 1px solid $color-purple-light;
+    padding-top: 1rem;
+    &:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+	}
+
+	h3 {
+		@include font-size(1rem);
+    
+	}
+
+  code {
+    color: $color-purple-dark;
+  }
+
+  a {
+    @include spesh-link();
+  }
+}
+
+.page-content {
+  a {
+    line-break: loose;
+  }
+}
+
+.purple-grad-bg {
+  a {
+    color: $color-white;
+  }
+  .breadcrumb,
+  .breadcrumb-item + .breadcrumb-item::before {
+    color: $color-white;
+    
+  }
+}

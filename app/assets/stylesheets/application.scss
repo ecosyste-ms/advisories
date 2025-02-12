@@ -208,3 +208,8 @@ pre code.hljs{
     
   }
 }
+
+.btn-link {
+  @include spesh-link();
+  border-radius: 0;
+}

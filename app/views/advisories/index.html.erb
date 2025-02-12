@@ -1,4 +1,4 @@
-<% @meta_description = "Browse all Security Advisories for #{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]}" %>
+<% @meta_description = "Browse all Security Advisories #{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} #{params[:repository_url]}" %>
 
 <div class="container-sm">
   <h2 class="h1">
@@ -6,7 +6,14 @@
   </h2>
 
   <p class="lead">
-    <%= @meta_description %>
+    Browse all Security Advisories
+    <% if params[:severity].present? || params[:ecosystem].present? || params[:package_name].present? || params[:repository_url].present? %>
+      for 
+    <% end %>
+    <%= params[:severity].try(:humanize) %>
+    <%= params[:ecosystem] %>
+    <%= params[:package_name] %>
+    <%= params[:repository_url] %>
   </p>
 
   <div class="row">

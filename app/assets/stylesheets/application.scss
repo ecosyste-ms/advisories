@@ -191,7 +191,10 @@ pre code.hljs{
 
 .page-content {
   a {
-    line-break: loose;
+    line-break: anywhere;
+    @include media-breakpoint-up(md) {
+      line-break: loose;
+    }
   }
 }
 

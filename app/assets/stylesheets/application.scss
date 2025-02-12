@@ -181,6 +181,7 @@ pre code.hljs{
 
   a {
     @include spesh-link();
+    line-break: anywhere;
   }
 }
 

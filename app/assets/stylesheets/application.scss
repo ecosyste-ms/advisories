@@ -32,8 +32,12 @@ pre code.hljs{
 
 .site-logo {
   background-image: asset-url('ecosystems-advisories-logo.svg');
-  width: 425px;
-  height: 50px;
+  width: 275px;
+  height: 32px;
+  @include media-breakpoint-up(lg) {
+    width: 425px;
+    height: 50px;
+  }
 }
 
 .site-logo--white {

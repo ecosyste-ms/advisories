@@ -212,6 +212,19 @@ pre code.hljs{
 .btn-link {
   @include spesh-link();
   border-radius: 0;
+}
+
+.listing-controls {
+  background-color: $color-grey-light;
+  p {
+    line-height: 2.2222222222rem;
+  }
+}
+
+.list-group-item.active {
+  background-color: $color-purple-dark;
+}
+
 //pagination 
 .page-link {
   color: $color-purple-dark;

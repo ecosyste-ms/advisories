@@ -213,3 +213,27 @@ pre code.hljs{
   @include spesh-link();
   border-radius: 0;
 }
+
+.listing-controls {
+  background-color: $color-grey-light;
+  p {
+    line-height: 2.2222222222rem;
+  }
+}
+
+.list-group-item.active {
+  background-color: $color-purple-dark;
+}
+
+//pagination 
+.page-link {
+  color: $color-purple-dark;
+  border-color: $color-grey;
+  &:hover {
+    color: $color-purple;
+  }
+}
+.page-link.active, .active > .page-link {
+  background-color: $color-purple-dark;
+  border-color: $color-purple-dark;
+}

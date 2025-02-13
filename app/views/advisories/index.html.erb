@@ -1,30 +1,46 @@
 <% @meta_description = "Browse all Security Advisories #{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} #{params[:repository_url]}" %>
 
 <div class="container-sm">
-  <h2 class="h1">
-    <%= @meta_title = "#{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} Security Advisories"%>
+  <h2 class="h1 mb-5">
+   Browse Security Advisories
   </h2>
 
-  <p class="lead">
-    Browse all Security Advisories
-    <% if params[:severity].present? || params[:ecosystem].present? || params[:package_name].present? || params[:repository_url].present? %>
-      for 
-    <% end %>
-    <%= params[:severity].try(:humanize) %>
-    <%= params[:ecosystem] %>
-    <%= params[:package_name] %>
-    <%= params[:repository_url] %>
-  </p>
+
 
   <div class="row">
     <div class="col-lg-8">
-      <div class="listing-controls text-end">
-        <%= render 'sort' %>
+      <div class="listing-controls p-3 mb-5 rounded">
+    
+    <div class="row">
+      <div class="col-8">
+        <p class="mb-0">
+          <% if params[:severity].present? %>
+            <strong><%= params[:severity].humanize %></strong>
+          <% end %>
+          Security Advisories
+          <% if params[:package_name].present? %>
+            for <strong><%= params[:package_name] %></strong>
+          <% end %>
+          <% if params[:repository_url].present? %>
+            for <strong><%= params[:repository_url] %></strong>
+          <% end %>
+          <% if params[:ecosystem].present? %>
+            in <strong><%= params[:ecosystem] %></strong>
+          <% end %>
+          <% if params.slice(:ecosystem, :package_name, :repository_url, :severity).values.any?(&:present?) %>
+            <%= link_to 'Clear Filters', advisories_path, class: 'btn btn-link btn-clear p-0' %>
+          <% end %>
+        </p>
+      </div>
+  
+          <div class="col-4  text-end">
+            <%= render 'sort' %>
+          </div>
+        </div>
       </div>
       <%= render @advisories %>
       <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>  
     </div>
-  
     <div class="col-lg-4 listing-filters">
       <h3 class="h4 mx-3">Filter by Severity</h3>
       <div class="list-group list-group-flush">

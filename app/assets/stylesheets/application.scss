@@ -212,4 +212,15 @@ pre code.hljs{
 .btn-link {
   @include spesh-link();
   border-radius: 0;
+//pagination 
+.page-link {
+  color: $color-purple-dark;
+  border-color: $color-grey;
+  &:hover {
+    color: $color-purple;
+  }
+}
+.page-link.active, .active > .page-link {
+  background-color: $color-purple-dark;
+  border-color: $color-purple-dark;
 }

@@ -1,16 +1,6 @@
 @import "bootstrap"; 
 @import "ecosystems"; 
 
-.text-decoration-hover{
-  text-decoration: none;
-  &:hover{
-    text-decoration: underline;
-  }
-}
-body {
-  font-optical-sizing: auto;
-}
-
 pre code.hljs{
   padding: 0 !important;
 }
@@ -69,11 +59,6 @@ pre code.hljs{
   a {
     text-decoration: none;
     color: $color-black;
-    &:hover,
-    &:active,
-    &:focus {
-      
-    }
   }
 }
 
@@ -90,26 +75,6 @@ pre code.hljs{
 .advisory-listing__time {
   margin-top: 0.3888888889; //gross number but it aligns the baseline with the severity badge
   @include font-size(0.7777777778rem);
-}
-
-// TODO - this is a mess, bootstrap config is ignoring this in the main file
-
-.badge-warning {
-  background-color: $bootstrap-warning;
-}
-
-.badge-danger {
-  background-color: $bootstrap-danger;
-  color: $color-white;
-}
-
-.badge-dark {
-  background-color: $color-black;
-  color: $color-white;
-}
-
-.badge-light {
-  background-color: $color-grey-light;
 }
 
 .listing-filters {
@@ -223,17 +188,4 @@ pre code.hljs{
 
 .list-group-item.active {
   background-color: $color-purple-dark;
-}
-
-//pagination 
-.page-link {
-  color: $color-purple-dark;
-  border-color: $color-grey;
-  &:hover {
-    color: $color-purple;
-  }
-}
-.page-link.active, .active > .page-link {
-  background-color: $color-purple-dark;
-  border-color: $color-purple-dark;
 }

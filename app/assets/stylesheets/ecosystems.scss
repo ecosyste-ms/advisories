@@ -332,7 +332,6 @@ body {
   }
 }
 
-
 .header__global__menu__category {
   margin-bottom: 0.5rem;
 }
@@ -388,6 +387,10 @@ body {
 }
 
 .header__local__navigation {
+  margin-left: -1rem;
+  @include media-breakpoint-up(lg) {
+    margin-left: 0;
+  }
   a {
     @include spesh-link();
     padding: 0;

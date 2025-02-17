@@ -316,13 +316,21 @@ body {
   padding-top: 70px;
 }
 
-.header__global__menu {
-  will-change: scale;
-}
-
 .header__global__menu-link {
   @include spesh-link();
+  .bi {
+    display: inline-block;
+    transition: transform 0.35s ease-out; //same time as bootstrap's animation
+    transform-origin: center;
+  }
 }
+
+.header__global__menu-link[aria-expanded="true"] {
+  .bi {
+    transform: rotateX(180deg);
+  }
+}
+
 
 .header__global__menu__category {
   margin-bottom: 0.5rem;
@@ -346,6 +354,10 @@ body {
     &:hover,
     &:active,
     &:focus {
+      color: $color-purple-dark;
+    }
+    &.active {
+      text-decoration: none;
       color: $color-purple-dark;
     }
   }

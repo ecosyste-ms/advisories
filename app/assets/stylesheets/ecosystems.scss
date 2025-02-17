@@ -318,6 +318,7 @@ body {
 
 .header__global__menu-link {
   @include spesh-link();
+  @include font-size(1rem);
   .bi {
     display: inline-block;
     transition: transform 0.35s ease-out; //same time as bootstrap's animation

@@ -32,6 +32,9 @@ namespace :ecosystems do
       exec("rake ecosystems:update_shared_assets")
     end
 
+    # Install required gems
+    `bundle add bootstrap-icons-helper`
+
     # Copy required files
     `cp #{temp_rake_file} #{ecosystems_rake_path}`
     `cp #{temp_dir}/app/views/shared/_header.html.erb app/views/shared/` 

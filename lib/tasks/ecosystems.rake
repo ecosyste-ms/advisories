@@ -37,6 +37,7 @@ namespace :ecosystems do
     `cp #{temp_dir}/app/views/shared/_header.html.erb app/views/shared/` 
     `cp #{temp_dir}/app/views/shared/_footer.html.erb app/views/shared/`
     `cp #{temp_dir}/app/views/shared/_menu.html.erb app/views/shared/`
+    `cp #{temp_dir}/app/views/layouts/application.html.erb app/views/layouts/`
     `cp #{temp_dir}/app/assets/stylesheets/ecosystems.scss app/assets/stylesheets/`
     `cp #{temp_dir}/app/helpers/ecosystems_helper.rb app/helpers/`
     `cp -r #{temp_dir}/app/assets/images/. app/assets/images/`
@@ -45,6 +46,23 @@ namespace :ecosystems do
     # Cleanup
     `rm -rf #{temp_dir}`
 
+    # git add and commit
+    `git add lib/tasks/ecosystems.rake app/views/shared/_header.html.erb app/views/shared/_footer.html.erb app/views/shared/_menu.html.erb app/views/layouts/application.html.erb app/assets/stylesheets/ecosystems.scss app/helpers/ecosystems_helper.rb app/assets/images/ public/`
+    `git commit -m "Update shared assets from #{shared_asset_repo}"`
+
     puts "Shared assets updated successfully."
+  end
+
+  task :setup_shared_assets, [:target_repo] do |_t, args|
+    target_repo_path = "../#{args[:target_repo]}"
+    puts "Setting up shared assets for repository at: #{target_repo_path}"
+
+    # Ensure target directory exists
+    `mkdir -p #{target_repo_path}/lib/tasks`
+
+    # Copy required files
+    `cp lib/tasks/ecosystems.rake #{target_repo_path}/lib/tasks/`
+
+    puts "Shared assets setup completed successfully."
   end
 end

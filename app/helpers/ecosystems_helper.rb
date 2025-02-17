@@ -1,5 +1,9 @@
 module EcosystemsHelper
   
+  def github_repo_name
+    ENV['GITHUB_REPO_NAME'] || request.subdomains.first || Rails.application.class.module_parent_name.underscore
+  end
+
   def ecosystems_services
     {
       "Data" => [

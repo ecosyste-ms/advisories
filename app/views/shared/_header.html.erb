@@ -13,52 +13,20 @@
       </div>
       
       <div id="header__global__menu" class="collapse header__global__menu">
-        <div class="header__global__menu__category">
-          <h2 class="header__global__menu__category-title">Data</h2>
-          <ul class="header__global__menu__category-links">
-            <li><a href="#">Packages</a></li>
-            <li><a href="#">Repositories</a></li>
-            <li><a href="#">Advisories</a></li>
-          </ul>
-        </div>
-        <div class="header__global__menu__category">
-          <h2 class="header__global__menu__category-title">Tools</h2>
-          <ul class="header__global__menu__category-links">
-            <li><a href="#">Dependency Parser</a></li>
-            <li><a href="#">Dependency Resolver</a></li>
-            <li><a href="#">SBOM Parser</a></li>
-            <li><a href="#">License Parser</a></li>
-            <li><a href="#">Digest</a></li>
-            <li><a href="#">Archives</a></li>
-            <li><a href="#">Diff</a></li>
-            <li><a href="#">Summary</a></li>
-          </ul>
-        </div>
-        <div class="header__global__menu__category">
-          <h2 class="header__global__menu__category-title">Indexes</h2>
-          <ul class="header__global__menu__category-links">
-            <li><a href="#">Timeline</a></li>
-            <li><a href="#">Commits</a></li>
-            <li><a href="#">Issues</a></li>
-            <li><a href="#">Sponsors</a></li>
-            <li><a href="#">Docker</a></li>
-            <li><a href="#">Open Collective</a></li>
-          </ul>
-        </div>
-        <div class="header__global__menu__category">
-          <h2 class="header__global__menu__category-title">Applications</h2>
-          <ul class="header__global__menu__category-links">
-            <li><a href="#">Funds</a></li>
-          </ul>
-        </div>
-        <div class="header__global__menu__category">
-          <h2 class="header__global__menu__category-title">Experiments</h2>
-          <ul class="header__global__menu__category-links">
-            <li><a href="#">OST</a></li>
-            <li><a href="#">Papers</a></li>
-            <li><a href="#">Awesome</a></li>
-          </ul>
-        </div>
+        <% ecosystems_services.each do |category, services| %>
+          <div class="header__global__menu__category">
+            <h2 class="header__global__menu__category-title"><%= category %></h2>
+            <ul class="header__global__menu__category-links">
+              <% services.each do |service| %>
+                <li>
+                  <a href="<%= service[:url] %>" target="_blank" class="<%= 'active' if service[:url] == request.base_url %>">
+                    <%= service[:name] %>
+                  </a>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
       </div>
     </div>
   </div>

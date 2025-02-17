@@ -272,14 +272,109 @@ body {
   font-optical-sizing: auto;
 }
 
-.header {
+
+.header__global {
+  width: 100%;
+}
+
+.header__global__site-logo-wrapper {
   h1 {
-    font-size: 1em;
-    line-height: 1;
+    font-size: 0;
+    line-height: 0;
+    margin: 0;
   }
 }
 
-.navigation-bar {
+.site-logo {
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+
+  background-image: asset-url('ecosystems-logo.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  display: inline-block;
+
+  width: 155px;
+  height: 30px;
+}
+
+.site-logo--white {
+	background-image: asset-url('ecosystems-logo-white.svg');
+  width: 246px;
+  height: 50px;
+}
+
+.site-name {
+  line-height: 50px;
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 40px;
+  font-weight: 400;
+  color: $color-purple;
+  padding-top: 70px;
+}
+
+.header__global__menu {
+  will-change: scale;
+}
+
+.header__global__menu-link {
+  @include spesh-link();
+}
+
+.header__global__menu__category {
+  margin-bottom: 0.5rem;
+}
+
+.header__global__menu__category-title {
+  display: inline;
+  @include font-size(1rem);
+}
+
+.header__global__menu__category-links {
+  @include font-size(1rem);
+  display: inline;
+  padding-left: 1rem;
+  li {
+    display: inline;
+    margin-right: 1rem;
+  }
+  a {
+    color: $color-black;
+    &:hover,
+    &:active,
+    &:focus {
+      color: $color-purple-dark;
+    }
+  }
+}
+
+.header__local {
+  border-top: 1px solid $color-grey;
+  margin-top: 2rem;
+}
+
+.header__local__sitename {
+  color: $color-purple-dark;
+}
+
+.header__local__homelink {
+  color: $color-purple-dark;
+  text-decoration: none;
+  &:hover,
+  &:active,
+  &:focus {
+    color: $color-black;
+  }
+}
+
+.header__local__description {
+  @include font-size(1rem);
+}
+
+.header__local__navigation {
   a {
     @include spesh-link();
     padding: 0;
@@ -290,30 +385,10 @@ body {
 }
 
 .nav {
-  @include media-breakpoint-up(md) {
+  @include media-breakpoint-up(lg) {
     justify-content: end;
   }
 }
-
-.site-logo {
-  font-size: 0;
-  line-height: 0;
-  color: transparent;
-
-  background-image: asset-url('eco-systems-funds-logo.svg');
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  display: inline-block;
-
-  width: 350px;
-  height: 50px; 
-}
-
-.site-logo--white {
-  background-image: asset-url('eco-systems-funds-logo-white.svg');
-}
-
 
 .dark-section {
   background-color: $color-purple-dark;

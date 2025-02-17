@@ -18,22 +18,105 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
   </head>
   <body>
+	<header class="header">
+		<div class="header__global">
+			<div class="container">
+			<div class="row mb-4">
+				<div class="col-md-6 header__global__site-logo-wrapper">
+					<h1>
+						<a class="site-logo" href="/" >ecosyste.ms</a>
+					</h1>
+				</div>
+				<div class="col-md-6 text-end	">
+					<a class="header__global__menu-link" role="button" aria-expanded="false" aria-controls="header__global__menu" data-bs-toggle="collapse" href="#header__global__menu"><strong>ecosyste.ms</strong> services</a>
+				</div>
+			</div>
+				
+				<div id="header__global__menu" class="collapse header__global__menu">
+					<div class="header__global__menu__category">
+						<h2 class="header__global__menu__category-title">Data</h2>
+							<ul class="header__global__menu__category-links">
+								<li><a href="#">Packages</a></li>
+								<li><a href="#">Repositories</a></li>
+								<li><a href="#">Advisories</a></li>
+							</ul>
+					</div>
+					<div class="header__global__menu__category">
+						<h2 class="header__global__menu__category-title">Tools</h2>
+						<ul class="header__global__menu__category-links">
+							<li><a href="#">Dependency Parser</a></li>
+							<li><a href="#">Dependency Resolver</a></li>
+							<li><a href="#">SBOM Parser</a></li>
+							<li><a href="#">License Parser</a></li>
+							<li><a href="#">Digest</a></li>
+							<li><a href="#">Archives</a></li>
+							<li><a href="#">Diff</a></li>
+							<li><a href="#">Summary</a></li>
+						</ul>
+					</div>
+					<div class="header__global__menu__category">
+						<h2 class="header__global__menu__category-title">Indexes</h2>
+						<ul class="header__global__menu__category-links">
+							<li><a href="#">Timeline</a></li>
+							<li><a href="#">Commits</a></li>
+							<li><a href="#">Issues</a></li>
+							<li><a href="#">Sponsors</a></li>
+							<li><a href="#">Docker</a></li>
+							<li><a href="#">Open Collective</a></li>
+						</ul>
+					</div>
+					<div class="header__global__menu__category">
+					<h2 class="header__global__menu__category-title">Applications</h2>
+					<ul class="header__global__menu__category-links">
+						<li><a href="#">Funds</a></li>
+					</ul>
+				</div>
+				<div class="header__global__menu__category">
+					<h2 class="header__global__menu__category-title">Experiments</h2>
+					<ul class="header__global__menu__category-links">
+						<li><a href="#">OST</a></li>
+						<li><a href="#">Papers</a></li>
+						<li><a href="#">Awesome</a></li>
+					</ul>
+				</div>
+				</div>
+			</div>
+		</div>
+		<div class="header__local pt-3">
+			<div class="container">
+				<div class="row">
+					<div class="col-lg-3 col-md-4">
+						<h1 class="h3 header__local__sitename">
+							<a class="header__local__homelink" href="/">Advisories</a>
+						</h1>
+					</div>
+					<div class="col-lg-5 col-md-8">
+						<p class="header__local__description">
+							An open API service providing security vulnerability metadata for many open source software ecosystems. 
+						</p>
+					</div>
+					<div class="col-lg-4 col-md-12">
+						<nav class="header__local__navigation">
+							<ul class="nav">
+									<li class="nav-item">
+										<a class="nav-link" href="/about">About</a>
+									</li>
+									<li class="nav-item">
+										<a class="nav-link" href="/overview">How it works</a>
+									</li>
+									<li class="nav-item">
+										<a class="nav-link" href="/faq">FAQ</a>
+									</li>
+								</ul>
+						</nav>
+					</div>
+				</div>
+			</div>
+		</div>
+	</header>
     <div class="main">
-      <div class="container">
-        <header class="header">
-          <h1>
-            <a class="site-logo" href="/" >ecosyste.ms advisories</a>
-          </h1>
-        </header>
-
-        <div class="col-lg-8">
-          <p class="lead mb-4">
-            An open API service providing security vulnerability metadata for many open source software ecosystems. 
-          </p>
-        </div>
-      </div>
+      
         
-      </div>
 
       <%= yield %>
     </div>

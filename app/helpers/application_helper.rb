@@ -25,6 +25,14 @@ module ApplicationHelper
   end
 
   def meta_description
-    @meta_description || 'An open API service providing security vulnerability metadata for many open source software ecosystems.'
+    @meta_description || app_description
+  end
+
+  def app_name
+    "Advisories"
+  end
+
+  def app_description
+    'An open API service providing security vulnerability metadata for many open source software ecosystems.'
   end
 end

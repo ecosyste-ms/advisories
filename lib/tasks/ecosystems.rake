@@ -64,5 +64,17 @@ namespace :ecosystems do
     `cp lib/tasks/ecosystems.rake #{target_repo_path}/lib/tasks/`
 
     puts "Shared assets setup completed successfully."
+
+    # add app_name and app_description to the target repo
+    puts "Add the following to app/helpers/application_helper.rb in the target repo:"
+    puts "module ApplicationHelper"
+    puts "  def app_name"
+    puts "    \"AppName\""
+    puts "  end"
+    puts ""
+    puts "  def app_description"
+    puts "    \"Description of the app.\""
+    puts "  end"
+    puts "end"
   end
 end

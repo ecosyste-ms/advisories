@@ -20,7 +20,10 @@
         <span class="me-4 mb-2 advisory-header__meta__text">CVSS: <%= @advisory.cvss_score %></span>
         <% end %>
         <% if @advisory.epss_percentage %>
-        <span class="me-4 advisory-header__meta__text">EPSS: <%= @advisory.epss_percentage %></span>
+          <span class="me-4 advisory-header__meta__text">EPSS: <%= @advisory.epss_percentage %>% (<%= @advisory.epss_percentile %> Percentile)</span>
+        <% end %>
+        <% if @advisory.epss_percentile %>
+          <span class="me-4 advisory-header__meta__text">EPSS: </span>
         <% end %>
         <span class="advisory-header__meta__text">Blast Radius: <%= @advisory.blast_radius.round(1) %></span>
       </div>

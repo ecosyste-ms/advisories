@@ -91,7 +91,7 @@ GEM
       bootstrap-icons (~> 1)
       rails (>= 7.0)
     builder (3.3.0)
-    chartkick (5.1.3)
+    chartkick (5.1.4)
     commonmarker (2.0.4)
       rb_sys (~> 0.9)
     commonmarker (2.0.4-aarch64-linux)
@@ -208,20 +208,20 @@ GEM
     net-smtp (0.5.1)
       net-protocol
     nio4r (2.7.4)
-    nokogiri (1.18.2)
+    nokogiri (1.18.3)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
-    nokogiri (1.18.2-aarch64-linux-musl)
+    nokogiri (1.18.3-aarch64-linux-musl)
       racc (~> 1.4)
-    nokogiri (1.18.2-arm-linux-gnu)
+    nokogiri (1.18.3-arm-linux-gnu)
       racc (~> 1.4)
-    nokogiri (1.18.2-arm-linux-musl)
+    nokogiri (1.18.3-arm-linux-musl)
       racc (~> 1.4)
-    nokogiri (1.18.2-arm64-darwin)
+    nokogiri (1.18.3-arm64-darwin)
       racc (~> 1.4)
-    nokogiri (1.18.2-x86_64-darwin)
+    nokogiri (1.18.3-x86_64-darwin)
       racc (~> 1.4)
-    nokogiri (1.18.2-x86_64-linux-gnu)
+    nokogiri (1.18.3-x86_64-linux-gnu)
       racc (~> 1.4)
     octokit (9.2.0)
       faraday (>= 1, < 3)
@@ -338,7 +338,7 @@ GEM
       actionpack (>= 6.1)
       activesupport (>= 6.1)
       sprockets (>= 3.0.0)
-    stringio (3.1.3)
+    stringio (3.1.4)
     thor (1.3.2)
     tilt (2.6.0)
     timeout (0.4.3)
@@ -444,7 +444,7 @@ CHECKSUMS
   bootstrap-icons (1.0.14) sha256=b289aa9b6ce012dd45c9c1c64f06f89f006f792dbedcc6c6f3405e3212bd6e5a
   bootstrap-icons-helper (2.0.2) sha256=ad8afdfe80806c29831a989cd1cb703d88a629b5297d5c8e61cfcbc91f4d8327
   builder (3.3.0) sha256=497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f
-  chartkick (5.1.3) sha256=e98e01bd0ef256c1b949c574d997f3c82aeb382577738b52dbe133c18346a50b
+  chartkick (5.1.4) sha256=893b2b5e6321a917f4ada2db082e0cb81a247cdad014e0b0a37aeb9287c10be5
   commonmarker (2.0.4) sha256=3dd74c8081a46f992a1d9b7fac796583468d41dd8ea6806a84ca08ff05ae13cf
   commonmarker (2.0.4-aarch64-linux) sha256=ddb421a7e97c4b5c6abdc8302492389e612501e33c550f72258f57c4a62bbfdc
   commonmarker (2.0.4-arm64-darwin) sha256=39ecc81b246dbd24d6aaf83288581a364f142244d3963d10dd984e33b09d9dec
@@ -508,13 +508,13 @@ CHECKSUMS
   net-protocol (0.2.2) sha256=aa73e0cba6a125369de9837b8d8ef82a61849360eba0521900e2c3713aa162a8
   net-smtp (0.5.1) sha256=ed96a0af63c524fceb4b29b0d352195c30d82dd916a42f03c62a3a70e5b70736
   nio4r (2.7.4) sha256=d95dee68e0bb251b8ff90ac3423a511e3b784124e5db7ff5f4813a220ae73ca9
-  nokogiri (1.18.2) sha256=93791cfb33186fe077eb9e1b8a6855b5621e328f81f565334572fa398366f8bf
-  nokogiri (1.18.2-aarch64-linux-musl) sha256=99bcea596a80eaee99f2bae2596275641ea688262c1da32b4e90db6159e86477
-  nokogiri (1.18.2-arm-linux-gnu) sha256=6fb0246b69f2c589a69254e82bc2a40aa238c4f977fd7903e283341a92935729
-  nokogiri (1.18.2-arm-linux-musl) sha256=dcdd4d10ed2743f0d8c887825700c3a8506aea1aa415917ac50ccc01597c51a3
-  nokogiri (1.18.2-arm64-darwin) sha256=8288ec7a296e2510ca9bd053c0c5989f11260f8c07bc3e9afbafa536f7077281
-  nokogiri (1.18.2-x86_64-darwin) sha256=7fca165e5ee87e9b6b3f1377180376afc0c8652ed2a3d761f472f0e3d3a1c651
-  nokogiri (1.18.2-x86_64-linux-gnu) sha256=9330ced4a976604865c2a76ce158e2bc608fa83999552e85a32ec06f85f427db
+  nokogiri (1.18.3) sha256=6b9fc3b14fd0cedd21f6cad8cf565123ba7401e56b5d0aec180c23cdca28fd5a
+  nokogiri (1.18.3-aarch64-linux-musl) sha256=acb256bb3213a180b1ed84a49c06d5d4c6c1da26f33bc9681f1fece4dab09a79
+  nokogiri (1.18.3-arm-linux-gnu) sha256=37b73a55e0d1e8a058a24abb16868903e81cb4773049739c532b864f87236b1b
+  nokogiri (1.18.3-arm-linux-musl) sha256=09407970cd13736cf87e975fae69c13e1178bab0313d07b35580ee4dd3650793
+  nokogiri (1.18.3-arm64-darwin) sha256=ce088965cd424b8e752d82087dcf017069d55791f157098ed1f671d966857610
+  nokogiri (1.18.3-x86_64-darwin) sha256=d729406bb5a7b1bbe7ed3c0922336dd2c46085ed444d6de2a0a4c33950a4edea
+  nokogiri (1.18.3-x86_64-linux-gnu) sha256=3c7ad5cee39855ed9c746065f39b584b9fd2aaff61df02d0f85ba8d671bbe497
   octokit (9.2.0) sha256=4fa47ff35ce654127edf2c836ab9269bcc8829f5542dc1e86871f697ce7f4316
   ostruct (0.6.1) sha256=09a3fb7ecc1fa4039f25418cc05ae9c82bd520472c5c6a6f515f03e4988cb817
   packageurl-ruby (0.1.0) sha256=3edfa1ce355200fde2a1d2cf625dafdf28d0cc9472eb99493325bf3d88e9daa3
@@ -563,7 +563,7 @@ CHECKSUMS
   spdx (2.0.12) sha256=c44ad4b9fbfa8138bfc1e8065fc7cf531207b63dccd2b63b0b61df7c5bdf80a6
   sprockets (4.2.1) sha256=951b13dd2f2fcae840a7184722689a803e0ff9d2702d902bd844b196da773f97
   sprockets-rails (3.5.2) sha256=a9e88e6ce9f8c912d349aa5401509165ec42326baf9e942a85de4b76dbc4119e
-  stringio (3.1.3) sha256=1eedb8369ee99a9a0edfdacea95c72d647feb8ce844427c150bd641e1797abc8
+  stringio (3.1.4) sha256=7dd68f6f1a88610817c21f6d926dbf36e1fc585d3869fcd4a56c1f3210591d70
   thor (1.3.2) sha256=eef0293b9e24158ccad7ab383ae83534b7ad4ed99c09f96f1a6b036550abbeda
   tilt (2.6.0) sha256=263d748466e0d83e510aa1a2e2281eff547937f0ef06be33d3632721e255f76b
   timeout (0.4.3) sha256=9509f079b2b55fe4236d79633bd75e34c1c1e7e3fb4b56cb5fda61f80a0fe30e

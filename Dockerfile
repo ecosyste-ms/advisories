@@ -18,6 +18,7 @@ RUN apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get -yq dist-upgrad
   libpq-dev \
   tzdata \
   libclang-dev \
+  libyaml-dev \
   git \
  && gem update --system \
  && gem install bundler foreman \

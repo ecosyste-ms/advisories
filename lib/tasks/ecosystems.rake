@@ -39,13 +39,18 @@ namespace :ecosystems do
     `cp #{temp_rake_file} #{ecosystems_rake_path}`
     `cp #{temp_dir}/app/views/shared/_header.html.erb app/views/shared/` 
     `cp #{temp_dir}/app/views/shared/_footer.html.erb app/views/shared/`
-    `cp #{temp_dir}/app/views/shared/_menu.html.erb app/views/shared/`
     `cp #{temp_dir}/app/views/layouts/application.html.erb app/views/layouts/`
     `cp #{temp_dir}/app/assets/stylesheets/ecosystems.scss app/assets/stylesheets/`
     `cp #{temp_dir}/app/helpers/ecosystems_helper.rb app/helpers/`
     `cp -r #{temp_dir}/app/assets/images/. app/assets/images/`
     `cp -r #{temp_dir}/public/. public/`
 
+    # Copy _menu.html.erb only if it does not already exist
+    menu_file = "app/views/shared/_menu.html.erb"
+    unless File.exist?(menu_file)
+      `cp #{temp_dir}/app/views/shared/_menu.html.erb #{menu_file}`
+    end
+    
     # Cleanup
     `rm -rf #{temp_dir}`
 

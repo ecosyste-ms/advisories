@@ -92,12 +92,12 @@ GEM
       rails (>= 7.0)
     builder (3.3.0)
     chartkick (5.1.4)
-    commonmarker (2.0.4)
+    commonmarker (2.1.0)
       rb_sys (~> 0.9)
-    commonmarker (2.0.4-aarch64-linux)
-    commonmarker (2.0.4-arm64-darwin)
-    commonmarker (2.0.4-x86_64-darwin)
-    commonmarker (2.0.4-x86_64-linux)
+    commonmarker (2.1.0-aarch64-linux)
+    commonmarker (2.1.0-arm64-darwin)
+    commonmarker (2.1.0-x86_64-darwin)
+    commonmarker (2.1.0-x86_64-linux)
     concurrent-ruby (1.3.5)
     connection_pool (2.5.0)
     counter_culture (3.8.2)
@@ -445,11 +445,11 @@ CHECKSUMS
   bootstrap-icons-helper (2.0.2) sha256=ad8afdfe80806c29831a989cd1cb703d88a629b5297d5c8e61cfcbc91f4d8327
   builder (3.3.0) sha256=497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f
   chartkick (5.1.4) sha256=893b2b5e6321a917f4ada2db082e0cb81a247cdad014e0b0a37aeb9287c10be5
-  commonmarker (2.0.4) sha256=3dd74c8081a46f992a1d9b7fac796583468d41dd8ea6806a84ca08ff05ae13cf
-  commonmarker (2.0.4-aarch64-linux) sha256=ddb421a7e97c4b5c6abdc8302492389e612501e33c550f72258f57c4a62bbfdc
-  commonmarker (2.0.4-arm64-darwin) sha256=39ecc81b246dbd24d6aaf83288581a364f142244d3963d10dd984e33b09d9dec
-  commonmarker (2.0.4-x86_64-darwin) sha256=455782dfc9af1ca92ec84ac8ac3b685b6f3d1d0ef8f0c9290070b7976e3f4acc
-  commonmarker (2.0.4-x86_64-linux) sha256=34043c15857f0ef45f3f55ff9b0a5ee8fac395682c373ab39275c4a2a0a03400
+  commonmarker (2.1.0) sha256=9a60aec70e44ada490ce36d8aa97d0b7b7dd84b8d42d0c994d812ba121ab3547
+  commonmarker (2.1.0-aarch64-linux) sha256=d5c539d712bdc2e4097df88bf2df8331707e888ab2c799b023b7a86a4c371d1a
+  commonmarker (2.1.0-arm64-darwin) sha256=4ea78d2a17315240d2fad20815e23d53fdcfe4b9590c11f1169ba4dadb2367d3
+  commonmarker (2.1.0-x86_64-darwin) sha256=6ffbbf9095d89adbf1f1be68f4a37e144b3d807d66881ddae16debf65b0cc6a5
+  commonmarker (2.1.0-x86_64-linux) sha256=0b99d83399a038914d8cd462d95c362d862882fe23da7eecc95d727e8c8bc217
   concurrent-ruby (1.3.5) sha256=813b3e37aca6df2a21a3b9f1d497f8cbab24a2b94cab325bffe65ee0f6cbebc6
   connection_pool (2.5.0) sha256=233b92f8d38e038c1349ccea65dd3772727d669d6d2e71f9897c8bf5cd53ebfc
   counter_culture (3.8.2) sha256=24d038740fc9e5546cda2b8a17e83e7778ab73bcc959b7a3bd807e4cf6250072

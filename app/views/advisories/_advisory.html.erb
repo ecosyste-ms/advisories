@@ -1,7 +1,7 @@
 <div class="card mb-4 pb-4 advisory-listing">
   <div class="card-body p-0">
     <% if advisory.severity %>
-      <span class='advisory-listing__badge badge badge-<%= severity_class(advisory.severity)%>'>
+      <span class='advisory-listing__badge badge <%= severity_class(advisory.severity)%>'>
         <%= advisory.severity.humanize %>
       </span>
     <% end %>

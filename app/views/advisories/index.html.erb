@@ -45,7 +45,7 @@
         <% @severities.each do |severity,count| %>
           <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(request.params.merge(severity: (params[:severity] == severity ? nil : severity), page: nil)) %>">
             <%= severity.humanize %>
-            <span class="badge badge-light rounded-pill"><%= number_with_delimiter count %></span>
+            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
           </a>
         <% end %>
       </div>
@@ -55,7 +55,7 @@
         <% @ecosystems.each do |ecosystem,count| %>
           <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:ecosystem] == ecosystem %>" href="<%= url_for(request.params.merge(ecosystem: (params[:ecosystem] == ecosystem ? nil : ecosystem), page: nil)) %>">
             <%= ecosystem %>
-            <span class="badge badge-light rounded-pill"><%= number_with_delimiter count %></span>
+            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
           </a>
         <% end %>
       </div>
@@ -65,7 +65,7 @@
         <% @packages.first(200).each do |package,count| %>
           <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:package_name] == package['package_name'] %>" href="<%= url_for(request.params.merge(package_name: (params[:package_name] == package['package_name'] ? nil : package['package_name']), page: nil)) %>">
             <%= package['package_name'] %>
-            <span class="badge badge-light rounded-pill"><%= number_with_delimiter count %></span>
+            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
           </a>
         <% end %>
       </div>
@@ -76,7 +76,7 @@
           <% next if repository_url.blank? %>
           <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:repository_url] == repository_url %>" href="<%= url_for(repository_url: (params[:repository_url] == repository_url ? nil : repository_url), page: nil) %>">
             <%= repository_url %>
-            <span class="badge badge-light  rounded-pill"><%= number_with_delimiter count%></span>
+            <span class="badge bg-primary  rounded-pill"><%= number_with_delimiter count%></span>
           </a>
         <% end %>
       </div>

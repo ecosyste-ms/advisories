@@ -4,15 +4,15 @@ module ApplicationHelper
   def severity_class(severity)
     case severity.downcase
     when 'low'
-      'success'
+      'bg-success'
     when 'moderate'
-      'warning'
+      'text-bg-warning'
     when 'high'
-      'danger'
+      'bg-danger'
     when 'critical'
-      'dark'
+      'bg-dark'
     else
-      'info'
+      'text-bg-info'
     end
   end
 

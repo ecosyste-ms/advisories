@@ -14,53 +14,6 @@ pre code.hljs{
   }
 }
 
-.advisory-listing {
-  border: 0;
-  border-radius: 0;
-  border-bottom: 3px solid $color-purple-light;
-  padding: 0;
-}
-
-.advisory-listing
-
-.advisory-listing__title {
-	@include font-size(1rem);
-  a {
-    text-decoration: none;
-    color: $color-black;
-  }
-}
-
-.advisory-listing__id {
-	font-weight: normal;
-	color: $color-grey-dark;
-	@include font-size(0.875rem);
-}
-
-.advisory-listing__details {
-  @include font-size(0.875rem);
-}
-
-.advisory-listing__time {
-  margin-top: 0.3888888889; //gross number but it aligns the baseline with the severity badge
-  @include font-size(0.7777777778rem);
-}
-
-.listing-filters {
-  .list-group-item {
-    @include font-size(0.875rem);
-    border-color: $color-grey;
-    word-break: break-word;
-  }
-}
-
-.listing-controls {
-  .dropdown-item.active,
-  .dropdown-item:active {
-    background-color: $color-purple;
-  }
-}
-
 .advisory-header__meta__text {
   @include font-size(1rem);
   line-height: 1.4rem;

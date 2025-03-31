@@ -26,8 +26,8 @@ module Sources
           updated_at: advisory[:node][:advisory][:updatedAt],
           withdrawn_at: advisory[:node][:advisory][:withdrawnAt],
           classification: advisory[:node][:advisory][:classification],
-          cvss_score: advisory[:node][:advisory][:cvss][:score],
-          cvss_vector: advisory[:node][:advisory][:cvss][:vectorString],
+          cvss_score: advisory[:node][:advisory][:cvssSeverities][:cvssV4][:score],
+          cvss_vector: advisory[:node][:advisory][:cvssSeverities][:cvssV4][:vectorString],
           references: advisory[:node][:advisory][:references].map { |r| r[:url] },
           source_kind: 'github',
           identifiers: advisory[:node][:advisory][:identifiers].map { |i|i[:value] },
@@ -101,9 +101,11 @@ module Sources
                   publishedAt
                   updatedAt
                   withdrawnAt
-                  cvss{
-                    score
-                    vectorString
+                  cvssSeverities{
+                    cvssV4 {
+                      score
+                      vectorString
+                    }
                   }
                   classification
                   epss{

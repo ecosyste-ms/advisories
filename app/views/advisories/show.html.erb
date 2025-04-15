@@ -180,6 +180,8 @@
           <h3>Withdrawn</h3>
           <p><span title="<%= @advisory.withdrawn_at %>"><%= time_ago_in_words @advisory.withdrawn_at %> ago</span></p>
         <% end %>
+        <h2>API</h2>
+        <p><%= link_to "JSON", api_v1_advisory_url(@advisory) %></p>
       </div>
 		
 		</div>

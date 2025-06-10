@@ -38,3 +38,5 @@ data
 *.dump
 *.csv
 *.sql
+
+.claude

@@ -6,6 +6,7 @@ require 'webmock/minitest'
 require 'mocha/minitest'
 
 class ActiveSupport::TestCase
+  include FactoryBot::Syntax::Methods
   Shoulda::Matchers.configure do |config|
     config.integrate do |with|
       with.test_framework :minitest

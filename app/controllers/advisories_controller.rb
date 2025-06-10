@@ -5,10 +5,10 @@ class AdvisoriesController < ApplicationController
     @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
-    @ecosystems = scope.select(:packages).map{|a| a.packages.map{|p| p['ecosystem'] } }.flatten.inject(Hash.new(0)) { |h, e| h[e] += 1 ; h }.to_a.sort_by{|a| a[1]}.reverse
+    @ecosystems = scope.ecosystem_counts
     scope = scope.ecosystem(params[:ecosystem]) if params[:ecosystem].present?
   
-    @packages = scope.select(:packages).map{|a| a.packages.map{|p| p.except("versions") } }.flatten.inject(Hash.new(0)) { |h, e| h[e] += 1 ; h }.to_a.sort_by{|a| a[1]}.reverse 
+    @packages = scope.package_counts 
     scope = scope.package_name(params[:package_name]) if params[:package_name].present?
 
     @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse

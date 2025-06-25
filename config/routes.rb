@@ -19,6 +19,7 @@ Rails.application.routes.draw do
   get :recent_advisories_data, to: 'advisories#recent_advisories_data'
 
   get '/batscope', to: 'batscope#index'
+  get '/batscope/owners', to: 'batscope#owners'
 
   resources :exports, only: [:index], path: 'open-data'
 

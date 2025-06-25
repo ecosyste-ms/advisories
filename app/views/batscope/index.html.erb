@@ -14,6 +14,17 @@
     <div class="col-lg-12">
       <div class="listing-controls p-3 mb-5 rounded">
         
+        <div class="row mb-3">
+          <div class="col-12">
+            <div class="btn-group" role="group">
+              <%= link_to "View by Owner", batscope_owners_path(params.permit(:period, :sort, :critical, :ecosystem)), 
+                  class: "btn btn-sm btn-outline-primary" %>
+              <%= link_to "View by Package", batscope_path(params.permit(:period, :sort, :critical, :ecosystem)), 
+                  class: "btn btn-sm btn-primary" %>
+            </div>
+          </div>
+        </div>
+        
         <div class="row">
           <div class="col-md-3">
             <label class="form-label">Time Period</label>
@@ -72,7 +83,7 @@
                 <%= hidden_field_tag :period, params[:period] %>
                 <%= hidden_field_tag :sort, params[:sort] %>
                 <%= hidden_field_tag :ecosystem, params[:ecosystem] %>
-                <%= check_box_tag :critical, 'true', params[:critical] == 'true',
+                  <%= check_box_tag :critical, 'true', params[:critical] == 'true',
                     class: 'form-check-input',
                     onchange: 'this.form.submit()' %>
                 <label class="form-check-label" for="critical">
@@ -104,81 +115,81 @@
       </div>
 
       <% if @packages.any? %>
-        <div class="table-responsive">
-          <table class="table table-hover table-sm table-striped">
-            <thead>
-              <tr>
-                <th>Package</th>
-                <th>Ecosystem</th>
-                <th>Owner</th>
-                <th>Dwlds</th>
-                <th>Dpdnt Packages</th>
-                <th>Dpdnt Repos</th>
-                <th>Important</th>
-                <th>First Advisory</th>
-                <th>Severity</th>
-                <th>Published</th>
-                <th>CVSS</th>
-                <th>EPSS %</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% @packages.each do |package| %>
-                <% first_advisory = package.advisories.order(:created_at).first %>
+          <div class="table-responsive">
+            <table class="table table-hover table-sm table-striped">
+              <thead>
                 <tr>
-                  <td>
-                    <%= link_to package.name, package.packages_url, target: '_blank' %>
-                  </td>
-                  <td>
-                    <%= link_to package.ecosystem, package.registry_url, target: '_blank' %>
-                  </td>
-                  <td>
-                    <%= (link_to package.owner, package.owner_url, target: '_blank') if package.owner_url.present? %>
-                  </td>
-                  <td><%= number_to_human(package.downloads, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
-                  <td><%= number_to_human(package.dependent_packages_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
-                  <td><%= number_to_human(package.dependent_repos_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
-                  <td>
-                    <% if package.critical %>
-                      <span title="Important package" class="text-success" style="font-size: 1.2em;">✅</span>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% if first_advisory %>
-                      <%= link_to truncate(first_advisory.cve || first_advisory.to_s, length: 15), advisory_path(first_advisory) %>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% if first_advisory&.severity %>
-                      <span class="badge <%= severity_class(first_advisory.severity) %>">
-                        <%= first_advisory.severity.humanize %>
-                      </span>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% if first_advisory&.published_at %>
-                      <%= first_advisory.published_at.strftime('%Y-%m-%d') %>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% if first_advisory&.cvss_score %>
-                      <%= first_advisory.cvss_score.round(1) %>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% if first_advisory&.epss_percentage %>
-                      <%= (first_advisory.epss_percentage * 100).round(2) %>%
-                    <% end %>
-                  </td>
+                  <th>Package</th>
+                  <th>Ecosystem</th>
+                  <th>Owner</th>
+                  <th>Dwlds</th>
+                  <th>Dpdnt Packages</th>
+                  <th>Dpdnt Repos</th>
+                  <th>Important</th>
+                  <th>First Advisory</th>
+                  <th>Severity</th>
+                  <th>Published</th>
+                  <th>CVSS</th>
+                  <th>EPSS %</th>
                 </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% else %>
-        <div class="alert alert-info">
-          No packages found with their first advisory in the selected time period.
-        </div>
+              </thead>
+              <tbody>
+                <% @packages.each do |package| %>
+                  <% first_advisory = package.advisories.order(:created_at).first %>
+                  <tr>
+                    <td>
+                      <%= link_to package.name, package.packages_url, target: '_blank' %>
+                    </td>
+                    <td>
+                      <%= link_to package.ecosystem, package.registry_url, target: '_blank' %>
+                    </td>
+                    <td>
+                      <%= (link_to package.owner, package.owner_url, target: '_blank') if package.owner_url.present? %>
+                    </td>
+                    <td><%= number_to_human(package.downloads, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
+                    <td><%= number_to_human(package.dependent_packages_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
+                    <td><%= number_to_human(package.dependent_repos_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
+                    <td>
+                      <% if package.critical %>
+                        <span title="Important package" class="text-success" style="font-size: 1.2em;">✅</span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if first_advisory %>
+                        <%= link_to truncate(first_advisory.cve || first_advisory.to_s, length: 15), advisory_path(first_advisory) %>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if first_advisory&.severity %>
+                        <span class="badge <%= severity_class(first_advisory.severity) %>">
+                          <%= first_advisory.severity.humanize %>
+                        </span>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if first_advisory&.published_at %>
+                        <%= first_advisory.published_at.strftime('%Y-%m-%d') %>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if first_advisory&.cvss_score %>
+                        <%= first_advisory.cvss_score.round(1) %>
+                      <% end %>
+                    </td>
+                    <td>
+                      <% if first_advisory&.epss_percentage %>
+                        <%= (first_advisory.epss_percentage * 100).round(2) %>%
+                      <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% else %>
+          <div class="alert alert-info">
+            No packages found with their first advisory in the selected time period.
+          </div>
       <% end %>
     </div>
   </div>

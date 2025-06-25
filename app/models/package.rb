@@ -30,6 +30,7 @@ class Package < ApplicationRecord
     self.description = json['description']
     self.registry_url = json['registry_url']
     self.versions_count = json['versions_count']
+    self.critical = json['critical'] || false
     save
 
     # download version numbers

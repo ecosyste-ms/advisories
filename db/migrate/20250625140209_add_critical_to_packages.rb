@@ -1,0 +1,5 @@
+class AddCriticalToPackages < ActiveRecord::Migration[8.0]
+  def change
+    add_column :packages, :critical, :boolean, default: false
+  end
+end

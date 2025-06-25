@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2024_12_03_120748) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_25_140209) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -65,6 +65,7 @@ ActiveRecord::Schema[8.0].define(version: 2024_12_03_120748) do
     t.string "version_numbers", default: [], array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "critical", default: false
   end
 
   create_table "registries", force: :cascade do |t|

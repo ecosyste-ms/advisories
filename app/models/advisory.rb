@@ -18,6 +18,7 @@ class Advisory < ApplicationRecord
   before_save :set_repository_url
   before_save :set_blast_radius
   after_create :sync_packages
+  after_commit :update_package_advisory_counts
 
   def to_s
     uuid
@@ -216,5 +217,9 @@ class Advisory < ApplicationRecord
 
   def cve
     identifiers.find{|id| id.start_with?('CVE-') }
+  end
+
+  def update_package_advisory_counts
+    package_records.each(&:update_advisories_count)
   end
 end

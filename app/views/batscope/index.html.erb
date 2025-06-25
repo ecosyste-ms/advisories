@@ -75,7 +75,7 @@
                     class: 'form-check-input',
                     onchange: 'this.form.submit()' %>
                 <label class="form-check-label" for="critical">
-                  Critical packages only
+                  Important packages only
                 </label>
               <% end %>
             </div>
@@ -91,7 +91,7 @@
                 in <strong><%= @ecosystem %></strong>
               <% end %>
               <% if @critical_only %>
-                (<strong>critical only</strong>)
+                (<strong>important only</strong>)
               <% end %>
               sorted by <strong><%= @sort.humanize.downcase %></strong>
               <% if params.slice(:period, :sort, :critical, :ecosystem).values.any?(&:present?) %>
@@ -113,7 +113,7 @@
                 <th>Downloads</th>
                 <th>Dependent Packages</th>
                 <th>Dependent Repos</th>
-                <th>Critical</th>
+                <th>Important?</th>
                 <th>First Advisory</th>
                 <th>Severity</th>
                 <th>Published</th>
@@ -139,7 +139,7 @@
                   <td><%= number_to_human(package.dependent_repos_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
                   <td>
                     <% if package.critical %>
-                      <span class="badge bg-danger">Critical</span>
+                      <span title="Important package" class="text-success" style="font-size: 1.2em;">✅</span>
                     <% end %>
                   </td>
                   <td>

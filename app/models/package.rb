@@ -13,7 +13,7 @@ class Package < ApplicationRecord
     "https://packages.ecosyste.ms/registries/#{registry.name}/packages/#{name}"
   end
 
-  def owner
+  def extract_owner
     repository_url.to_s.split('/')[3] if repository_url.present?
   end
 
@@ -44,6 +44,7 @@ class Package < ApplicationRecord
     self.registry_url = json['registry_url']
     self.versions_count = json['versions_count']
     self.critical = json['critical'] || false
+    self.owner = extract_owner
     save
 
     # download version numbers
@@ -52,6 +53,9 @@ class Package < ApplicationRecord
 
     self.version_numbers = response.body
     save
+    
+    # update advisory count
+    update_advisories_count
   end
 
   def advisories
@@ -77,5 +81,10 @@ class Package < ApplicationRecord
         part.split(/(\d+)|(\D+)/).map { |p| p.match?(/\d+/) ? p.to_i : p }
       end
     end
+  end
+
+  def update_advisories_count
+    count = advisories.count
+    update_column(:advisories_count, count) if advisories_count != count
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_25_140209) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_25_150908) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -66,6 +66,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_25_140209) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "critical", default: false
+    t.integer "advisories_count", default: 0
+    t.string "owner"
+    t.index ["advisories_count"], name: "index_packages_on_advisories_count"
+    t.index ["owner"], name: "index_packages_on_owner"
   end
 
   create_table "registries", force: :cascade do |t|

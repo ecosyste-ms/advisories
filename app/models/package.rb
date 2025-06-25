@@ -9,6 +9,18 @@ class Package < ApplicationRecord
     @registry = Registry.find_by_ecosystem(ecosystem)
   end
 
+  def packages_url
+    "https://packages.ecosyste.ms/registries/#{registry.name}/packages/#{name}"
+  end
+
+  def owner
+    repository_url.to_s.split('/')[3] if repository_url.present?
+  end
+
+  def owner_url
+    repository_url.to_s.split('/')[0..3].join('/') if repository_url.present?
+  end
+
   def sync
     return if registry.nil?
     conn = Faraday.new('https://packages.ecosyste.ms') do |f|

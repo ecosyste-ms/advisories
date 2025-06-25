@@ -104,11 +104,12 @@
 
       <% if @packages.any? %>
         <div class="table-responsive">
-          <table class="table table-hover">
+          <table class="table table-hover table-sm table-striped">
             <thead>
               <tr>
                 <th>Package</th>
                 <th>Ecosystem</th>
+                <th>Owner</th>
                 <th>Downloads</th>
                 <th>Dependent Packages</th>
                 <th>Dependent Repos</th>
@@ -125,9 +126,14 @@
                 <% first_advisory = package.advisories.order(:created_at).first %>
                 <tr>
                   <td>
-                    <%= link_to package.name, package.registry_url, target: '_blank' %>
+                    <%= link_to package.name, package.packages_url, target: '_blank' %>
                   </td>
-                  <td><%= package.ecosystem %></td>
+                  <td>
+                    <%= link_to package.ecosystem, package.registry_url, target: '_blank' %>
+                  </td>
+                  <td>
+                    <%= (link_to package.owner, package.owner_url, target: '_blank') if package.owner_url.present? %>
+                  </td>
                   <td><%= number_to_human(package.downloads, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
                   <td><%= number_to_human(package.dependent_packages_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
                   <td><%= number_to_human(package.dependent_repos_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>

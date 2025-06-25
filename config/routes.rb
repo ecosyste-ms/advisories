@@ -18,6 +18,8 @@ Rails.application.routes.draw do
 
   get :recent_advisories_data, to: 'advisories#recent_advisories_data'
 
+  get '/batscope', to: 'batscope#index'
+
   resources :exports, only: [:index], path: 'open-data'
 
   get '/404', to: 'errors#not_found'

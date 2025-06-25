@@ -1,0 +1,178 @@
+<% @meta_description = "Browse packages with recent first advisories" %>
+
+<div class="container">
+  <h2 class="h1 mb-5">
+    OSCSE Batscope
+  </h2>
+
+  <p>
+    Packages that have received their first security advisory recently.
+  </p>
+
+  <div class="row">
+    <div class="col-lg-12">
+      <div class="listing-controls p-3 mb-5 rounded">
+        
+        <div class="row">
+          <div class="col-md-3">
+            <label class="form-label">Time Period</label>
+            <%= form_with url: batscope_path, method: :get, local: true do |f| %>
+              <%= hidden_field_tag :sort, params[:sort] %>
+              <%= hidden_field_tag :critical, params[:critical] %>
+              <%= hidden_field_tag :ecosystem, params[:ecosystem] %>
+              <%= select_tag :period, 
+                  options_for_select([
+                    ['Past Week', 'week'],
+                    ['Past Month', 'month'],
+                    ['Past Year', 'year']
+                  ], params[:period] || 'month'),
+                  class: 'form-select',
+                  onchange: 'this.form.submit()' %>
+            <% end %>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Sort By</label>
+            <%= form_with url: batscope_path, method: :get, local: true do |f| %>
+              <%= hidden_field_tag :period, params[:period] %>
+              <%= hidden_field_tag :critical, params[:critical] %>
+              <%= hidden_field_tag :ecosystem, params[:ecosystem] %>
+              <%= select_tag :sort, 
+                  options_for_select([
+                    ['Downloads', 'downloads'],
+                    ['Dependent Packages', 'dependent_packages_count'],
+                    ['Dependent Repos', 'dependent_repos_count']
+                  ], params[:sort] || 'downloads'),
+                  class: 'form-select',
+                  onchange: 'this.form.submit()' %>
+            <% end %>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Ecosystem</label>
+            <%= form_with url: batscope_path, method: :get, local: true do |f| %>
+              <%= hidden_field_tag :period, params[:period] %>
+              <%= hidden_field_tag :sort, params[:sort] %>
+              <%= hidden_field_tag :critical, params[:critical] %>
+              <%= select_tag :ecosystem, 
+                  options_for_select(
+                    [['All Ecosystems', '']] + Registry.all.pluck(:ecosystem).uniq.sort.map{|e| [e, e]},
+                    params[:ecosystem]
+                  ),
+                  class: 'form-select',
+                  onchange: 'this.form.submit()' %>
+            <% end %>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Filters</label>
+            <div class="form-check">
+              <%= form_with url: batscope_path, method: :get, local: true do |f| %>
+                <%= hidden_field_tag :period, params[:period] %>
+                <%= hidden_field_tag :sort, params[:sort] %>
+                <%= hidden_field_tag :ecosystem, params[:ecosystem] %>
+                <%= check_box_tag :critical, 'true', params[:critical] == 'true',
+                    class: 'form-check-input',
+                    onchange: 'this.form.submit()' %>
+                <label class="form-check-label" for="critical">
+                  Critical packages only
+                </label>
+              <% end %>
+            </div>
+          </div>
+        </div>
+        
+        <div class="row mt-3">
+          <div class="col-12">
+            <p class="mb-0">
+              Showing packages with their first advisory in the 
+              <strong><%= @period %></strong>
+              <% if @ecosystem.present? %>
+                in <strong><%= @ecosystem %></strong>
+              <% end %>
+              <% if @critical_only %>
+                (<strong>critical only</strong>)
+              <% end %>
+              sorted by <strong><%= @sort.humanize.downcase %></strong>
+              <% if params.slice(:period, :sort, :critical, :ecosystem).values.any?(&:present?) %>
+                <%= link_to 'Clear Filters', batscope_path, class: 'btn btn-link btn-sm' %>
+              <% end %>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <% if @packages.any? %>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Ecosystem</th>
+                <th>Downloads</th>
+                <th>Dependent Packages</th>
+                <th>Dependent Repos</th>
+                <th>Critical</th>
+                <th>First Advisory</th>
+                <th>Severity</th>
+                <th>Published</th>
+                <th>CVSS</th>
+                <th>EPSS %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @packages.each do |package| %>
+                <% first_advisory = package.advisories.order(:created_at).first %>
+                <tr>
+                  <td>
+                    <%= link_to package.name, package.registry_url, target: '_blank' %>
+                  </td>
+                  <td><%= package.ecosystem %></td>
+                  <td><%= number_to_human(package.downloads, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
+                  <td><%= number_to_human(package.dependent_packages_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
+                  <td><%= number_to_human(package.dependent_repos_count, format: '%n%u', units: { thousand: 'K', million: 'M', billion: 'B' }) %></td>
+                  <td>
+                    <% if package.critical %>
+                      <span class="badge bg-danger">Critical</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if first_advisory %>
+                      <%= link_to truncate(first_advisory.cve || first_advisory.to_s, length: 15), advisory_path(first_advisory) %>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if first_advisory&.severity %>
+                      <span class="badge <%= severity_class(first_advisory.severity) %>">
+                        <%= first_advisory.severity.humanize %>
+                      </span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if first_advisory&.published_at %>
+                      <%= first_advisory.published_at.strftime('%Y-%m-%d') %>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if first_advisory&.cvss_score %>
+                      <%= first_advisory.cvss_score.round(1) %>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% if first_advisory&.epss_percentage %>
+                      <%= (first_advisory.epss_percentage * 100).round(2) %>%
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="alert alert-info">
+          No packages found with their first advisory in the selected time period.
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

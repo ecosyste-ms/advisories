@@ -213,4 +213,8 @@ class Advisory < ApplicationRecord
   def update_blast_radius
     update_column(:blast_radius, calculate_blast_radius)
   end
+
+  def cve
+    identifiers.find{|id| id.start_with?('CVE-') }
+  end
 end

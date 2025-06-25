@@ -3,6 +3,7 @@ class Package < ApplicationRecord
   validates :name, presence: true, uniqueness: { scope: :ecosystem }
 
   scope :ecosystem, ->(ecosystem) { where(ecosystem: ecosystem) }
+  scope :critical, -> { where(critical: true) }
 
   def registry
     @registry = Registry.find_by_ecosystem(ecosystem)

@@ -23,11 +23,7 @@ class Package < ApplicationRecord
 
   def sync
     return if registry.nil?
-    conn = Faraday.new('https://packages.ecosyste.ms') do |f|
-      f.request :json
-      f.request :retry
-      f.response :json
-    end
+    conn = EcosystemsFaradayClient.build
     
     response = conn.get("/api/v1/registries/#{CGI.escape(registry.name)}/packages/#{name}")
     return nil unless response.success?

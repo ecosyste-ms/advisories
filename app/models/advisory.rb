@@ -84,9 +84,10 @@ class Advisory < ApplicationRecord
   end
 
   def version_numbers(package)
-    resp = Faraday.get(Registry.package_versions_api_link_for(package))
+    conn = EcosystemsFaradayClient.build
+    resp = conn.get(Registry.package_versions_api_link_for(package))
     return [] unless resp.success?
-    json = JSON.parse(resp.body)
+    json = resp.body
     json.map{|v| v['number'] }
   end
   
@@ -122,9 +123,10 @@ class Advisory < ApplicationRecord
     vulns = affected_versions_for_package(package)
     version_numbers = version_numbers(package)
 
-    resp = Faraday.get(dependent_packages_api_url(package)) # TODO pagination if headers next link is present
+    conn = EcosystemsFaradayClient.build
+    resp = conn.get(dependent_packages_api_url(package)) # TODO pagination if headers next link is present
     return [] unless resp.success?
-    json = JSON.parse(resp.body)
+    json = resp.body
     json.select do |dep|
       SemanticRange.satisfies?(latest_resolved_version(package, version_numbers, dep['requirements']), affected_range_for(package), platform: package['ecosystem'].humanize, loose: true)
     end

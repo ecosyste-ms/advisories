@@ -1,10 +1,6 @@
 class Registry < ApplicationRecord
   def self.sync_all
-    conn = Faraday.new('https://packages.ecosyste.ms') do |f|
-      f.request :json
-      f.request :retry
-      f.response :json
-    end
+    conn = EcosystemsFaradayClient.build
     
     response = conn.get('/api/v1/registries')
     return nil unless response.success?

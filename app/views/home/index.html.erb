@@ -1,0 +1,101 @@
+<% @meta_description = "Browse all Security Advisories #{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} #{params[:repository_url]}" %>
+<div class="hero generic-home__hero text-center mt-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-10 offset-lg-1 hero py-5">
+        <h1 class="display-1 mb-3">Essential vulnerability data for your ecosystem</h1>
+        <h2 class="lead mb-4">Advisories is a comprehensive open API service that provides professional-quality security vulnerability metadata for numerous open source software ecosystems <strong>for free</strong></h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="show-the-thing my-5 pb-5">
+  <div class="container">
+    <div class="row">
+      <div class="col-12 col-lg-4 mb-5">
+        <h2>Comprehensive vulnerability database</h2>
+        <p>Access unified vulnerability data from multiple sources including package registries, software repositories, and vulnerability databases, giving you a comprehensive view of security threats across your entire open source stack.</p>
+        <div class="stat-card mb-2">
+          <div class="stat-card-body">
+            <span class="stat-card-title stat-card-title--small">
+              <%= number_with_delimiter Advisory.count %>
+            </span>
+            <span class="stat-card-text stat-card-text--small">Advisories</span>
+          </div>
+        </div>
+        <div class="stat-card mb-2">
+          <div class="stat-card-body">
+            <span class="stat-card-title stat-card-title--small">
+              <%= number_with_delimiter Package.count %>
+            </span>
+            <span class="stat-card-text stat-card-text--small">Packages</span>
+          </div>
+        </div>
+  
+      </div>
+      <div class="col-12 col-lg-8">
+        <div class="d-md-flex justify-content-between align-items-center mb-2">
+          <h3>Latest vulnerabilities</h3>
+          <a href="/advisories" class="spesh-link">View all</a>
+        </div>
+        <div class="scrollable-window scrollable-window--vulnerability-list p-4 border overflow-y-scroll rounded">
+          <% @recent_advisories.each do |advisory| %>
+            <%= render 'advisories/advisory', advisory: advisory %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="generic-home__benefits py-5 border-top">
+  <div class="container">
+    <div class="row mb-5">
+      <div class="col-12 col-md-12 col-lg-4">
+        <%= image_tag("stone-1.svg", alt: " ", size: "85x85", class: "mt-4 mb-4") %>
+        <h3 class="h4">Get complete security visibility</h3>
+        <p>Access unified vulnerability data from multiple sources including package registries, software repositories, and vulnerability databases, giving you a comprehensive view of security threats across your entire open source stack.</p> 
+      </div>
+      <div class="col-12 col-md-6 col-lg-4">
+        <%= image_tag("stone-2.svg", alt: " ", size: "85x85", class: "mt-4 mb-4") %>
+        <h3 class="h4">Stay ahead of security risks</h3>
+        <p>Identify which packages and projects in your dependencies are affected by security advisories, empowering you to make informed decisions and address vulnerabilities before they become critical threats to your systems.</p> 
+      </div><div class="col-12 col-md-6 col-lg-4">
+        <%= image_tag("stone-3.svg", alt: " ", size: "85x85", class: "mt-4 mb-4") %>
+        <h3 class="h4">Integrate seamlessly into your workflow</h3>
+        <p>Enjoy 5,000 requests per hour rate limits and comprehensive REST API documentation, allowing you to easily incorporate security intelligence into your development and security management processes.</p> 
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="generic-home__ecosystems-banner grey-bg">
+  <div class="container">
+    <div class="row">
+      <div class="col-12 col-lg-4">
+        <h2 class="mb-4 mt-5">Free and open</h2>
+        <p class="mb-4">We provide this essential service at no cost as part of the broader <strong>ecosyste.ms</strong> initiative to support and secure critical digital infrastructure. </p>
+        <p><a href="https://ecosyste.ms" class="spesh-link mb-5">Find out more</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="generic-home__getstarted py-5 border-top">
+  <div class="container">
+    <div class="row">
+      <div class="col-12 col-lg-8 offset-lg-2 text-center">
+        <div class="col-lg-7 container text-center">
+          <h2 class="h1 mb-4 mt-5">Get started</h2>
+          <p class="mb-4">Find a project and see it in our dashboard, with statistics on responsiveness, productivity, finance and more available to compare over time.</p>
+          <p><a href="/advisories" class="spesh-link me-4">Read the API docs</a><a href="#" class="spesh-link ms-4">Browse vulnerabilities</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+

@@ -19,7 +19,7 @@
         <div class="stat-card mb-2">
           <div class="stat-card-body">
             <span class="stat-card-title stat-card-title--small">
-              23,034
+              <%= number_with_delimiter Advisory.count %>
             </span>
             <span class="stat-card-text stat-card-text--small">Advisories</span>
           </div>
@@ -27,7 +27,7 @@
         <div class="stat-card mb-2">
           <div class="stat-card-body">
             <span class="stat-card-title stat-card-title--small">
-              9,979
+              <%= number_with_delimiter Package.count %>
             </span>
             <span class="stat-card-text stat-card-text--small">Packages</span>
           </div>
@@ -37,7 +37,7 @@
       <div class="col-12 col-lg-8">
         <div class="d-md-flex justify-content-between align-items-center mb-2">
           <h3>Latest vulnerabilities</h3>
-          <a href="#" class="spesh-link">View all</a>
+          <a href="/advisories" class="spesh-link">View all</a>
         </div>
         <div class="scrollable-window scrollable-window--vulnerability-list p-4 border overflow-y-scroll rounded">
             <div class="card mb-4 pb-4 listing">
@@ -205,7 +205,7 @@
         <div class="col-lg-7 container text-center">
           <h2 class="h1 mb-4 mt-5">Get started</h2>
           <p class="mb-4">Find a project and see it in our dashboard, with statistics on responsiveness, productivity, finance and more available to compare over time</p>
-          <p><a href="#" class="spesh-link me-4">Read the API docs</a><a href="#" class="spesh-link ms-4">Browse vulnerabilities</a></p>
+          <p><a href="/advisories" class="spesh-link me-4">Read the API docs</a><a href="#" class="spesh-link ms-4">Browse vulnerabilities</a></p>
         </div>
       </div>
     </div>

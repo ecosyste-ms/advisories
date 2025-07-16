@@ -68,6 +68,9 @@ $btn-color: $color-white;
 $badge-font-weight: 400;
 $badge-padding-y: 0.4em;
 
+$card-cap-bg: $color-grey-light;
+$card-border-color: $color-grey;
+
 
 /* Outputs our colours variables as css variables so that chart.js can access them */
 :root {
@@ -1332,8 +1335,26 @@ a.project-badge {
 }
 
 /* Generic homepages */
+
+.generic-home__hero {
+  .lead {
+    max-width: 42rem;
+  }
+}
+
 .generic-home__hero__para {
   max-width: 44ch;
+}
+
+.generic-home__hero--center {
+  text-align: center;
+  .lead {
+    margin: 0 auto;
+  }
+}
+
+.generic-home__hero--left {
+  
 }
 
 .generic-home__benefits {

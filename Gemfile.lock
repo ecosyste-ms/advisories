@@ -413,7 +413,6 @@ DEPENDENCIES
   sitemap_generator
   spdx (= 2.0.12)
   sprockets-rails
-  tzinfo-data
   web-console
   webmock
 

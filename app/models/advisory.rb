@@ -19,6 +19,7 @@ class Advisory < ApplicationRecord
   before_save :set_blast_radius
   after_create :sync_packages
   after_commit :update_package_advisory_counts
+  after_commit :ping_packages_for_resync
 
   def to_s
     uuid
@@ -223,5 +224,9 @@ class Advisory < ApplicationRecord
 
   def update_package_advisory_counts
     package_records.each(&:update_advisories_count)
+  end
+
+  def ping_packages_for_resync
+    package_records.each(&:ping_for_resync)
   end
 end

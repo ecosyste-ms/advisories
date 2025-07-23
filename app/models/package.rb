@@ -13,6 +13,10 @@ class Package < ApplicationRecord
     "https://packages.ecosyste.ms/registries/#{registry.name}/packages/#{name}"
   end
 
+  def ping_url
+    "#{packages_url}/ping"
+  end
+
   def extract_owner
     repository_url.to_s.split('/')[3] if repository_url.present?
   end
@@ -82,5 +86,13 @@ class Package < ApplicationRecord
   def update_advisories_count
     count = advisories.count
     update_column(:advisories_count, count) if advisories_count != count
+  end
+
+  def ping_for_resync
+    return if registry.nil?
+    conn = EcosystemsFaradayClient.build
+    conn.post(ping_url)
+  rescue => e
+    Rails.logger.warn "Failed to ping #{ping_url}: #{e.message}"
   end
 end

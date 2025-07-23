@@ -84,4 +84,78 @@ class AdvisoryTest < ActiveSupport::TestCase
       assert_equal [[package.except("versions"), 1]], result
     end
   end
+
+  context "#ping_packages_for_resync" do
+    should "ping packages.ecosyste.ms for each package when advisory is created" do
+      # Create registries for the ecosystems
+      create(:registry, name: "npmjs.org", ecosystem: "npm")
+      create(:registry, name: "rubygems.org", ecosystem: "rubygems")
+      
+      # Stub package sync requests (called by sync_packages callback)
+      stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/.+/packages/.+})
+        .to_return(status: 200, body: {}.to_json, headers: {'Content-Type' => 'application/json'})
+      stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/.+/packages/.+/version_numbers})
+        .to_return(status: 200, body: [].to_json, headers: {'Content-Type' => 'application/json'})
+      
+      # Stub the ping HTTP request to packages.ecosyste.ms
+      stub_request(:post, %r{https://packages\.ecosyste\.ms/registries/.+/packages/.+/ping})
+        .to_return(status: 200, body: "", headers: {})
+
+      source = create(:source)
+      advisory = build(:advisory, source: source, packages: [
+        { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] },
+        { "ecosystem" => "rubygems", "package_name" => "rails", "versions" => [] }
+      ])
+
+      # Creating the advisory should trigger the ping
+      advisory.save!
+
+      # Verify the requests were made
+      assert_requested :post, "https://packages.ecosyste.ms/registries/npmjs.org/packages/lodash/ping"
+      assert_requested :post, "https://packages.ecosyste.ms/registries/rubygems.org/packages/rails/ping"
+    end
+
+    should "ping packages.ecosyste.ms for each package when advisory is updated" do
+      # Create registry for npm ecosystem  
+      create(:registry, name: "npmjs.org", ecosystem: "npm")
+      
+      # Stub package sync requests (called by sync_packages callback)
+      stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/.+/packages/.+})
+        .to_return(status: 200, body: {}.to_json, headers: {'Content-Type' => 'application/json'})
+      stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/.+/packages/.+/version_numbers})
+        .to_return(status: 200, body: [].to_json, headers: {'Content-Type' => 'application/json'})
+      
+      # Stub the ping HTTP request to packages.ecosyste.ms
+      stub_request(:post, %r{https://packages\.ecosyste\.ms/registries/.+/packages/.+/ping})
+        .to_return(status: 200, body: "", headers: {})
+
+      advisory = create(:advisory)
+
+      # Updating the advisory should trigger the ping
+      advisory.update!(title: "Updated title")
+
+      # Verify the request was made for the default test package (2 times: once for create, once for update)
+      assert_requested :post, "https://packages.ecosyste.ms/registries/npmjs.org/packages/test-package/ping", times: 2
+    end
+
+    should "handle ping failures gracefully" do
+      # Create registry for npm ecosystem  
+      create(:registry, name: "npmjs.org", ecosystem: "npm")
+      
+      # Stub package sync requests (called by sync_packages callback)
+      stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/.+/packages/.+})
+        .to_return(status: 200, body: {}.to_json, headers: {'Content-Type' => 'application/json'})
+      stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/.+/packages/.+/version_numbers})
+        .to_return(status: 200, body: [].to_json, headers: {'Content-Type' => 'application/json'})
+      
+      # Stub the ping HTTP request to fail
+      stub_request(:post, %r{https://packages\.ecosyste\.ms/registries/.+/packages/.+/ping})
+        .to_raise(StandardError.new("Network error"))
+
+      # Should not raise an error
+      assert_nothing_raised do
+        create(:advisory)
+      end
+    end
+  end
 end

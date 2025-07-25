@@ -10,26 +10,26 @@ class Package < ApplicationRecord
   end
 
   def packages_url
-    "https://packages.ecosyste.ms/registries/#{registry.name}/packages/#{name}"
+    "https://packages.ecosyste.ms#{escaped_registry_package_path}"
   end
 
   def ping_url
     "#{packages_url}/ping"
   end
 
-  def extract_owner
-    repository_url.to_s.split('/')[3] if repository_url.present?
-  end
-
-  def owner_url
-    repository_url.to_s.split('/')[0..3].join('/') if repository_url.present?
+  def ping_for_resync
+    return if registry.nil?
+    conn = EcosystemsFaradayClient.build
+    conn.post(ping_url)
+  rescue => e
+    Rails.logger.warn "Failed to ping #{ping_url}: #{e.message}"
   end
 
   def sync
     return if registry.nil?
     conn = EcosystemsFaradayClient.build
     
-    response = conn.get("/api/v1/registries/#{CGI.escape(registry.name)}/packages/#{name}")
+    response = conn.get("/api/v1#{escaped_registry_package_path}")
     return nil unless response.success?
     json = response.body
 
@@ -48,7 +48,7 @@ class Package < ApplicationRecord
     save
 
     # download version numbers
-    response = conn.get("/api/v1/registries/#{CGI.escape(registry.name)}/packages/#{name}/version_numbers")
+    response = conn.get("/api/v1#{escaped_registry_package_path}/version_numbers")
     return nil unless response.success?
 
     self.version_numbers = response.body
@@ -88,11 +88,17 @@ class Package < ApplicationRecord
     update_column(:advisories_count, count) if advisories_count != count
   end
 
-  def ping_for_resync
-    return if registry.nil?
-    conn = EcosystemsFaradayClient.build
-    conn.post(ping_url)
-  rescue => e
-    Rails.logger.warn "Failed to ping #{ping_url}: #{e.message}"
+  private
+
+  def escaped_registry_package_path
+    "/registries/#{URI.encode_www_form_component(registry.name)}/packages/#{URI.encode_www_form_component(name)}"
+  end
+
+  def extract_owner
+    repository_url.to_s.split('/')[3] if repository_url.present?
+  end
+
+  def owner_url
+    repository_url.to_s.split('/')[0..3].join('/') if repository_url.present?
   end
 end

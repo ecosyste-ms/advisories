@@ -39,6 +39,7 @@ gem 'librariesio-url-parser'
 gem 'ostruct'
 gem 'faraday-multipart'
 gem 'bootstrap-icons-helper'
+gem 'redis'
 
 group :development, :test do
   gem 'dotenv-rails'

@@ -5,8 +5,8 @@ class Advisory < ApplicationRecord
 
   counter_culture :source
 
-  scope :ecosystem, ->(ecosystem) { where("? <@ ANY ( ARRAY(select jsonb_array_elements ( packages )) )",{ecosystem:ecosystem}.to_json) }
-  scope :package_name, ->(package_name) { where("? <@ ANY ( ARRAY(select jsonb_array_elements ( packages )) )",{package_name:package_name}.to_json) }
+  scope :ecosystem, ->(ecosystem) { where("EXISTS (SELECT 1 FROM jsonb_array_elements(packages) AS p WHERE LOWER(p->>'ecosystem') = LOWER(?))", ecosystem) }
+  scope :package_name, ->(package_name) { where("EXISTS (SELECT 1 FROM jsonb_array_elements(packages) AS p WHERE LOWER(p->>'package_name') = LOWER(?))", package_name) }
   scope :severity, ->(severity) { where(severity: severity) }
   scope :repository_url, ->(repository_url) { where(repository_url: repository_url) }
   scope :created_after, ->(created_at) { where('created_at > ?', created_at) }

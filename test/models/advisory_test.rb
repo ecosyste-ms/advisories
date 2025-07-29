@@ -158,4 +158,56 @@ class AdvisoryTest < ActiveSupport::TestCase
       end
     end
   end
+
+  context ".ecosystem scope" do
+    should "match ecosystems case insensitively" do
+      create(:advisory, packages: [
+        { "ecosystem" => "NPM", "package_name" => "test1", "versions" => [] }
+      ])
+      create(:advisory, packages: [
+        { "ecosystem" => "rubygems", "package_name" => "test2", "versions" => [] }
+      ])
+
+      npm_results = Advisory.ecosystem("npm")
+      rubygems_results = Advisory.ecosystem("RUBYGEMS")
+
+      assert_equal 1, npm_results.count
+      assert_equal 1, rubygems_results.count
+    end
+
+    should "match exact case as well" do
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "test1", "versions" => [] }
+      ])
+
+      results = Advisory.ecosystem("npm")
+      assert_equal 1, results.count
+    end
+  end
+
+  context ".package_name scope" do
+    should "match package names case insensitively" do
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "LODASH", "versions" => [] }
+      ])
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "express", "versions" => [] }
+      ])
+
+      lodash_results = Advisory.package_name("lodash")
+      express_results = Advisory.package_name("EXPRESS")
+
+      assert_equal 1, lodash_results.count
+      assert_equal 1, express_results.count
+    end
+
+    should "match exact case as well" do
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "test-package", "versions" => [] }
+      ])
+
+      results = Advisory.package_name("test-package")
+      assert_equal 1, results.count
+    end
+  end
 end

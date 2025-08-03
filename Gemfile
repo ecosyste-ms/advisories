@@ -40,6 +40,7 @@ gem 'ostruct'
 gem 'faraday-multipart'
 gem 'bootstrap-icons-helper'
 gem 'redis'
+gem 'appsignal'
 
 group :development, :test do
   gem 'dotenv-rails'

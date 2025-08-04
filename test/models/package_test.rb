@@ -71,4 +71,45 @@ class PackageTest < ActiveSupport::TestCase
       package_without_registry.ping_for_resync
     end
   end
+
+  context "#sort_versions" do
+    setup do
+      @package = Package.new(ecosystem: "npm", name: "test-package")
+    end
+
+    should "sort versions in ascending order" do
+      versions = ["1.0.0", "2.0.0", "1.1.0", "1.0.1"]
+      expected = ["1.0.0", "1.0.1", "1.1.0", "2.0.0"]
+      assert_equal expected, @package.sort_versions(versions)
+    end
+
+    should "handle versions with different number of parts" do
+      versions = ["1.0", "1.0.0", "1.0.1", "1"]
+      # In semantic versioning, "1" should be treated as "1.0.0.0", "1.0" as "1.0.0.0"
+      # So the order should be: "1.0" (1.0.0.0), "1.0.0" (1.0.0.0), "1" (1.0.0.0), "1.0.1"
+      # But since "1", "1.0", and "1.0.0" are equivalent, their relative order may vary
+      # The important thing is that "1.0.1" comes last
+      result = @package.sort_versions(versions)
+      assert_equal "1.0.1", result.last
+      assert result.include?("1")
+      assert result.include?("1.0")
+      assert result.include?("1.0.0")
+    end
+
+    should "handle versions with pre-release identifiers" do
+      versions = ["1.0.0-alpha", "1.0.0", "1.0.0-beta", "1.0.0-alpha.1"]
+      expected = ["1.0.0", "1.0.0-alpha", "1.0.0-alpha.1", "1.0.0-beta"]
+      assert_equal expected, @package.sort_versions(versions)
+    end
+
+    should "handle mixed numeric and string parts" do
+      versions = ["1.0.0rc1", "1.0.0", "1.0.0rc2", "1.0.0a1"]
+      expected = ["1.0.0", "1.0.0a1", "1.0.0rc1", "1.0.0rc2"]
+      assert_equal expected, @package.sort_versions(versions)
+    end
+
+    should "handle empty array" do
+      assert_equal [], @package.sort_versions([])
+    end
+  end
 end

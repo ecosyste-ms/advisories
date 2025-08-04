@@ -75,11 +75,34 @@ class Package < ApplicationRecord
   end
 
   def sort_versions(versions)
-    # split by major, minor, patch, prerelease and sort each part
     versions.sort_by do |v|
-      v.split('.').map do |part|
-        part.split(/(\d+)|(\D+)/).map { |p| p.match?(/\d+/) ? p.to_i : p }
+      # Split version by dots
+      parts = v.split('.')
+      
+      # Normalize to have consistent structure for comparison
+      normalized_parts = []
+      4.times do |i|
+        part = parts[i] || '0'
+        
+        # Split each part into numeric and non-numeric segments
+        segments = part.split(/(\d+)/).reject(&:empty?)
+        
+        part_comparison = []
+        segments.each do |segment|
+          if segment.match?(/^\d+$/)
+            part_comparison << [0, segment.to_i] # Numbers sort first
+          else
+            part_comparison << [1, segment] # Strings sort after numbers
+          end
+        end
+        
+        # If no segments (empty part), treat as [0, 0]
+        part_comparison = [[0, 0]] if part_comparison.empty?
+        
+        normalized_parts << part_comparison
       end
+      
+      normalized_parts
     end
   end
 

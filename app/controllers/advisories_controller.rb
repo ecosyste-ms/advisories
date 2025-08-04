@@ -20,10 +20,25 @@ class AdvisoriesController < ApplicationController
     if params[:sort].present? || params[:order].present?
       sort = params[:sort] || 'created_at'
       order = params[:order] || 'desc'
-      sort_options = sort.split(',').zip(order.split(',')).to_h
-      scope = scope.order(sort_options)
+      
+      sort_columns = sort.split(',').map(&:strip)
+      order_directions = order.split(',').map(&:strip)
+      
+      arel_orders = []
+      sort_columns.zip(order_directions).each do |col, ord|
+        if Advisory.column_names.include?(col)
+          direction = ord&.downcase == 'asc' ? :asc : :desc
+          arel_orders << Advisory.arel_table[col].send(direction)
+        end
+      end
+      
+      if arel_orders.any?
+        scope = scope.order(arel_orders)
+      else
+        scope = scope.order(Advisory.arel_table[:published_at].desc)
+      end
     else
-      scope = scope.order("published_at DESC")
+      scope = scope.order(Advisory.arel_table[:published_at].desc)
     end
 
     @pagy, @advisories = pagy(scope.includes(:source))

@@ -406,7 +406,7 @@ DEPENDENCIES
   ostruct
   packageurl-ruby
   pagy
-  pg (~> 1.5)
+  pg
   pg_query
   pghero
   puma (~> 6.4)

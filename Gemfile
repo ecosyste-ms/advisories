@@ -32,7 +32,7 @@ gem "chartkick"
 gem "groupdate"
 gem 'jquery-rails'
 gem 'faraday-typhoeus'
-gem 'packageurl-ruby'
+gem 'purl'
 gem 'octokit'
 gem "nokogiri"
 gem 'commonmarker'

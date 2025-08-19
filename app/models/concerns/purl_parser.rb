@@ -1,4 +1,4 @@
-require 'package_url'
+require 'purl'
 
 class PurlParser
   ECOSYSTEM_MAPPING = {
@@ -16,7 +16,7 @@ class PurlParser
     return nil if purl_string.blank?
 
     begin
-      parsed = PackageURL.parse(purl_string)
+      parsed = Purl.parse(purl_string)
       ecosystem = map_ecosystem(parsed.type)
       return nil if ecosystem.nil?
 

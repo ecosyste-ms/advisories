@@ -109,6 +109,40 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Package'
+  /advisories/lookup:
+    get:
+      summary: "lookup advisories by Package URL (PURL)"
+      operationId: "lookupAdvisoriesByPurl"
+      description: "Lookup security advisories for a package using Package URL (PURL) specification. Supports multiple ecosystems including npm, pypi, rubygems, maven, nuget, go, and cargo."
+      tags:
+        - advisories
+      parameters:
+        - name: purl
+          in: query
+          description: "Package URL (PURL) to lookup advisories for. Format: pkg:type/namespace/name@version"
+          required: true
+          schema:
+            type: string
+          example: "pkg:npm/lodash@4.17.20"
+      responses:
+        200:
+          description: "List of advisories for the specified package"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Advisory'
+        400:
+          description: "Bad Request - Invalid or missing PURL parameter"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "PURL parameter is required"
   /advisories/{advisoryUUID}:
     get:
       summary: get a advisories by uuid

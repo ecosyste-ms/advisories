@@ -9,6 +9,7 @@ Rails.application.routes.draw do
       resources :advisories, only: [:index, :show] do
         collection do
           get :packages
+          get :lookup
         end
       end
     end

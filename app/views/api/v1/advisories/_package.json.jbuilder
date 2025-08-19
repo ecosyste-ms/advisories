@@ -1,4 +1,6 @@
-json.extract! package, :ecosystem, :package_name, :versions
+json.ecosystem package['ecosystem']
+json.package_name package['package_name']
+json.versions package['versions']
 
 if package_record&.last_synced_at
   json.statistics do

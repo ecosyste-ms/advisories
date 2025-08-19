@@ -27,4 +27,27 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   def packages
     render json: Advisory.packages
   end
+
+  def lookup
+    purl = params[:purl]
+    
+    if purl.blank?
+      render json: { error: 'PURL parameter is required' }, status: :bad_request
+      return
+    end
+
+    parsed_purl = PurlParser.parse(purl)
+    
+    if parsed_purl.nil?
+      render json: { error: 'Invalid PURL format' }, status: :bad_request
+      return
+    end
+
+    advisories = Advisory.ecosystem(parsed_purl[:ecosystem])
+                        .package_name(parsed_purl[:package_name])
+                        .includes(:source)
+
+    @purl = purl
+    @advisories = advisories
+  end
 end

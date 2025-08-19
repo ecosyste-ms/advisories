@@ -230,6 +230,10 @@ components:
           type: string
         package_name:
           type: string
+        purl:
+          type: string
+          description: "Package URL (PURL) for this package"
+          example: "pkg:npm/lodash"
         versions:
           type: array
           items:

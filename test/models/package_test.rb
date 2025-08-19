@@ -112,4 +112,26 @@ class PackageTest < ActiveSupport::TestCase
       assert_equal [], @package.sort_versions([])
     end
   end
+
+  context "#purl" do
+    should "generate PURL for npm package" do
+      package = build(:package, ecosystem: "npm", name: "lodash")
+      assert_equal "pkg:npm/lodash", package.purl
+    end
+
+    should "generate PURL for rubygems package" do
+      package = build(:package, ecosystem: "rubygems", name: "rails")
+      assert_equal "pkg:gem/rails", package.purl
+    end
+
+    should "generate PURL for pypi package" do
+      package = build(:package, ecosystem: "pypi", name: "django")
+      assert_equal "pkg:pypi/django", package.purl
+    end
+
+    should "return nil for unsupported ecosystem" do
+      package = build(:package, ecosystem: "unsupported", name: "package")
+      assert_nil package.purl
+    end
+  end
 end

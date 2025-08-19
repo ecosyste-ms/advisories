@@ -56,6 +56,12 @@
             <%= link_to Registry.package_html_link_for(package), target: :_blank do %>
               <%= package['ecosystem'] %>:<%= package['package_name'] %>
             <% end %>
+            <% purl = PurlParser.generate_purl(ecosystem: package['ecosystem'], package_name: package['package_name']) %>
+            <% if purl %>
+              <div class="small text-muted mt-1">
+                PURL: <code><%= purl %></code>
+              </div>
+            <% end %>
           </td>
           <td>
             <%= package['versions'].map{|v| v['vulnerable_version_range']}.join(', ') %>

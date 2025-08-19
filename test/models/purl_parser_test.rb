@@ -111,4 +111,61 @@ class PurlParserTest < ActiveSupport::TestCase
       assert_nil PurlParser.map_ecosystem(nil)
     end
   end
+
+  context ".generate_purl" do
+    should "generate PURL for npm package" do
+      purl = PurlParser.generate_purl(ecosystem: "npm", package_name: "lodash")
+      assert_equal "pkg:npm/lodash", purl
+    end
+
+    should "generate PURL with version for npm package" do
+      purl = PurlParser.generate_purl(ecosystem: "npm", package_name: "lodash", version: "4.17.20")
+      assert_equal "pkg:npm/lodash@4.17.20", purl
+    end
+
+    should "generate PURL for rubygems package" do
+      purl = PurlParser.generate_purl(ecosystem: "rubygems", package_name: "rails")
+      assert_equal "pkg:gem/rails", purl
+    end
+
+    should "generate PURL for pypi package" do
+      purl = PurlParser.generate_purl(ecosystem: "pypi", package_name: "django")
+      assert_equal "pkg:pypi/django", purl
+    end
+
+    should "generate PURL with namespace for maven package" do
+      purl = PurlParser.generate_purl(
+        ecosystem: "maven", 
+        package_name: "spring-core", 
+        namespace: "org.springframework"
+      )
+      assert_equal "pkg:maven/org.springframework/spring-core", purl
+    end
+
+    should "return nil for unsupported ecosystem" do
+      purl = PurlParser.generate_purl(ecosystem: "unsupported", package_name: "package")
+      assert_nil purl
+    end
+
+    should "handle nil ecosystem" do
+      purl = PurlParser.generate_purl(ecosystem: nil, package_name: "package")
+      assert_nil purl
+    end
+  end
+
+  context ".reverse_map_ecosystem" do
+    should "reverse map ecosystems to PURL types" do
+      assert_equal "npm", PurlParser.reverse_map_ecosystem("npm")
+      assert_equal "pypi", PurlParser.reverse_map_ecosystem("pypi")
+      assert_equal "gem", PurlParser.reverse_map_ecosystem("rubygems")
+      assert_equal "maven", PurlParser.reverse_map_ecosystem("maven")
+      # Note: Both 'golang' and 'go' map to 'go' ecosystem, but reverse mapping returns the first match
+      assert_equal "go", PurlParser.reverse_map_ecosystem("go")
+    end
+
+    should "return nil for unsupported ecosystem" do
+      assert_nil PurlParser.reverse_map_ecosystem("unsupported")
+      assert_nil PurlParser.reverse_map_ecosystem(nil)
+    end
+  end
 end

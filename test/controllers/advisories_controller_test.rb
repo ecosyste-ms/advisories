@@ -46,4 +46,5 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     get recent_advisories_data_url
     assert_response :success
   end
+
 end

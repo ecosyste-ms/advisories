@@ -36,4 +36,25 @@ class PurlParser
   def self.map_ecosystem(purl_type)
     ECOSYSTEM_MAPPING[purl_type&.downcase]
   end
+
+  def self.generate_purl(ecosystem:, package_name:, version: nil, namespace: nil)
+    purl_type = reverse_map_ecosystem(ecosystem)
+    return nil if purl_type.nil?
+
+    begin
+      Purl::PackageURL.new(
+        type: purl_type,
+        name: package_name,
+        version: version,
+        namespace: namespace
+      ).to_s
+    rescue => e
+      Rails.logger.warn "Failed to generate PURL for #{ecosystem}/#{package_name}: #{e.message}"
+      nil
+    end
+  end
+
+  def self.reverse_map_ecosystem(ecosystem)
+    ECOSYSTEM_MAPPING.invert[ecosystem&.downcase]
+  end
 end

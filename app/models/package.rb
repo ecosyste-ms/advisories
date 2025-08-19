@@ -111,6 +111,13 @@ class Package < ApplicationRecord
     update_column(:advisories_count, count) if advisories_count != count
   end
 
+  def purl
+    PurlParser.generate_purl(
+      ecosystem: ecosystem,
+      package_name: name
+    )
+  end
+
   private
 
   def escaped_registry_package_path

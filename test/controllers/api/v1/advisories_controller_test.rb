@@ -41,6 +41,11 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
       
       assert_equal 1, json_response.length
       assert_equal @advisory.uuid, json_response.first["uuid"]
+      
+      # Check that packages include PURL field
+      packages = json_response.first["packages"]
+      assert_equal 1, packages.length
+      assert_equal "pkg:npm/lodash", packages.first["purl"]
     end
 
     should "return advisories for valid npm PURL without version" do

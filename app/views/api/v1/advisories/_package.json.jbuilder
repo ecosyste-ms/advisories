@@ -1,6 +1,10 @@
 json.ecosystem package['ecosystem']
 json.package_name package['package_name']
 json.versions package['versions']
+json.purl PurlParser.generate_purl(
+  ecosystem: package['ecosystem'],
+  package_name: package['package_name']
+)
 
 if package_record&.last_synced_at
   json.statistics do

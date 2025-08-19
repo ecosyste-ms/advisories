@@ -173,7 +173,7 @@ components:
         packages:
           type: array
           items:
-            type: object
+            $ref: '#/components/schemas/PackageWithDetails'
         created_at:
           type: string
         updated_at:
@@ -189,3 +189,38 @@ components:
           type: string
         package_name:
           type: string
+    PackageWithDetails:
+      type: object
+      properties:
+        ecosystem:
+          type: string
+        package_name:
+          type: string
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              vulnerable_version_range:
+                type: string
+              first_patched_version:
+                type: string
+        statistics:
+          type: object
+          properties:
+            dependent_packages_count:
+              type: integer
+            dependent_repos_count:
+              type: integer
+            downloads:
+              type: integer
+            downloads_period:
+              type: string
+        affected_versions:
+          type: array
+          items:
+            type: string
+        unaffected_versions:
+          type: array
+          items:
+            type: string

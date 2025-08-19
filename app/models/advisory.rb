@@ -229,4 +229,11 @@ class Advisory < ApplicationRecord
   def ping_packages_for_resync
     package_records.each(&:ping_for_resync)
   end
+
+  def packages_with_records
+    packages.map do |package|
+      package_record = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
+      [package, package_record]
+    end
+  end
 end

@@ -22,6 +22,17 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should set cache headers for index" do
+    get api_v1_advisories_url, as: :json
+    assert_response :success
+    
+    assert_match /public/, response.headers['Cache-Control']
+    assert_match /max-age=3600/, response.headers['Cache-Control'] 
+    assert_match /s-maxage=3600/, response.headers['Cache-Control']
+    assert_match /stale-while-revalidate=86400/, response.headers['Cache-Control']
+    assert_equal 'Accept, Accept-Encoding', response.headers['Vary']
+  end
+
   test "should filter by ecosystem case-insensitively" do
     create(:advisory, source: @source, packages: [{"ecosystem" => "pypi", "package_name" => "test-pypi", "versions" => []}])
     
@@ -64,9 +75,25 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should set cache headers for show" do
+    get api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+    
+    assert_match /public/, response.headers['Cache-Control']
+    assert_match /max-age=3600/, response.headers['Cache-Control']
+  end
+
   test "should get packages" do
     get packages_api_v1_advisories_url, as: :json
     assert_response :success
+  end
+
+  test "should set cache headers for packages" do
+    get packages_api_v1_advisories_url, as: :json
+    assert_response :success
+    
+    assert_match /public/, response.headers['Cache-Control']
+    assert_match /max-age=3600/, response.headers['Cache-Control']
   end
 
   context "lookup endpoint" do
@@ -135,8 +162,15 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
       
       assert_response :bad_request
       json_response = JSON.parse(response.body)
-      
       assert_equal "Invalid PURL format", json_response["error"]
+    end
+
+    should "set cache headers for lookup endpoint" do
+      get lookup_api_v1_advisories_url, params: { purl: "pkg:npm/lodash@4.17.20" }, as: :json
+      assert_response :success
+      
+      assert_match /public/, response.headers['Cache-Control']
+      assert_match /max-age=3600/, response.headers['Cache-Control']
     end
 
     should "handle rubygems ecosystem correctly" do

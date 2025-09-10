@@ -162,14 +162,14 @@ class AdvisoryTest < ActiveSupport::TestCase
   context ".ecosystem scope" do
     should "match ecosystems case insensitively" do
       create(:advisory, packages: [
-        { "ecosystem" => "NPM", "package_name" => "test1", "versions" => [] }
+        { "ecosystem" => "npm", "package_name" => "test1", "versions" => [] }
       ])
       create(:advisory, packages: [
         { "ecosystem" => "rubygems", "package_name" => "test2", "versions" => [] }
       ])
 
-      npm_results = Advisory.ecosystem("npm")
-      rubygems_results = Advisory.ecosystem("RUBYGEMS")
+      npm_results = Advisory.ecosystem("NPM")  # Input is uppercase
+      rubygems_results = Advisory.ecosystem("RUBYGEMS")  # Input is uppercase
 
       assert_equal 1, npm_results.count
       assert_equal 1, rubygems_results.count

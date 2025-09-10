@@ -22,6 +22,43 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should filter by ecosystem case-insensitively" do
+    create(:advisory, source: @source, packages: [{"ecosystem" => "pypi", "package_name" => "test-pypi", "versions" => []}])
+    
+    get api_v1_advisories_url, params: { ecosystem: "PyPI" }, as: :json
+    assert_response :success
+    
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    assert_equal "pypi", json_response.first["packages"].first["ecosystem"]
+  end
+
+  test "should filter by package_name case-insensitively" do
+    create(:advisory, source: @source, packages: [{"ecosystem" => "npm", "package_name" => "Express", "versions" => []}])
+    
+    get api_v1_advisories_url, params: { ecosystem: "npm", package_name: "express" }, as: :json
+    assert_response :success
+    
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    assert_equal "Express", json_response.first["packages"].first["package_name"]
+  end
+
+  test "should handle combined ecosystem and package_name filters" do
+    create(:advisory, source: @source, packages: [{"ecosystem" => "pypi", "package_name" => "apache-airflow", "versions" => []}])
+    create(:advisory, source: @source, packages: [{"ecosystem" => "pypi", "package_name" => "django", "versions" => []}])
+    create(:advisory, source: @source, packages: [{"ecosystem" => "npm", "package_name" => "apache-airflow", "versions" => []}])
+    
+    get api_v1_advisories_url, params: { ecosystem: "pypi", package_name: "apache-airflow" }, as: :json
+    assert_response :success
+    
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    package = json_response.first["packages"].first
+    assert_equal "pypi", package["ecosystem"]
+    assert_equal "apache-airflow", package["package_name"]
+  end
+
   test "should get show" do
     get api_v1_advisory_url(@advisory), as: :json
     assert_response :success

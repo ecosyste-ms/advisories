@@ -6,11 +6,13 @@ First things first, you'll need to fork and clone the repository to your local m
 
 `git clone https://github.com/ecosyste-ms/advisories.git`
 
-The project uses ruby on rails which have a number of system dependencies you'll need to install. 
+The project uses ruby on rails which have a number of system dependencies you'll need to install.
 
 - [ruby](https://www.ruby-lang.org/en/documentation/installation/)
 - [postgresql 14](https://www.postgresql.org/download/)
 - [node.js 16+](https://nodejs.org/en/download/)
+
+You will then need to set some configuration environment variables. Copy `env.example` to `.env.development` and customise the values to suit your local setup.
 
 Once you've got all of those installed, from the root directory of the project run the following commands:
 

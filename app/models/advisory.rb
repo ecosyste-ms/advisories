@@ -235,8 +235,20 @@ class Advisory < ApplicationRecord
   end
 
   def packages_with_records
+    # Collect all unique ecosystem/name pairs
+    package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
+
+    # Batch load all package records in a single query
+    package_records = Package.where(
+      package_keys.map { |ecosystem, name|
+        "(ecosystem = ? AND name = ?)"
+      }.join(" OR "),
+      *package_keys.flatten
+    ).index_by { |p| [p.ecosystem, p.name] }
+
+    # Map packages with their records
     packages.map do |package|
-      package_record = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
+      package_record = package_records[[package['ecosystem'], package['package_name']]]
       [package, package_record]
     end
   end

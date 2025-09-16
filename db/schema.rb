@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_10_171600) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_16_172721) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -76,6 +76,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_10_171600) do
     t.integer "advisories_count", default: 0
     t.string "owner"
     t.index ["advisories_count"], name: "index_packages_on_advisories_count"
+    t.index ["ecosystem", "name"], name: "index_packages_on_ecosystem_and_name", unique: true
     t.index ["owner"], name: "index_packages_on_owner"
   end
 

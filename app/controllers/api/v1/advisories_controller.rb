@@ -1,5 +1,5 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
-  before_action :set_cache_headers, only: [:index, :show, :packages, :lookup]
+  # before_action :set_cache_headers, only: [:index, :show, :packages, :lookup]
   
   def index
     scope = Advisory.all

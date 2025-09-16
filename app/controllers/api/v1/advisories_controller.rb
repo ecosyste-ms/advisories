@@ -24,6 +24,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
   def show
     @advisory = Advisory.find_by_uuid!(params[:id])
+    fresh_when @advisory
   end
 
   def packages

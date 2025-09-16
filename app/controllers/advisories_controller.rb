@@ -53,5 +53,6 @@ class AdvisoriesController < ApplicationController
 
   def show
     @advisory = Advisory.find_by!(uuid: params[:id])
+    fresh_when @advisory
   end
 end

@@ -13,8 +13,12 @@ class Package < ApplicationRecord
     "https://packages.ecosyste.ms#{escaped_registry_package_path}"
   end
 
+  def packages_api_url
+    "https://packages.ecosyste.ms/api/v1#{escaped_registry_package_path}"
+  end
+
   def ping_url
-    "#{packages_url}/ping"
+    "#{packages_api_url}/ping"
   end
 
   def ping_for_resync

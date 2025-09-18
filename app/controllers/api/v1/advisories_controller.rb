@@ -1,6 +1,4 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
-  # before_action :set_cache_headers, only: [:index, :show, :packages, :lookup]
-  
   def index
     scope = Advisory.all
     
@@ -52,22 +50,5 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
     @purl = purl
     @advisories = advisories
-  end
-
-  private
-
-  def set_cache_headers
-    # Cache for 1 hour (3600 seconds)
-    # Advisory data doesn't change frequently, so this is safe
-    expires_in 1.hour, public: true
-    
-    # Set Cache-Control header for CloudFlare
-    response.headers['Cache-Control'] = 'public, max-age=3600, s-maxage=3600'
-    
-    # Add Vary header for content negotiation
-    response.headers['Vary'] = 'Accept, Accept-Encoding'
-    
-    # Allow CloudFlare to cache stale content for up to 1 day while revalidating
-    response.headers['Cache-Control'] += ', stale-while-revalidate=86400'
   end
 end

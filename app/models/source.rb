@@ -16,9 +16,6 @@ class Source < ApplicationRecord
   end
 
   def sync_advisories
-    source_instance.list_advisories.each do |advisory|
-      a = advisories.find_or_initialize_by(uuid: advisory[:uuid])
-      a.update!(advisory)
-    end
+    source_instance.sync_advisories
   end
 end

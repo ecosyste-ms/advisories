@@ -43,5 +43,12 @@ module Sources
     def list_advisories
       map_advisories(fetch_advisories)
     end
+
+    def sync_advisories
+      list_advisories.each do |advisory|
+        a = source.advisories.find_or_initialize_by(uuid: advisory[:uuid])
+        a.update!(advisory)
+      end
+    end
   end
 end

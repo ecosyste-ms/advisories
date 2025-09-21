@@ -13,6 +13,28 @@ module Sources
       advisories
     end
 
+    def sync_advisories
+      cursor = 'null'
+      total_synced = 0
+      loop do
+        res = fetch_advisories_page(cursor)
+        page_advisories = res[:data][:securityVulnerabilities][:edges]
+        mapped_advisories = map_advisories(page_advisories)
+
+        mapped_advisories.each do |advisory|
+          a = source.advisories.find_or_initialize_by(uuid: advisory[:uuid])
+          a.update!(advisory)
+        end
+
+        total_synced += mapped_advisories.count
+        Rails.logger.info "Synced #{mapped_advisories.count} advisories (#{total_synced} total)"
+
+        break unless res[:data][:securityVulnerabilities][:pageInfo][:hasNextPage]
+        cursor = "\"#{res[:data][:securityVulnerabilities][:pageInfo][:endCursor]}\""
+      end
+      total_synced
+    end
+
     def map_advisories(advisories)
       vulns = advisories.map do |advisory|
         {

@@ -31,33 +31,50 @@ class Package < ApplicationRecord
 
   def sync
     return if registry.nil?
-    conn = EcosystemsFaradayClient.build
-    
-    response = conn.get("/api/v1#{escaped_registry_package_path}")
-    return nil unless response.success?
-    json = response.body
 
-    self.last_synced_at = Time.now
-    self.dependent_packages_count = json['dependent_packages_count']
-    self.dependent_repos_count = json['dependent_repos_count']
-    self.downloads = json['downloads']
-    self.downloads_period = json['downloads_period']
-    self.latest_release_number = json['latest_release_number']
-    self.repository_url = json['repository_url']
-    self.description = json['description']
-    self.registry_url = json['registry_url']
-    self.versions_count = json['versions_count']
-    self.critical = json['critical'] || false
-    self.owner = extract_owner
-    save
+    # Fetch package data with conditional request using ETag
+    package_response = EcosystemsFaradayClient.conditional_get(
+      "/api/v1#{escaped_registry_package_path}",
+      package_etag
+    )
 
-    # download version numbers
-    response = conn.get("/api/v1#{escaped_registry_package_path}/version_numbers")
-    return nil unless response.success?
+    # Only update if data has changed (not a 304 response)
+    if package_response[:success] && !package_response[:not_modified]
+      json = package_response[:body]
 
-    self.version_numbers = response.body
-    save
-    
+      self.last_synced_at = Time.now
+      self.dependent_packages_count = json['dependent_packages_count']
+      self.dependent_repos_count = json['dependent_repos_count']
+      self.downloads = json['downloads']
+      self.downloads_period = json['downloads_period']
+      self.latest_release_number = json['latest_release_number']
+      self.repository_url = json['repository_url']
+      self.description = json['description']
+      self.registry_url = json['registry_url']
+      self.versions_count = json['versions_count']
+      self.critical = json['critical'] || false
+      self.owner = extract_owner
+      self.package_etag = package_response[:etag]
+      save
+    elsif package_response[:not_modified]
+      # Data hasn't changed, just update last_synced_at
+      update_column(:last_synced_at, Time.now)
+    end
+
+    return nil unless package_response[:success]
+
+    # Fetch version numbers with conditional request using ETag
+    versions_response = EcosystemsFaradayClient.conditional_get(
+      "/api/v1#{escaped_registry_package_path}/version_numbers",
+      versions_etag
+    )
+
+    if versions_response[:success] && !versions_response[:not_modified]
+      self.version_numbers = versions_response[:body]
+      self.versions_etag = versions_response[:etag]
+      save
+    end
+
     # update advisory count
     update_advisories_count
   end

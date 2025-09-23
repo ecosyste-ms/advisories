@@ -89,6 +89,15 @@ class Advisory < ApplicationRecord
   end
 
   def version_numbers(package)
+    # Try to find cached package record
+    pkg = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
+
+    # If we have cached version numbers, use them
+    if pkg && pkg.version_numbers.present?
+      return pkg.version_numbers
+    end
+
+    # Otherwise fetch from API
     conn = EcosystemsFaradayClient.build
     resp = conn.get(Registry.package_versions_api_link_for(package))
     return [] unless resp.success?
@@ -127,6 +136,9 @@ class Advisory < ApplicationRecord
   def affected_dependencies(package)
     vulns = affected_versions_for_package(package)
     version_numbers = version_numbers(package)
+
+    # Check if we have a cached package record to potentially avoid API calls
+    pkg = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
 
     conn = EcosystemsFaradayClient.build
     resp = conn.get(dependent_packages_api_url(package)) # TODO pagination if headers next link is present

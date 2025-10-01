@@ -1,4 +1,9 @@
-<% @meta_description = "Browse Security Advisories for #{@package_name} in #{@ecosystem}" %>
+<% @meta_title = "#{@package_name} Security Advisories - #{@ecosystem.humanize}" %>
+<% if @package&.description.present? %>
+  <% @meta_description = "Security advisories for #{@package_name} (#{@ecosystem}): #{@package.description.truncate(120)}" %>
+<% else %>
+  <% @meta_description = "View security advisories, CVEs, and vulnerability details for #{@package_name} in the #{@ecosystem} ecosystem." %>
+<% end %>
 
 <div class="container">
   <div class="mb-5">

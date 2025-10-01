@@ -1,8 +1,10 @@
 class AdvisoriesController < ApplicationController
   def index
     # Redirect to new ecosystem and package routes
-    if params[:ecosystem].present? && params[:package_name].present?
-      redirect_to ecosystem_package_path(params[:ecosystem], params[:package_name]), status: :moved_permanently
+    package_name = params[:package_name] || params[:name]
+
+    if params[:ecosystem].present? && package_name.present?
+      redirect_to ecosystem_package_path(params[:ecosystem], package_name), status: :moved_permanently
       return
     elsif params[:ecosystem].present?
       redirect_to ecosystem_path(params[:ecosystem]), status: :moved_permanently

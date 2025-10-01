@@ -64,4 +64,10 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should redirect with legacy name parameter" do
+    get advisories_url, params: { ecosystem: "pypi", name: "apache-airflow" }
+    assert_redirected_to ecosystem_package_path("pypi", "apache-airflow")
+    assert_response :moved_permanently
+  end
+
 end

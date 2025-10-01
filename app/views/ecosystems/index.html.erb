@@ -1,0 +1,27 @@
+<% @meta_description = "Browse Security Advisories by Ecosystem" %>
+
+<div class="container">
+  <h2 class="h1 mb-5">
+   Browse Advisories by Ecosystems
+  </h2>
+
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+    <% @ecosystems.each do |ecosystem| %>
+      <div class="col">
+        <%= link_to ecosystem_path(ecosystem[:name]), class: "card h-100 text-decoration-none border-0 shadow-sm" do %>
+          <div class="card-body d-flex flex-column align-items-center text-center">
+            <% if ecosystem[:registry]&.icon_url.present? %>
+              <img src="<%= ecosystem[:registry].icon_url %>" alt="<%= ecosystem[:name] %>" class="mb-3" style="width: 64px; height: 64px; object-fit: contain;">
+            <% else %>
+              <div class="mb-3" style="width: 64px; height: 64px; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: #999;">
+                <%= ecosystem[:name][0].upcase %>
+              </div>
+            <% end %>
+            <h3 class="h5 card-title mb-2"><%= ecosystem[:name] %></h3>
+            <p class="text-muted mb-0"><%= number_with_delimiter ecosystem[:count] %> <%= 'advisory'.pluralize(ecosystem[:count]) %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

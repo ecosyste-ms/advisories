@@ -14,6 +14,7 @@ class Registry < ApplicationRecord
         r.packages_count = registry['packages_count']
         r.github = registry['github']
         r.metadata = registry['metadata']
+        r.icon_url = registry['icon_url']
         r.purl_type = registry['purl_type']
         r.created_at = registry['created_at']
         r.updated_at = registry['updated_at']

@@ -17,6 +17,10 @@ Rails.application.routes.draw do
 
   resources :advisories, only: [:index, :show]
 
+  get 'ecosystems', to: 'ecosystems#index', as: 'ecosystems'
+  get 'ecosystems/:ecosystem_id', to: 'ecosystems#show', as: 'ecosystem'
+  get 'ecosystems/:ecosystem_id/*package_name', to: 'ecosystems#package', as: 'ecosystem_package', format: false
+
   get :recent_advisories_data, to: 'advisories#recent_advisories_data'
 
   get '/batscope', to: 'batscope#index'

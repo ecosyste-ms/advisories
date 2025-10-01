@@ -1,0 +1,72 @@
+<% @meta_description = "Browse Security Advisories for #{@package_name} in #{@ecosystem}" %>
+
+<div class="container">
+  <div class="mb-5">
+    <div class="d-flex align-items-center mb-3">
+      <% if @registry&.icon_url.present? %>
+        <img src="<%= @registry.icon_url %>" alt="<%= @ecosystem %>" class="me-3" style="width: 64px; height: 64px; object-fit: contain;">
+      <% end %>
+      <div>
+        <h2 class="h1 mb-0"><%= @package_name %></h2>
+        <p class="text-muted mb-0">
+          <%= link_to @ecosystem, ecosystem_path(@ecosystem) %>
+          <% if @package %>
+            <% if @package.description.present? %>
+              · <%= @package.description %>
+            <% end %>
+            <% if @package.repository_url.present? %>
+              · <a href="<%= @package.repository_url %>" target="_blank" rel="noopener">Repository</a>
+            <% end %>
+            <% if @package.registry_url.present? %>
+              · <a href="<%= @package.registry_url %>" target="_blank" rel="noopener">Package</a>
+            <% end %>
+          <% end %>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="listing-controls p-3 mb-5 rounded">
+
+    <div class="row">
+      <div class="col-8">
+        <p class="mb-0">
+          <% if params[:severity].present? %>
+            <strong><%= params[:severity].humanize %></strong>
+          <% end %>
+          Security Advisories
+          for <strong><%= @package_name %></strong>
+          <% if params[:repository_url].present? %>
+            for <strong><%= params[:repository_url] %></strong>
+          <% end %>
+          in <strong><%= @ecosystem %></strong>
+          <% if params.slice(:repository_url, :severity).values.any?(&:present?) %>
+            <%= link_to 'Clear Filters', ecosystem_package_path(@ecosystem, @package_name), class: 'btn btn-link btn-clear p-0' %>
+          <% end %>
+        </p>
+      </div>
+
+          <div class="col-4  text-end">
+            <%= render 'advisories/sort' %>
+          </div>
+        </div>
+      </div>
+      <%= render @advisories %>
+      <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+    </div>
+    <div class="col-lg-4 listing-filters">
+      <h3 class="h4 mx-3">Filter by Severity</h3>
+      <div class="list-group list-group-flush">
+        <% @severities.each do |severity,count| %>
+          <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(request.params.merge(severity: (params[:severity] == severity ? nil : severity), page: nil)) %>">
+            <%= severity.humanize %>
+            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
+          </a>
+        <% end %>
+      </div>
+
+    </div>
+  </div>
+</div>

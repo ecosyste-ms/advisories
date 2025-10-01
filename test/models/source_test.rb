@@ -111,6 +111,9 @@ class SourceTest < ActiveSupport::TestCase
   end
 
   test "base source sync_advisories uses list_advisories for non-paginated sources" do
+    # Reset WebMock to ensure no stubs from previous tests
+    WebMock.reset!
+
     # This test should not make any HTTP calls
     mock_source = Sources::Base.new(@source)
 

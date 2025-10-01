@@ -47,4 +47,21 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should redirect ecosystem filter to ecosystem path" do
+    get advisories_url, params: { ecosystem: "pypi" }
+    assert_redirected_to ecosystem_path("pypi")
+    assert_response :moved_permanently
+  end
+
+  test "should redirect ecosystem and package filters to package path" do
+    get advisories_url, params: { ecosystem: "npm", package_name: "lodash" }
+    assert_redirected_to ecosystem_package_path("npm", "lodash")
+    assert_response :moved_permanently
+  end
+
+  test "should not redirect if only other filters are present" do
+    get advisories_url, params: { severity: "high" }
+    assert_response :success
+  end
+
 end

@@ -1,15 +1,22 @@
 class AdvisoriesController < ApplicationController
   def index
+    # Redirect to new ecosystem and package routes
+    if params[:ecosystem].present? && params[:package_name].present?
+      redirect_to ecosystem_package_path(params[:ecosystem], params[:package_name]), status: :moved_permanently
+      return
+    elsif params[:ecosystem].present?
+      redirect_to ecosystem_path(params[:ecosystem]), status: :moved_permanently
+      return
+    end
+
     scope = Advisory.not_withdrawn
 
     @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
     @ecosystems = scope.ecosystem_counts
-    scope = scope.ecosystem(params[:ecosystem]) if params[:ecosystem].present?
-  
-    @packages = scope.package_counts 
-    scope = scope.package_name(params[:package_name]) if params[:package_name].present?
+
+    @packages = scope.package_counts
 
     @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?

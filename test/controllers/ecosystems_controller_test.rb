@@ -15,7 +15,7 @@ class EcosystemsControllerTest < ActionDispatch::IntegrationTest
   test "should get ecosystems index" do
     get ecosystems_url
     assert_response :success
-    assert_select "h2", /Browse Ecosystems/
+    assert_select "h2", /Browse Advisories by Ecosystems/
   end
 
   test "should get ecosystem show page" do

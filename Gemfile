@@ -3,7 +3,11 @@ git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
 ruby '3.4.6'
 
-gem "rails", "~> 8.0.0"
+gem "activemodel", "~> 8.0.0"
+gem "activerecord", "~> 8.0.0"
+gem "actionpack", "~> 8.0.0"
+gem "actionview", "~> 8.0.0"
+gem "railties", "~> 8.0.0"
 
 gem "secure_headers"
 gem "sprockets-rails"
@@ -38,7 +42,7 @@ gem 'sitemap_generator'
 gem 'librariesio-url-parser'
 gem 'ostruct'
 gem 'faraday-multipart'
-gem 'bootstrap-icons-helper'
+gem 'bootstrap-icons', require: 'bootstrap_icons'
 gem 'redis'
 gem 'appsignal'
 

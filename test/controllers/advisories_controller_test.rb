@@ -70,4 +70,18 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :moved_permanently
   end
 
+  test "should redirect package_name without ecosystem if only one package exists" do
+    package = FactoryBot.create(:package, name: "typo3/cms", ecosystem: "packagist")
+    get advisories_url, params: { package_name: "typo3/cms" }
+    assert_redirected_to ecosystem_package_path("packagist", "typo3/cms")
+    assert_response :moved_permanently
+  end
+
+  test "should not redirect package_name without ecosystem if multiple packages exist" do
+    FactoryBot.create(:package, name: "lodash", ecosystem: "npm")
+    FactoryBot.create(:package, name: "lodash", ecosystem: "jspm")
+    get advisories_url, params: { package_name: "lodash" }
+    assert_response :success
+  end
+
 end

@@ -146,14 +146,14 @@ class PackageTest < ActiveSupport::TestCase
       assert_nil package.repository_host
     end
 
-    should "handle git SSH URLs" do
+    should "return nil for git SSH URLs" do
       package = build(:package, repository_url: "git@github.com:user/repo.git")
-      assert_equal "github.com", package.repository_host
+      assert_nil package.repository_host
     end
 
-    should "handle git SSH URLs with different format" do
+    should "return nil for git SSH URLs with different format" do
       package = build(:package, repository_url: "bcgit@git.bouncycastle.org:bc-fips-libs-2.1.X-java.git")
-      assert_equal "git.bouncycastle.org", package.repository_host
+      assert_nil package.repository_host
     end
 
     should "return nil for invalid URLs" do

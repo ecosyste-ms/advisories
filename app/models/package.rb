@@ -153,12 +153,9 @@ class Package < ApplicationRecord
 
   def repository_host
     return nil unless repository_url.present?
-    uri = URI.parse(repository_url)
-    uri.host
+    URI.parse(repository_url).host
   rescue URI::InvalidURIError
-    # Handle git SSH URLs like "git@github.com:user/repo.git"
-    match = repository_url.match(/@([^:\/]+)/)
-    match ? match[1] : nil
+    nil
   end
 
   def registry_name

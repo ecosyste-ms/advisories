@@ -13,20 +13,25 @@
       <% end %>
       <div>
         <h2 class="h1 mb-0"><%= @package_name %></h2>
-        <p class="text-muted mb-0">
+        <p class="text-muted mb-1">
           <%= link_to @ecosystem, ecosystem_path(@ecosystem) %>
-          <% if @package %>
-            <% if @package.description.present? %>
-              · <%= @package.description %>
-            <% end %>
-            <% if @package.repository_url.present? %>
-              · <a href="<%= @package.repository_url %>" target="_blank" rel="noopener">Repository</a>
-            <% end %>
-            <% if @package.registry_url.present? %>
-              · <a href="<%= @package.registry_url %>" target="_blank" rel="noopener">Package</a>
-            <% end %>
-          <% end %>
         </p>
+        <% if @package %>
+          <% if @package.description.present? %>
+            <p class="text-muted mb-1"><%= @package.description %></p>
+          <% end %>
+          <% if @package.repository_url.present? || @package.registry_url.present? %>
+            <p class="text-muted mb-0">
+              <% if @package.repository_url.present? %>
+                <a href="<%= @package.repository_url %>" target="_blank" rel="noopener">View on <%= @package.repository_host %></a>
+              <% end %>
+              <% if @package.registry_url.present? %>
+                <%= ' · ' if @package.repository_url.present? %>
+                <a href="<%= @package.registry_url %>" target="_blank" rel="noopener">View on <%= @package.registry_name %></a>
+              <% end %>
+            </p>
+          <% end %>
+        <% end %>
       </div>
     </div>
   </div>

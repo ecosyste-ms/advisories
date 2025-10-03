@@ -139,8 +139,6 @@ class Package < ApplicationRecord
     )
   end
 
-  private
-
   def escaped_registry_package_path
     "/registries/#{URI.encode_www_form_component(registry.name)}/packages/#{URI.encode_www_form_component(name)}"
   end
@@ -151,5 +149,15 @@ class Package < ApplicationRecord
 
   def owner_url
     repository_url.to_s.split('/')[0..3].join('/') if repository_url.present?
+  end
+
+  def repository_host
+    return nil unless repository_url.present?
+    URI.parse(repository_url).host
+  end
+
+  def registry_name
+    return nil unless registry_url.present?
+    registry&.name || URI.parse(registry_url).host
   end
 end

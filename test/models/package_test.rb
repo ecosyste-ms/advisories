@@ -134,4 +134,34 @@ class PackageTest < ActiveSupport::TestCase
       assert_nil package.purl
     end
   end
+
+  context "#repository_host" do
+    should "return host from repository URL" do
+      package = build(:package, repository_url: "https://github.com/rails/rails")
+      assert_equal "github.com", package.repository_host
+    end
+
+    should "return nil when repository URL is blank" do
+      package = build(:package, repository_url: nil)
+      assert_nil package.repository_host
+    end
+  end
+
+  context "#registry_name" do
+    should "return registry name when available" do
+      registry = create(:registry, name: "npmjs.org", ecosystem: "npm")
+      package = build(:package, ecosystem: "npm", registry_url: "https://www.npmjs.com/package/lodash")
+      assert_equal "npmjs.org", package.registry_name
+    end
+
+    should "return host from registry URL when registry name is not available" do
+      package = build(:package, ecosystem: "unknown", registry_url: "https://example.com/package/test")
+      assert_equal "example.com", package.registry_name
+    end
+
+    should "return nil when registry URL is blank" do
+      package = build(:package, registry_url: nil)
+      assert_nil package.registry_name
+    end
+  end
 end

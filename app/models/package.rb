@@ -84,30 +84,56 @@ class Package < ApplicationRecord
   end
 
   def affected_versions(range)
-    v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact
-    sort_versions v.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
+    # Create mapping of cleaned version to original version
+    version_map = {}
+    version_numbers.each do |v|
+      cleaned = SemanticRange.clean(v, loose: true)
+      version_map[cleaned] = v if cleaned
+    end
+
+    # Filter using cleaned versions
+    cleaned_versions = version_map.keys
+    affected_cleaned = cleaned_versions.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
+
+    # Map back to original versions and sort
+    original_affected = affected_cleaned.map {|v| version_map[v] }
+    sort_versions_with_originals(original_affected)
   end
 
   def fixed_versions(range)
-    av = affected_versions(range)
-    v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact - av
+    # Create mapping of cleaned version to original version
+    version_map = {}
+    version_numbers.each do |v|
+      cleaned = SemanticRange.clean(v, loose: true)
+      version_map[cleaned] = v if cleaned
+    end
+
+    # Get affected cleaned versions
+    cleaned_versions = version_map.keys
+    affected_cleaned = cleaned_versions.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
+
+    # Get fixed versions (all versions minus affected)
+    fixed_cleaned = cleaned_versions - affected_cleaned
+
+    # Map back to original versions and sort
+    original_fixed = fixed_cleaned.map {|v| version_map[v] }
     # ignore prerelease versions for now
-    sort_versions v.reject {|v| v.include?('-') }
+    sort_versions_with_originals original_fixed.reject {|v| v.include?('-') }
   end
 
   def sort_versions(versions)
     versions.sort_by do |v|
       # Split version by dots
       parts = v.split('.')
-      
+
       # Normalize to have consistent structure for comparison
       normalized_parts = []
       4.times do |i|
         part = parts[i] || '0'
-        
+
         # Split each part into numeric and non-numeric segments
         segments = part.split(/(\d+)/).reject(&:empty?)
-        
+
         part_comparison = []
         segments.each do |segment|
           if segment.match?(/^\d+$/)
@@ -116,15 +142,30 @@ class Package < ApplicationRecord
             part_comparison << [1, segment] # Strings sort after numbers
           end
         end
-        
+
         # If no segments (empty part), treat as [0, 0]
         part_comparison = [[0, 0]] if part_comparison.empty?
-        
+
         normalized_parts << part_comparison
       end
-      
+
       normalized_parts
     end
+  end
+
+  def sort_versions_with_originals(versions)
+    # Create mapping of cleaned version to original
+    version_map = {}
+    versions.each do |v|
+      cleaned = SemanticRange.clean(v, loose: true)
+      version_map[cleaned] = v if cleaned
+    end
+
+    # Sort cleaned versions
+    sorted_cleaned = sort_versions(version_map.keys)
+
+    # Map back to originals
+    sorted_cleaned.map {|v| version_map[v] }
   end
 
   def update_advisories_count

@@ -179,4 +179,98 @@ class PackageTest < ActiveSupport::TestCase
       assert_nil package.registry_name
     end
   end
+
+  context "#affected_versions" do
+    should "preserve original version strings for Go packages with v prefix" do
+      registry = create(:registry, name: "go.dev", ecosystem: "go")
+      package = Package.create!(
+        ecosystem: "go",
+        name: "golang.org/x/crypto",
+        version_numbers: ["v1.0.0", "v1.1.0", "v1.2.0", "v2.0.0"]
+      )
+
+      # Test range that should match v1.x versions
+      affected = package.affected_versions(">= 1.0.0, < 2.0.0")
+
+      assert_equal ["v1.0.0", "v1.1.0", "v1.2.0"], affected
+      assert affected.all? { |v| v.start_with?("v") }, "All Go versions should preserve v prefix"
+    end
+
+    should "work correctly for npm packages without v prefix" do
+      registry = create(:registry, name: "npmjs.org", ecosystem: "npm")
+      package = Package.create!(
+        ecosystem: "npm",
+        name: "test-package",
+        version_numbers: ["1.0.0", "1.1.0", "1.2.0", "2.0.0"]
+      )
+
+      affected = package.affected_versions(">= 1.0.0, < 2.0.0")
+
+      assert_equal ["1.0.0", "1.1.0", "1.2.0"], affected
+    end
+
+    should "handle mixed version formats and preserve v prefix" do
+      registry = create(:registry, name: "go.dev", ecosystem: "go")
+      package = Package.create!(
+        ecosystem: "go",
+        name: "github.com/test/package",
+        version_numbers: ["v0.9.0", "v1.0.0", "v1.1.0", "v1.2.0"]
+      )
+
+      affected = package.affected_versions(">= 1.0.0")
+
+      # Should include all versions >= 1.0.0 with original v prefix
+      assert affected.include?("v1.0.0")
+      assert affected.include?("v1.1.0")
+      assert affected.include?("v1.2.0")
+      assert_not affected.include?("v0.9.0")
+      # Verify all returned versions preserve the v prefix
+      assert affected.all? { |v| v.start_with?("v") }
+    end
+  end
+
+  context "#fixed_versions" do
+    should "preserve original version strings for Go packages with v prefix" do
+      registry = create(:registry, name: "go.dev", ecosystem: "go")
+      package = Package.create!(
+        ecosystem: "go",
+        name: "golang.org/x/crypto",
+        version_numbers: ["v1.0.0", "v1.1.0", "v1.2.0", "v2.0.0"]
+      )
+
+      # Test range that should match v1.x versions (meaning v2.0.0 is fixed)
+      fixed = package.fixed_versions(">= 1.0.0, < 2.0.0")
+
+      assert_equal ["v2.0.0"], fixed
+      assert fixed.all? { |v| v.start_with?("v") }, "All Go versions should preserve v prefix"
+    end
+
+    should "work correctly for npm packages without v prefix" do
+      registry = create(:registry, name: "npmjs.org", ecosystem: "npm")
+      package = Package.create!(
+        ecosystem: "npm",
+        name: "test-package",
+        version_numbers: ["1.0.0", "1.1.0", "1.2.0", "2.0.0"]
+      )
+
+      fixed = package.fixed_versions(">= 1.0.0, < 2.0.0")
+
+      assert_equal ["2.0.0"], fixed
+    end
+
+    should "exclude prerelease versions" do
+      registry = create(:registry, name: "go.dev", ecosystem: "go")
+      package = Package.create!(
+        ecosystem: "go",
+        name: "github.com/test/package",
+        version_numbers: ["v1.0.0", "v1.1.0", "v2.0.0-beta", "v2.0.0"]
+      )
+
+      fixed = package.fixed_versions(">= 1.0.0, < 2.0.0")
+
+      # Should exclude v2.0.0-beta (prerelease) but include v2.0.0
+      assert_equal ["v2.0.0"], fixed
+      assert_not fixed.include?("v2.0.0-beta")
+    end
+  end
 end

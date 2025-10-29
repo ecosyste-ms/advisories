@@ -210,4 +210,89 @@ class AdvisoryTest < ActiveSupport::TestCase
       assert_equal 1, results.count
     end
   end
+
+  context "#clean_version" do
+    should "return cleaned version for valid semver" do
+      advisory = build(:advisory)
+      assert_equal "1.0.0", advisory.clean_version("1.0.0")
+    end
+
+    should "normalize prerelease versions with extra dots for filtering" do
+      advisory = build(:advisory)
+      # 1.7.0-alpha.2 should become 1.7.0-alpha for filtering purposes
+      assert_equal "1.7.0-alpha", advisory.clean_version("1.7.0-alpha.2")
+      assert_equal "1.7.0-alpha", advisory.clean_version("1.7.0-alpha.3")
+      assert_equal "2.0.0-beta", advisory.clean_version("2.0.0-beta.1")
+    end
+
+    should "return nil for completely invalid versions that don't look like semver" do
+      advisory = build(:advisory)
+      assert_nil advisory.clean_version("not-a-version")
+      assert_nil advisory.clean_version("abcdef")
+      assert_nil advisory.clean_version("random-string")
+    end
+
+    should "return nil for versions without x.x.x pattern" do
+      advisory = build(:advisory)
+      assert_nil advisory.clean_version("1.0")
+      assert_nil advisory.clean_version("latest")
+    end
+  end
+
+  context "#affected_versions" do
+    should "return original invalid versions that match the range after normalization" do
+      package = { "ecosystem" => "nuget", "package_name" => "Mammoth" }
+      advisory = build(:advisory, packages: [package])
+
+      # Stub version_numbers to return versions including ones with extra dots
+      versions = ["1.6.0", "1.7.0-alpha.2", "1.7.0-alpha.3", "1.10.0", "1.11.0", "1.12.0"]
+      advisory.stubs(:version_numbers).returns(versions)
+
+      affected = advisory.affected_versions(package, "< 1.11.0")
+
+      # Should include the ORIGINAL alpha versions (not normalized)
+      assert_includes affected, "1.7.0-alpha.2"
+      assert_includes affected, "1.7.0-alpha.3"
+      assert_includes affected, "1.6.0"
+      assert_includes affected, "1.10.0"
+
+      # Should not include versions >= 1.11.0
+      refute_includes affected, "1.11.0"
+      refute_includes affected, "1.12.0"
+    end
+
+    should "exclude completely invalid versions that don't look like semver" do
+      package = { "ecosystem" => "npm", "package_name" => "test" }
+      advisory = build(:advisory, packages: [package])
+
+      versions = ["1.0.0", "not-a-version", "1.7.0-alpha.2", "abcdef", "2.0.0"]
+      advisory.stubs(:version_numbers).returns(versions)
+
+      affected = advisory.affected_versions(package, "< 3.0.0")
+
+      # Should include valid and normalizable versions
+      assert_includes affected, "1.0.0"
+      assert_includes affected, "1.7.0-alpha.2"
+      assert_includes affected, "2.0.0"
+
+      # Should not include completely invalid versions
+      refute_includes affected, "not-a-version"
+      refute_includes affected, "abcdef"
+    end
+
+    should "handle both original versions being returned" do
+      package = { "ecosystem" => "nuget", "package_name" => "test" }
+      advisory = build(:advisory, packages: [package])
+
+      # Both of these normalize to "1.7.0-alpha" but we should return both originals
+      versions = ["1.7.0-alpha.2", "1.7.0-alpha.3"]
+      advisory.stubs(:version_numbers).returns(versions)
+
+      affected = advisory.affected_versions(package, "< 2.0.0")
+
+      assert_equal 2, affected.count
+      assert_includes affected, "1.7.0-alpha.2"
+      assert_includes affected, "1.7.0-alpha.3"
+    end
+  end
 end

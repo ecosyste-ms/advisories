@@ -109,9 +109,62 @@ class Advisory < ApplicationRecord
     "https://packages.ecosyste.ms/api/v1/dependencies?ecosystem=#{package['ecosystem']}&package_name=#{package['package_name']}&per_page=1000"
   end
 
+  def clean_version(version)
+    # Only attempt normalization if version looks roughly like semver (has at least x.x.x pattern)
+    return nil unless version.match?(/^\d+\.\d+\.\d+/)
+
+    # Check if we need to normalize the prerelease part
+    # Example: "1.7.0-alpha.2" -> "1.7.0-alpha"
+    if version.include?('-')
+      parts = version.split('-', 2)
+      base = parts[0]
+      prerelease = parts[1]
+
+      # If prerelease has dots, keep only the first part
+      if prerelease && prerelease.include?('.')
+        first_prerelease = prerelease.split('.').first
+        normalized = "#{base}-#{first_prerelease}"
+
+        # Try cleaning the normalized version
+        cleaned = SemanticRange.clean(normalized, loose: true)
+        return cleaned if cleaned.present?
+      end
+    end
+
+    # Otherwise try standard cleaning
+    SemanticRange.clean(version, loose: true)
+  end
+
+  def build_version_map(versions)
+    versions.map do |original|
+      cleaned = clean_version(original)
+      [original, cleaned] if cleaned.present?
+    end.compact.to_h
+  end
+
+  def version_satisfies_range?(cleaned_version, range, platform)
+    # First try the standard check
+    if SemanticRange.satisfies?(cleaned_version, range, platform: platform, loose: true)
+      true
+    elsif cleaned_version.include?('-')
+      # For prerelease versions, also check if the base version would satisfy the range
+      # This handles cases where "1.7.0-alpha" should match "< 1.11.0"
+      base_version = cleaned_version.split('-').first
+      SemanticRange.satisfies?(base_version, range, platform: platform, loose: true)
+    else
+      false
+    end
+  end
+
   def affected_versions(package, range)
-    v = version_numbers(package).map {|v| SemanticRange.clean(v, loose: true) }.compact
-    v.select {|v| SemanticRange.satisfies?(v, range, platform: package['ecosystem'].humanize, loose: true) }
+    originals = version_numbers(package)
+    version_map = build_version_map(originals)
+    platform = package['ecosystem'].humanize
+
+    # Filter using cleaned versions, return originals
+    version_map.select do |original, cleaned|
+      version_satisfies_range?(cleaned, range, platform)
+    end.keys
   end
 
   def affected_range_for(package)
@@ -129,8 +182,16 @@ class Advisory < ApplicationRecord
   end
 
   def latest_resolved_version(package, version_numbers, range)
-    v = version_numbers.map {|v| SemanticRange.clean(v, loose: true) }.compact
-    v.select {|v| SemanticRange.satisfies?(v, range, platform: package['ecosystem'].humanize, loose: true) }.max
+    version_map = build_version_map(version_numbers)
+    platform = package['ecosystem'].humanize
+
+    # Filter using cleaned versions
+    matching_versions = version_map.select do |original, cleaned|
+      version_satisfies_range?(cleaned, range, platform)
+    end
+
+    # Return the max cleaned version (not original) for comparison purposes
+    matching_versions.values.max
   end
 
   def affected_dependencies(package)

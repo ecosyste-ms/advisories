@@ -211,34 +211,6 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
-  context "#clean_version" do
-    should "return cleaned version for valid semver" do
-      advisory = build(:advisory)
-      assert_equal "1.0.0", advisory.clean_version("1.0.0")
-    end
-
-    should "normalize prerelease versions with extra dots for filtering" do
-      advisory = build(:advisory)
-      # 1.7.0-alpha.2 should become 1.7.0-alpha for filtering purposes
-      assert_equal "1.7.0-alpha", advisory.clean_version("1.7.0-alpha.2")
-      assert_equal "1.7.0-alpha", advisory.clean_version("1.7.0-alpha.3")
-      assert_equal "2.0.0-beta", advisory.clean_version("2.0.0-beta.1")
-    end
-
-    should "return nil for completely invalid versions that don't look like semver" do
-      advisory = build(:advisory)
-      assert_nil advisory.clean_version("not-a-version")
-      assert_nil advisory.clean_version("abcdef")
-      assert_nil advisory.clean_version("random-string")
-    end
-
-    should "return nil for versions without x.x.x pattern" do
-      advisory = build(:advisory)
-      assert_nil advisory.clean_version("1.0")
-      assert_nil advisory.clean_version("latest")
-    end
-  end
-
   context "#affected_versions" do
     should "return original invalid versions that match the range after normalization" do
       package = { "ecosystem" => "nuget", "package_name" => "Mammoth" }

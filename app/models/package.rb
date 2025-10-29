@@ -1,4 +1,6 @@
 class Package < ApplicationRecord
+  include VersionNormalization
+
   validates :ecosystem, presence: true
   validates :name, presence: true, uniqueness: { scope: :ecosystem }
 
@@ -84,40 +86,33 @@ class Package < ApplicationRecord
   end
 
   def affected_versions(range)
-    # Create mapping of cleaned version to original version
-    version_map = {}
-    version_numbers.each do |v|
-      cleaned = SemanticRange.clean(v, loose: true)
-      version_map[cleaned] = v if cleaned
-    end
+    # Map original versions to cleaned versions
+    version_map = build_version_map(version_numbers)
+    platform = ecosystem.humanize
 
-    # Filter using cleaned versions
-    cleaned_versions = version_map.keys
-    affected_cleaned = cleaned_versions.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
+    # Filter using cleaned versions, return originals
+    original_affected = version_map.select do |original, cleaned|
+      version_satisfies_range?(cleaned, range, platform)
+    end.keys
 
-    # Map back to original versions and sort
-    original_affected = affected_cleaned.map {|v| version_map[v] }
+    # Sort the results
     sort_versions_with_originals(original_affected)
   end
 
   def fixed_versions(range)
-    # Create mapping of cleaned version to original version
-    version_map = {}
-    version_numbers.each do |v|
-      cleaned = SemanticRange.clean(v, loose: true)
-      version_map[cleaned] = v if cleaned
-    end
+    # Map original versions to cleaned versions
+    version_map = build_version_map(version_numbers)
+    platform = ecosystem.humanize
 
-    # Get affected cleaned versions
-    cleaned_versions = version_map.keys
-    affected_cleaned = cleaned_versions.select {|v| SemanticRange.satisfies?(v, range, platform: ecosystem.humanize, loose: true) }
+    # Get affected originals
+    affected_originals = version_map.select do |original, cleaned|
+      version_satisfies_range?(cleaned, range, platform)
+    end.keys
 
     # Get fixed versions (all versions minus affected)
-    fixed_cleaned = cleaned_versions - affected_cleaned
+    original_fixed = version_map.keys - affected_originals
 
-    # Map back to original versions and sort
-    original_fixed = fixed_cleaned.map {|v| version_map[v] }
-    # ignore prerelease versions for now
+    # ignore prerelease versions for now and sort
     sort_versions_with_originals original_fixed.reject {|v| v.include?('-') }
   end
 

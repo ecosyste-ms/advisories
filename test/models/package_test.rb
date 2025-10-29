@@ -227,6 +227,63 @@ class PackageTest < ActiveSupport::TestCase
       # Verify all returned versions preserve the v prefix
       assert affected.all? { |v| v.start_with?("v") }
     end
+
+    should "return original invalid versions that match the range after normalization" do
+      registry = create(:registry, name: "nuget.org", ecosystem: "nuget")
+      package = Package.create!(
+        ecosystem: "nuget",
+        name: "Mammoth",
+        version_numbers: ["1.6.0", "1.7.0-alpha.2", "1.7.0-alpha.3", "1.10.0", "1.11.0", "1.12.0"]
+      )
+
+      affected = package.affected_versions("< 1.11.0")
+
+      # Should include the ORIGINAL alpha versions (not normalized)
+      assert_includes affected, "1.7.0-alpha.2"
+      assert_includes affected, "1.7.0-alpha.3"
+      assert_includes affected, "1.6.0"
+      assert_includes affected, "1.10.0"
+
+      # Should not include versions >= 1.11.0
+      refute_includes affected, "1.11.0"
+      refute_includes affected, "1.12.0"
+    end
+
+    should "exclude completely invalid versions that don't look like semver" do
+      registry = create(:registry, name: "npmjs.org", ecosystem: "npm")
+      package = Package.create!(
+        ecosystem: "npm",
+        name: "test",
+        version_numbers: ["1.0.0", "not-a-version", "1.7.0-alpha.2", "abcdef", "2.0.0"]
+      )
+
+      affected = package.affected_versions("< 3.0.0")
+
+      # Should include valid and normalizable versions
+      assert_includes affected, "1.0.0"
+      assert_includes affected, "1.7.0-alpha.2"
+      assert_includes affected, "2.0.0"
+
+      # Should not include completely invalid versions
+      refute_includes affected, "not-a-version"
+      refute_includes affected, "abcdef"
+    end
+
+    should "handle multiple alpha versions that normalize to same version" do
+      registry = create(:registry, name: "nuget.org", ecosystem: "nuget")
+      package = Package.create!(
+        ecosystem: "nuget",
+        name: "test",
+        version_numbers: ["1.7.0-alpha.2", "1.7.0-alpha.3", "2.0.0"]
+      )
+
+      affected = package.affected_versions("< 2.0.0")
+
+      # Both should be returned as originals
+      assert_equal 2, affected.count
+      assert_includes affected, "1.7.0-alpha.2"
+      assert_includes affected, "1.7.0-alpha.3"
+    end
   end
 
   context "#fixed_versions" do

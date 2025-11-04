@@ -341,7 +341,7 @@ DEPENDENCIES
   nokogiri
   octokit
   ostruct
-  pagy
+  pagy (~> 9.4.0)
   pg
   pg_query
   pghero

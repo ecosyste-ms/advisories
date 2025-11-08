@@ -23,7 +23,8 @@ module Sources
 
         mapped_advisories.each do |advisory|
           a = source.advisories.find_or_initialize_by(uuid: advisory[:uuid])
-          a.update!(advisory)
+          a.assign_attributes(advisory)
+          a.save! if a.changed?
         end
 
         total_synced += mapped_advisories.count

@@ -11,6 +11,7 @@ The project uses ruby on rails which have a number of system dependencies you'll
 - [ruby](https://www.ruby-lang.org/en/documentation/installation/)
 - [postgresql 14](https://www.postgresql.org/download/)
 - [node.js 16+](https://nodejs.org/en/download/)
+- [redis](https://redis.io/download/) (for Sidekiq background jobs)
 
 You will then need to set some configuration environment variables. Copy `env.example` to `.env.development` and customise the values to suit your local setup.
 
@@ -22,6 +23,16 @@ rails server
 ```
 
 You can then load up [http://localhost:3000](http://localhost:3000) to access the service.
+
+### Background Jobs
+
+Background tasks are handled by [Sidekiq](https://github.com/mperham/sidekiq), the workers live in [app/workers](app/workers/).
+
+Sidekiq is automatically run by `bin/dev`, but if you need to run it manually, run the following command:
+
+`bundle exec sidekiq`
+
+The Sidekiq web interface is available at [http://localhost:3000/sidekiq](http://localhost:3000/sidekiq).
 
 ### Docker
 

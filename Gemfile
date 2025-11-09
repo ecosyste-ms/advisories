@@ -44,6 +44,8 @@ gem 'ostruct'
 gem 'faraday-multipart'
 gem 'bootstrap-icons', require: 'bootstrap_icons'
 gem 'redis'
+gem 'sidekiq'
+gem 'sidekiq-unique-jobs'
 gem 'appsignal'
 
 group :development, :test do

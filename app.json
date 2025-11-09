@@ -13,6 +13,10 @@
       "schedule": "0 9 * * *"
     },
     {
+      "command": "bundle exec rake packages:clean_up_sidekiq_unique_jobs",
+      "schedule": "0 0 * * *"
+    },
+    {
       "command": "bundle exec rake sitemap:refresh",
       "schedule": "30 * * * *"
     }

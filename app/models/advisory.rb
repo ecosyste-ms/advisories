@@ -23,9 +23,7 @@ class Advisory < ApplicationRecord
 
   before_save :set_repository_url
   before_save :set_blast_radius
-  after_create :sync_packages
-  after_commit :update_package_advisory_counts
-  after_commit :ping_packages_for_resync
+  after_commit :enqueue_package_sync
 
   def to_s
     uuid
@@ -204,10 +202,15 @@ class Advisory < ApplicationRecord
 
   # TODO store affected_dependent_packages_count and affected_dependent_versions_count in the database and sync on a regular basis
 
+  def enqueue_package_sync
+    packages.each do |package|
+      PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
+    end
+  end
+
   def sync_packages
     packages.each do |package|
-      pkg = Package.find_or_create_by(ecosystem: package['ecosystem'], name: package['package_name'])
-      pkg.sync if pkg.last_synced_at.nil? || pkg.last_synced_at < 1.day.ago
+      PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
     end
   end
 
@@ -255,11 +258,15 @@ class Advisory < ApplicationRecord
   end
 
   def update_package_advisory_counts
-    package_records.each(&:update_advisories_count)
+    packages.each do |package|
+      PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
+    end
   end
 
   def ping_packages_for_resync
-    package_records.each(&:ping_for_resync)
+    packages.each do |package|
+      PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
+    end
   end
 
   def packages_with_records

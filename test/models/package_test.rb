@@ -31,17 +31,17 @@ class PackageTest < ActiveSupport::TestCase
       @package = Package.create!(ecosystem: "npm", name: "test-package")
     end
 
-    should "send POST request to packages.ecosyste.ms ping endpoint" do
-      stub_request(:post, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/test-package/ping")
+    should "send GET request to packages.ecosyste.ms ping endpoint" do
+      stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/test-package/ping")
         .to_return(status: 200, body: "", headers: {})
 
       @package.ping_for_resync
 
-      assert_requested :post, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/test-package/ping"
+      assert_requested :get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/test-package/ping"
     end
 
     should "handle network errors gracefully" do
-      stub_request(:post, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/test-package/ping")
+      stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/test-package/ping")
         .to_raise(StandardError.new("Network error"))
 
       # Should not raise an error
@@ -53,21 +53,21 @@ class PackageTest < ActiveSupport::TestCase
     should "URL escape registry and package names in ping request" do
       registry_with_spaces = create(:registry, name: "github actions", ecosystem: "github-actions")
       package_with_slash = Package.create!(ecosystem: "github-actions", name: "buildalon/setup-steamcmd")
-      
-      stub_request(:post, "https://packages.ecosyste.ms/api/v1/registries/github+actions/packages/buildalon%2Fsetup-steamcmd/ping")
+
+      stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/github+actions/packages/buildalon%2Fsetup-steamcmd/ping")
         .to_return(status: 200, body: "", headers: {})
 
       package_with_slash.ping_for_resync
 
-      assert_requested :post, "https://packages.ecosyste.ms/api/v1/registries/github+actions/packages/buildalon%2Fsetup-steamcmd/ping"
+      assert_requested :get, "https://packages.ecosyste.ms/api/v1/registries/github+actions/packages/buildalon%2Fsetup-steamcmd/ping"
     end
 
     should "skip ping if registry is nil" do
       package_without_registry = Package.new(ecosystem: "unknown", name: "test")
-      
+
       # Should not make any HTTP requests
-      assert_not_requested :post, /.+/
-      
+      assert_not_requested :get, /.+/
+
       package_without_registry.ping_for_resync
     end
   end

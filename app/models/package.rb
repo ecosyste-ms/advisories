@@ -26,7 +26,7 @@ class Package < ApplicationRecord
   def ping_for_resync
     return if registry.nil?
     conn = EcosystemsFaradayClient.build
-    conn.post(ping_url)
+    conn.get(ping_url)
   rescue => e
     Rails.logger.warn "Failed to ping #{ping_url}: #{e.message}"
   end

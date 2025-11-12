@@ -145,109 +145,259 @@ class SourceTest < ActiveSupport::TestCase
   end
 
   test "sync_advisories updates existing advisory when data changed" do
-    # Create an existing advisory
-    create(:advisory,
-      source: @source,
-      uuid: "GHSA-2222",
-      title: "Old Title",
-      description: "Old Description",
-      severity: "MEDIUM",
-      cvss_score: 5.0
-    )
+    Sidekiq::Testing.fake! do
+      # Create an existing advisory
+      create(:advisory,
+        source: @source,
+        uuid: "GHSA-2222",
+        title: "Old Title",
+        description: "Old Description",
+        severity: "MEDIUM",
+        cvss_score: 5.0
+      )
 
-    # Mock GraphQL response with CHANGED data (different title)
-    response = {
-      data: {
-        securityVulnerabilities: {
-          edges: [
-            {
-              node: {
-                advisory: {
-                  id: "GHSA-2222",
-                  permalink: "https://github.com/advisories/GHSA-2222",
-                  summary: "New Title",  # Changed!
-                  description: "Old Description",
-                  origin: "GITHUB",
-                  severity: "MEDIUM",
-                  publishedAt: "2024-01-01T00:00:00Z",
-                  updatedAt: "2024-01-02T00:00:00Z",
-                  withdrawnAt: nil,
-                  classification: "GENERAL",
-                  cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil } },
-                  references: [{ url: "https://example.com" }],
-                  identifiers: [],
-                  epss: { percentage: nil, percentile: nil }
-                },
-                package: { name: "test-package", ecosystem: "NPM" },
-                vulnerableVersionRange: "< 1.0.0",
-                firstPatchedVersion: nil
+      # Mock GraphQL response with CHANGED data (different title)
+      response = {
+        data: {
+          securityVulnerabilities: {
+            edges: [
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-2222",
+                    permalink: "https://github.com/advisories/GHSA-2222",
+                    summary: "New Title",  # Changed!
+                    description: "Old Description",
+                    origin: "GITHUB",
+                    severity: "MEDIUM",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil } },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [],
+                    epss: { percentage: nil, percentile: nil }
+                  },
+                  package: { name: "test-package", ecosystem: "NPM" },
+                  vulnerableVersionRange: "< 1.0.0",
+                  firstPatchedVersion: nil
+                }
               }
-            }
-          ],
-          pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+          }
         }
       }
-    }
 
-    stub_request(:post, "https://api.github.com/graphql")
-      .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+      stub_request(:post, "https://api.github.com/graphql")
+        .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
 
-    @source.sync_advisories
+      # Should enqueue PackageSyncWorker for changed advisory
+      assert_difference 'PackageSyncWorker.jobs.size', 1 do
+        @source.sync_advisories
+      end
 
-    # Verify the advisory was updated
-    advisory = Advisory.find_by(uuid: "GHSA-2222")
-    assert_equal "New Title", advisory.title
-    assert_equal "Old Description", advisory.description
+      # Verify the advisory was updated
+      advisory = Advisory.find_by(uuid: "GHSA-2222")
+      assert_equal "New Title", advisory.title
+      assert_equal "Old Description", advisory.description
+    end
   end
 
   test "sync_advisories creates new advisory when it doesn't exist" do
-    # Mock GraphQL response with new advisory
-    response = {
-      data: {
-        securityVulnerabilities: {
-          edges: [
-            {
-              node: {
-                advisory: {
-                  id: "GHSA-3333",
-                  permalink: "https://github.com/advisories/GHSA-3333",
-                  summary: "Brand New Advisory",
-                  description: "New Description",
-                  origin: "GITHUB",
-                  severity: "HIGH",
-                  publishedAt: "2024-01-01T00:00:00Z",
-                  updatedAt: "2024-01-02T00:00:00Z",
-                  withdrawnAt: nil,
-                  classification: "GENERAL",
-                  cvssSeverities: { cvssV4: { score: 8.0, vectorString: nil } },
-                  references: [{ url: "https://example.com" }],
-                  identifiers: [{ value: "CVE-2024-1234" }],
-                  epss: { percentage: 0.5, percentile: 0.9 }
-                },
-                package: { name: "new-package", ecosystem: "NPM" },
-                vulnerableVersionRange: "< 2.0.0",
-                firstPatchedVersion: { identifier: "2.0.0" }
+    Sidekiq::Testing.fake! do
+      # Mock GraphQL response with new advisory
+      response = {
+        data: {
+          securityVulnerabilities: {
+            edges: [
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-3333",
+                    permalink: "https://github.com/advisories/GHSA-3333",
+                    summary: "Brand New Advisory",
+                    description: "New Description",
+                    origin: "GITHUB",
+                    severity: "HIGH",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: { cvssV4: { score: 8.0, vectorString: nil } },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [{ value: "CVE-2024-1234" }],
+                    epss: { percentage: 0.5, percentile: 0.9 }
+                  },
+                  package: { name: "new-package", ecosystem: "NPM" },
+                  vulnerableVersionRange: "< 2.0.0",
+                  firstPatchedVersion: { identifier: "2.0.0" }
+                }
               }
-            }
-          ],
-          pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+          }
         }
       }
-    }
 
-    stub_request(:post, "https://api.github.com/graphql")
-      .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+      stub_request(:post, "https://api.github.com/graphql")
+        .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
 
-    assert_difference 'Advisory.count', 1 do
-      @source.sync_advisories
+      assert_difference ['Advisory.count', 'PackageSyncWorker.jobs.size'], 1 do
+        @source.sync_advisories
+      end
+
+      # Verify the new advisory was created correctly
+      advisory = Advisory.find_by(uuid: "GHSA-3333")
+      assert_not_nil advisory
+      assert_equal "Brand New Advisory", advisory.title
+      assert_equal "New Description", advisory.description
+      assert_equal "HIGH", advisory.severity
+      assert_equal 8.0, advisory.cvss_score
     end
+  end
 
-    # Verify the new advisory was created correctly
-    advisory = Advisory.find_by(uuid: "GHSA-3333")
-    assert_not_nil advisory
-    assert_equal "Brand New Advisory", advisory.title
-    assert_equal "New Description", advisory.description
-    assert_equal "HIGH", advisory.severity
-    assert_equal 8.0, advisory.cvss_score
+  test "sync_advisories does not enqueue jobs when advisory unchanged" do
+    Sidekiq::Testing.fake! do
+      # Create an existing advisory with ALL fields matching what GitHub will send
+      create(:advisory,
+        source: @source,
+        uuid: "GHSA-4444",
+        url: "https://github.com/advisories/GHSA-4444",
+        title: "Same Title",
+        description: "Same Description",
+        origin: "GITHUB",
+        severity: "MEDIUM",
+        published_at: "2024-01-01T00:00:00Z",
+        withdrawn_at: nil,
+        classification: "GENERAL",
+        cvss_score: 5.0,
+        cvss_vector: nil,
+        references: ["https://example.com"],
+        source_kind: "github",
+        identifiers: [],
+        epss_percentage: nil,
+        epss_percentile: nil,
+        packages: [{ "ecosystem" => "npm", "package_name" => "test-package", "versions" => [{ "vulnerable_version_range" => "< 1.0.0", "first_patched_version" => nil }] }]
+      )
+
+      # Mock GraphQL response with IDENTICAL data
+      response = {
+        data: {
+          securityVulnerabilities: {
+            edges: [
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-4444",
+                    permalink: "https://github.com/advisories/GHSA-4444",
+                    summary: "Same Title",
+                    description: "Same Description",
+                    origin: "GITHUB",
+                    severity: "MEDIUM",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil } },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [],
+                    epss: { percentage: nil, percentile: nil }
+                  },
+                  package: { name: "test-package", ecosystem: "NPM" },
+                  vulnerableVersionRange: "< 1.0.0",
+                  firstPatchedVersion: nil
+                }
+              }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+          }
+        }
+      }
+
+      stub_request(:post, "https://api.github.com/graphql")
+        .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      # Should NOT enqueue jobs since nothing changed
+      assert_no_difference 'PackageSyncWorker.jobs.size' do
+        @source.sync_advisories
+      end
+
+      # Advisory should still exist with same data
+      advisory = Advisory.find_by(uuid: "GHSA-4444")
+      assert_equal "Same Title", advisory.title
+    end
+  end
+
+  test "sync_advisories batches package sync jobs for multiple advisories" do
+    Sidekiq::Testing.fake! do
+      # Mock GraphQL response with multiple advisories affecting same package
+      response = {
+        data: {
+          securityVulnerabilities: {
+            edges: [
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-5555",
+                    permalink: "https://github.com/advisories/GHSA-5555",
+                    summary: "Advisory 1",
+                    description: "Description 1",
+                    origin: "GITHUB",
+                    severity: "HIGH",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: { cvssV4: { score: 7.0, vectorString: nil } },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [],
+                    epss: { percentage: nil, percentile: nil }
+                  },
+                  package: { name: "shared-package", ecosystem: "NPM" },
+                  vulnerableVersionRange: "< 1.0.0",
+                  firstPatchedVersion: nil
+                }
+              },
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-6666",
+                    permalink: "https://github.com/advisories/GHSA-6666",
+                    summary: "Advisory 2",
+                    description: "Description 2",
+                    origin: "GITHUB",
+                    severity: "MEDIUM",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil } },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [],
+                    epss: { percentage: nil, percentile: nil }
+                  },
+                  package: { name: "shared-package", ecosystem: "NPM" },
+                  vulnerableVersionRange: "< 2.0.0",
+                  firstPatchedVersion: nil
+                }
+              }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+          }
+        }
+      }
+
+      stub_request(:post, "https://api.github.com/graphql")
+        .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      # Should only enqueue 1 job for the shared package, not 2
+      assert_difference 'PackageSyncWorker.jobs.size', 1 do
+        assert_difference 'Advisory.count', 2 do
+          @source.sync_advisories
+        end
+      end
+    end
   end
 end

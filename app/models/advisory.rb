@@ -184,7 +184,8 @@ class Advisory < ApplicationRecord
   end
 
   def set_repository_url
-    self.repository_url = repository_urls.first
+    new_url = repository_urls.first
+    self.repository_url = new_url if repository_url != new_url
   end
 
   def repository_urls
@@ -246,7 +247,8 @@ class Advisory < ApplicationRecord
   end
 
   def set_blast_radius
-    self.blast_radius = calculate_blast_radius
+    new_radius = calculate_blast_radius
+    self.blast_radius = new_radius if blast_radius != new_radius
   end
 
   def update_blast_radius

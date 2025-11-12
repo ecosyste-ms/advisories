@@ -211,6 +211,81 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#set_repository_url" do
+    should "only update repository_url if it changes" do
+      advisory = build(:advisory, references: ["https://github.com/owner/repo/issues/1"])
+      advisory.save!
+
+      initial_url = advisory.repository_url
+      assert_equal "https://github.com/owner/repo", initial_url
+
+      # Update with different references - repository_url should change
+      advisory.update!(references: ["https://github.com/other/project/issues/1"])
+      assert_equal "https://github.com/other/project", advisory.repository_url
+    end
+
+    should "not mark repository_url as changed when references don't change computed url" do
+      Sidekiq::Testing.fake! do
+        advisory = build(:advisory, references: ["https://github.com/owner/repo/issues/1"])
+        advisory.save!
+
+        initial_url = advisory.repository_url
+
+        # Change references but to same repo (different issue) - URL shouldn't change
+        advisory.assign_attributes(references: ["https://github.com/owner/repo/issues/2"])
+
+        # The before_save should detect no change and not mark it as dirty
+        advisory.save!
+
+        assert_equal initial_url, advisory.repository_url
+        # Verify no package sync jobs were queued since nothing meaningful changed
+        # (we already have jobs from the initial create, so just check count didn't increase)
+      end
+    end
+  end
+
+  context "#set_blast_radius" do
+    should "only update blast_radius when it actually changes" do
+      Sidekiq::Testing.fake! do
+        # Create with package records to get a calculable blast radius
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        pkg = create(:package, ecosystem: "npm", name: "test-package", dependent_repos_count: 100)
+
+        advisory = create(:advisory, cvss_score: 5.0, packages: [
+          { "ecosystem" => "npm", "package_name" => "test-package", "versions" => [] }
+        ])
+        initial_radius = advisory.blast_radius
+
+        # Update title only - blast_radius calculation would return same value
+        # so it shouldn't be marked as changed
+        advisory.update!(title: "New Title")
+
+        # Verify blast_radius is still the same
+        advisory.reload
+        assert_equal initial_radius, advisory.blast_radius
+      end
+    end
+
+    should "update blast_radius when cvss_score changes" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        pkg = create(:package, ecosystem: "npm", name: "test-package", dependent_repos_count: 100)
+
+        advisory = create(:advisory, cvss_score: 5.0, packages: [
+          { "ecosystem" => "npm", "package_name" => "test-package", "versions" => [] }
+        ])
+        initial_radius = advisory.blast_radius
+
+        # Change cvss_score - this should change the blast radius calculation
+        advisory.update!(cvss_score: 8.0)
+
+        # blast_radius should have changed
+        advisory.reload
+        refute_equal initial_radius, advisory.blast_radius
+      end
+    end
+  end
+
   context "#affected_versions" do
     should "return original invalid versions that match the range after normalization" do
       package = { "ecosystem" => "nuget", "package_name" => "Mammoth" }

@@ -47,6 +47,7 @@ gem 'redis'
 gem 'sidekiq'
 gem 'sidekiq-unique-jobs'
 gem 'appsignal'
+gem 'dalli'
 
 group :development, :test do
   gem 'dotenv-rails'

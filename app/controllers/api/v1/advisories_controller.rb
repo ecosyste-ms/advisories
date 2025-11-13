@@ -15,6 +15,8 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
       order = params[:order] || 'desc'
       sort_options = sort.split(',').zip(order.split(',')).to_h
       scope = scope.order(sort_options)
+    else
+      scope = scope.order(published_at: :desc)
     end
 
     @pagy, @advisories = pagy(scope.includes(:source))

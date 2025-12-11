@@ -48,6 +48,7 @@ gem 'sidekiq'
 gem 'sidekiq-unique-jobs'
 gem 'appsignal'
 gem 'dalli'
+gem "connection_pool", "<3"
 
 group :development, :test do
   gem 'dotenv-rails'

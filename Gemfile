@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby '3.4.8'
+ruby '4.0.0'
 
 gem "activemodel", "~> 8.1.1"
 gem "activerecord", "~> 8.1.1"
@@ -22,7 +22,6 @@ gem "faraday-retry"
 gem "faraday-follow_redirects"
 gem "pagy", "~> 9.4.0"
 gem "pghero"
-gem "pg_query"
 gem 'bootstrap'
 gem 'rack-cors'
 gem 'rswag-api'
@@ -65,4 +64,5 @@ group :test do
   gem "mocha"
   gem "rails-controller-testing"
   gem "factory_bot_rails"
+  gem "minitest", "~> 5"
 end

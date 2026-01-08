@@ -22,7 +22,6 @@ gem "faraday-retry"
 gem "faraday-follow_redirects"
 gem "pagy", "~> 9.4.0"
 gem "pghero"
-gem "pg_query"
 gem 'bootstrap'
 gem 'rack-cors'
 gem 'rswag-api'
@@ -65,4 +64,5 @@ group :test do
   gem "mocha"
   gem "rails-controller-testing"
   gem "factory_bot_rails"
+  gem "minitest", "~> 5"
 end

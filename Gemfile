@@ -47,7 +47,6 @@ gem 'sidekiq'
 gem 'sidekiq-unique-jobs'
 gem 'appsignal'
 gem 'dalli'
-gem "connection_pool", "<3"
 
 group :development, :test do
   gem 'dotenv-rails'
@@ -64,5 +63,4 @@ group :test do
   gem "mocha"
   gem "rails-controller-testing"
   gem "factory_bot_rails"
-  gem "minitest", "~> 5"
 end

@@ -64,6 +64,30 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should filter by source" do
+    erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+    create(:advisory, source: erlef_source, packages: [{"ecosystem" => "hex", "package_name" => "phoenix", "versions" => []}])
+
+    get api_v1_advisories_url, params: { source: "erlef" }, as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    assert_equal "hex", json_response.first["packages"].first["ecosystem"]
+  end
+
+  test "should filter by source github" do
+    erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+    create(:advisory, source: erlef_source, packages: [{"ecosystem" => "hex", "package_name" => "phoenix", "versions" => []}])
+
+    get api_v1_advisories_url, params: { source: "github" }, as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    assert_equal "npm", json_response.first["packages"].first["ecosystem"]
+  end
+
   test "should get packages" do
     get packages_api_v1_advisories_url, as: :json
     assert_response :success

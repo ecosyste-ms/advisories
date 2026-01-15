@@ -169,12 +169,16 @@
           <p>EPSS Percentage: <%= @advisory.epss_percentage %></p>
           <p>EPSS Percentile: <%= @advisory.epss_percentile %></p>
         <% end %>
+        <% if @advisory.classification.present? %>
         <h2>Classification</h2>
         <p><%= @advisory.classification.humanize %></p>
+        <% end %>
         <h2>Source</h2>
         <p><%= @advisory.source %></p>
+        <% if @advisory.origin.present? %>
         <h2>Origin</h2>
         <p><%= @advisory.origin.humanize %></p>
+        <% end %>
         <% if @advisory.repository_url.present? %>
         <h2>Repository</h2>
         <p><%= link_to @advisory.repository_url, @advisory.repository_url, target: :_blank %></p>

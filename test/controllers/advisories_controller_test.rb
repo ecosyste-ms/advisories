@@ -84,4 +84,21 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should filter by source" do
+    erlef_source = FactoryBot.create(:source, kind: "erlef", url: "https://cna.erlef.org")
+    FactoryBot.create(:advisory, source: erlef_source)
+
+    get advisories_url, params: { source: "erlef" }
+    assert_response :success
+  end
+
+  test "should filter by source and show correct advisories" do
+    erlef_source = FactoryBot.create(:source, kind: "erlef", url: "https://cna.erlef.org")
+    FactoryBot.create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-0001")
+
+    get advisories_url, params: { source: "github" }
+    assert_response :success
+    assert_select "a[href*='#{@advisory.uuid}']"
+  end
+
 end

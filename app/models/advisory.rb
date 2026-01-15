@@ -15,6 +15,7 @@ class Advisory < ApplicationRecord
   }
   scope :severity, ->(severity) { where(severity: severity) }
   scope :repository_url, ->(repository_url) { where(repository_url: repository_url) }
+  scope :source_kind, ->(source_kind) { joins(:source).where(sources: { kind: source_kind }) }
   scope :created_after, ->(created_at) { where('created_at > ?', created_at) }
   scope :updated_after, ->(updated_at) { where('updated_at > ?', updated_at) }
 

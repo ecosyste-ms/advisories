@@ -185,6 +185,33 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context ".source_kind scope" do
+    should "filter advisories by source kind" do
+      github_source = create(:source, kind: "github", url: "https://github.com/advisories")
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      github_advisory = create(:advisory, source: github_source, uuid: "GHSA-test-1234")
+      erlef_advisory = create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-0001")
+
+      github_results = Advisory.source_kind("github")
+      erlef_results = Advisory.source_kind("erlef")
+
+      assert_equal 1, github_results.count
+      assert_equal github_advisory, github_results.first
+
+      assert_equal 1, erlef_results.count
+      assert_equal erlef_advisory, erlef_results.first
+    end
+
+    should "return empty when no advisories match source kind" do
+      github_source = create(:source, kind: "github", url: "https://github.com/advisories")
+      create(:advisory, source: github_source)
+
+      results = Advisory.source_kind("erlef")
+      assert_equal 0, results.count
+    end
+  end
+
   context ".package_name scope" do
     should "match package names case insensitively" do
       create(:advisory, packages: [

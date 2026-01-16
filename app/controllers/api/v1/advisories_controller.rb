@@ -52,6 +52,18 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
                         .includes(:source)
 
     @purl = purl
-    @advisories = advisories
+    @advisories = deduplicate_by_cve(advisories)
+  end
+
+  def deduplicate_by_cve(advisories)
+    grouped = advisories.group_by(&:cve)
+
+    no_cve = grouped.delete(nil) || []
+
+    deduped = grouped.map do |_cve, dupes|
+      dupes.max_by { |a| [a.packages.size, a.id] }
+    end
+
+    no_cve + deduped
   end
 end

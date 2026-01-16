@@ -260,6 +260,11 @@ class Advisory < ApplicationRecord
     identifiers.find{|id| id.start_with?('CVE-') }
   end
 
+  def related_advisories
+    return Advisory.none unless cve
+    Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
+  end
+
   def update_package_advisory_counts
     packages.each do |package|
       PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])

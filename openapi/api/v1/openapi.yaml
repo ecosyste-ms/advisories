@@ -47,6 +47,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: source
+          in: query
+          description: "Source to filter by (e.g. github, erlef)"
+          required: false
+          schema:
+            type: string
         - name: page
           in: query
           description: pagination page number 
@@ -163,6 +169,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Advisory'
+  /sources:
+    get:
+      summary: "list advisory sources"
+      operationId: "getSources"
+      tags:
+        - sources
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Source'
+  /sources/{sourceKind}:
+    get:
+      summary: get a source by kind
+      operationId: getSource
+      tags:
+        - sources
+      parameters:
+        - in: path
+          name: sourceKind
+          schema:
+            type: string
+          required: true
+          description: kind of the source (e.g. github, erlef)
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Source'
 components:
   schemas:
     Advisory:
@@ -216,6 +257,37 @@ components:
           type: number
         epss_percentile:
           type: number
+        related_advisories:
+          type: array
+          description: "Advisories from other sources for the same vulnerability (matched by CVE)"
+          items:
+            $ref: '#/components/schemas/RelatedAdvisory'
+    RelatedAdvisory:
+      type: object
+      properties:
+        uuid:
+          type: string
+        source_kind:
+          type: string
+        url:
+          type: string
+    Source:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        kind:
+          type: string
+        url:
+          type: string
+        advisories_count:
+          type: integer
+        created_at:
+          type: string
+        updated_at:
+          type: string
     Package:
       type: object
       properties:

@@ -185,6 +185,31 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#related_advisories" do
+    should "find advisories sharing the same CVE" do
+      github_source = create(:source, kind: "github", url: "https://github.com/advisories")
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      github_advisory = create(:advisory, source: github_source, uuid: "GHSA-test-1234", identifiers: ["CVE-2025-1234", "GHSA-test-1234"])
+      erlef_advisory = create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-1234", identifiers: ["CVE-2025-1234", "EEF-CVE-2025-1234"])
+
+      assert_includes github_advisory.related_advisories, erlef_advisory
+      assert_includes erlef_advisory.related_advisories, github_advisory
+    end
+
+    should "not include itself in related advisories" do
+      advisory = create(:advisory, identifiers: ["CVE-2025-1234"])
+
+      refute_includes advisory.related_advisories, advisory
+    end
+
+    should "return empty when no CVE" do
+      advisory = create(:advisory, identifiers: ["GHSA-test-only"])
+
+      assert_empty advisory.related_advisories
+    end
+  end
+
   context ".source_kind scope" do
     should "filter advisories by source kind" do
       github_source = create(:source, kind: "github", url: "https://github.com/advisories")

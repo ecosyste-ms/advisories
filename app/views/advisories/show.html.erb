@@ -175,6 +175,14 @@
         <% end %>
         <h2>Source</h2>
         <p><%= @advisory.source %></p>
+        <% if @advisory.related_advisories.any? %>
+        <h3>Also available from</h3>
+        <ul class="list-unstyled">
+          <% @advisory.related_advisories.includes(:source).each do |related| %>
+            <li><%= link_to "#{related.source.name} (#{related.uuid})", advisory_path(related) %></li>
+          <% end %>
+        </ul>
+        <% end %>
         <% if @advisory.origin.present? %>
         <h2>Origin</h2>
         <p><%= @advisory.origin.humanize %></p>

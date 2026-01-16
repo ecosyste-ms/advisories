@@ -21,6 +21,7 @@ Rails.application.routes.draw do
           get :lookup
         end
       end
+      resources :sources, only: [:index, :show]
     end
   end
 

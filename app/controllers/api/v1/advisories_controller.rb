@@ -6,6 +6,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
     scope = scope.ecosystem(params[:ecosystem]) if params[:ecosystem].present?
     scope = scope.package_name(params[:package_name]) if params[:package_name].present?
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
+    scope = scope.source_kind(params[:source]) if params[:source].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
     scope = scope.updated_after(params[:updated_after]) if params[:updated_after].present?
@@ -51,6 +52,18 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
                         .includes(:source)
 
     @purl = purl
-    @advisories = advisories
+    @advisories = deduplicate_by_cve(advisories)
+  end
+
+  def deduplicate_by_cve(advisories)
+    grouped = advisories.group_by(&:cve)
+
+    no_cve = grouped.delete(nil) || []
+
+    deduped = grouped.map do |_cve, dupes|
+      dupes.max_by { |a| [a.packages.size, a.id] }
+    end
+
+    no_cve + deduped
   end
 end

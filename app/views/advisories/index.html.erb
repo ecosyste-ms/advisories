@@ -1,4 +1,4 @@
-<% @meta_description = "Browse all Security Advisories #{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} #{params[:repository_url]}" %>
+<% @meta_description = "Browse all Security Advisories #{params[:severity].try(:humanize)} #{params[:ecosystem]} #{params[:package_name]} #{params[:repository_url]} #{params[:source]}" %>
 
 <div class="container">
   <h2 class="h1 mb-5">
@@ -25,7 +25,10 @@
           <% if params[:ecosystem].present? %>
             in <strong><%= params[:ecosystem] %></strong>
           <% end %>
-          <% if params.slice(:ecosystem, :package_name, :repository_url, :severity).values.any?(&:present?) %>
+          <% if params[:source].present? %>
+            from <strong><%= params[:source] %></strong>
+          <% end %>
+          <% if params.slice(:ecosystem, :package_name, :repository_url, :severity, :source).values.any?(&:present?) %>
             <%= link_to 'Clear Filters', advisories_path, class: 'btn btn-link btn-clear p-0' %>
           <% end %>
         </p>
@@ -45,6 +48,16 @@
         <% @severities.each do |severity,count| %>
           <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(request.params.merge(severity: (params[:severity] == severity ? nil : severity), page: nil)) %>">
             <%= severity.humanize %>
+            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
+          </a>
+        <% end %>
+      </div>
+
+      <h3 class="h4 mt-5 mx-3">Filter by Source</h3>
+      <div class="list-group list-group-flush">
+        <% @sources.each do |source, count| %>
+          <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:source] == source.kind %>" href="<%= url_for(request.params.merge(source: (params[:source] == source.kind ? nil : source.kind), page: nil)) %>">
+            <%= source.name %>
             <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
           </a>
         <% end %>

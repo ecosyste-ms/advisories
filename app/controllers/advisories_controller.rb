@@ -20,6 +20,9 @@ class AdvisoriesController < ApplicationController
 
     scope = Advisory.not_withdrawn
 
+    @sources = Source.joins(:advisories).group(:id).order(:name).count.to_a.map { |id, count| [Source.find(id), count] }
+    scope = scope.source_kind(params[:source]) if params[:source].present?
+
     @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 

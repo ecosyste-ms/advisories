@@ -64,6 +64,30 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should filter by source" do
+    erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+    create(:advisory, source: erlef_source, packages: [{"ecosystem" => "hex", "package_name" => "phoenix", "versions" => []}])
+
+    get api_v1_advisories_url, params: { source: "erlef" }, as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    assert_equal "hex", json_response.first["packages"].first["ecosystem"]
+  end
+
+  test "should filter by source github" do
+    erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+    create(:advisory, source: erlef_source, packages: [{"ecosystem" => "hex", "package_name" => "phoenix", "versions" => []}])
+
+    get api_v1_advisories_url, params: { source: "github" }, as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    assert_equal "npm", json_response.first["packages"].first["ecosystem"]
+  end
+
   test "should get packages" do
     get packages_api_v1_advisories_url, as: :json
     assert_response :success
@@ -161,8 +185,8 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     end
 
     should "handle pypi ecosystem correctly" do
-      create(:advisory, 
-        source: @source, 
+      create(:advisory,
+        source: @source,
         packages: [
           {
             "ecosystem" => "pypi",
@@ -175,11 +199,64 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
       )
 
       get lookup_api_v1_advisories_url, params: { purl: "pkg:pypi/django@3.1.0" }, as: :json
-      
+
       assert_response :success
       json_response = JSON.parse(response.body)
-      
+
       assert_equal 1, json_response.length
+    end
+
+    should "deduplicate advisories with same CVE" do
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      create(:advisory, source: @source,
+        packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
+        identifiers: ["CVE-2025-1234", "GHSA-test-1234"])
+
+      create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-1234",
+        packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
+        identifiers: ["CVE-2025-1234", "EEF-CVE-2025-1234"])
+
+      get lookup_api_v1_advisories_url, params: { purl: "pkg:npm/test-pkg" }, as: :json
+      assert_response :success
+
+      json_response = JSON.parse(response.body)
+      assert_equal 1, json_response.length
+    end
+
+    should "include related_advisories in response" do
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      create(:advisory, source: @source,
+        packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
+        identifiers: ["CVE-2025-1234", "GHSA-test-1234"])
+
+      create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-1234",
+        packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
+        identifiers: ["CVE-2025-1234", "EEF-CVE-2025-1234"])
+
+      get lookup_api_v1_advisories_url, params: { purl: "pkg:npm/test-pkg" }, as: :json
+      assert_response :success
+
+      json_response = JSON.parse(response.body)
+      related = json_response.first["related_advisories"]
+      assert_equal 1, related.length
+    end
+
+    should "not deduplicate advisories without CVE" do
+      create(:advisory, source: @source,
+        packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
+        identifiers: ["GHSA-aaaa-1111"])
+
+      create(:advisory, source: @source, uuid: "GHSA-bbbb-2222",
+        packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
+        identifiers: ["GHSA-bbbb-2222"])
+
+      get lookup_api_v1_advisories_url, params: { purl: "pkg:npm/test-pkg" }, as: :json
+      assert_response :success
+
+      json_response = JSON.parse(response.body)
+      assert_equal 2, json_response.length
     end
   end
 end

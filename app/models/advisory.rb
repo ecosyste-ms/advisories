@@ -15,6 +15,7 @@ class Advisory < ApplicationRecord
   }
   scope :severity, ->(severity) { where(severity: severity) }
   scope :repository_url, ->(repository_url) { where(repository_url: repository_url) }
+  scope :source_kind, ->(source_kind) { joins(:source).where(sources: { kind: source_kind }) }
   scope :created_after, ->(created_at) { where('created_at > ?', created_at) }
   scope :updated_after, ->(updated_at) { where('updated_at > ?', updated_at) }
 
@@ -257,6 +258,11 @@ class Advisory < ApplicationRecord
 
   def cve
     identifiers.find{|id| id.start_with?('CVE-') }
+  end
+
+  def related_advisories
+    return Advisory.none unless cve
+    Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
   end
 
   def update_package_advisory_counts

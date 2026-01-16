@@ -169,12 +169,24 @@
           <p>EPSS Percentage: <%= @advisory.epss_percentage %></p>
           <p>EPSS Percentile: <%= @advisory.epss_percentile %></p>
         <% end %>
+        <% if @advisory.classification.present? %>
         <h2>Classification</h2>
         <p><%= @advisory.classification.humanize %></p>
+        <% end %>
         <h2>Source</h2>
         <p><%= @advisory.source %></p>
+        <% if @advisory.related_advisories.any? %>
+        <h3>Also available from</h3>
+        <ul class="list-unstyled">
+          <% @advisory.related_advisories.includes(:source).each do |related| %>
+            <li><%= link_to "#{related.source.name} (#{related.uuid})", advisory_path(related) %></li>
+          <% end %>
+        </ul>
+        <% end %>
+        <% if @advisory.origin.present? %>
         <h2>Origin</h2>
         <p><%= @advisory.origin.humanize %></p>
+        <% end %>
         <% if @advisory.repository_url.present? %>
         <h2>Repository</h2>
         <p><%= link_to @advisory.repository_url, @advisory.repository_url, target: :_blank %></p>

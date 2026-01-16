@@ -127,7 +127,7 @@ class ErlefSourceTest < ActiveSupport::TestCase
     end
   end
 
-  test "map_osv_advisory skips advisories without semver packages" do
+  test "map_osv_advisory includes advisories with only git ranges (empty packages)" do
     osv = {
       id: "EEF-CVE-2025-GIT-ONLY",
       summary: "Test",
@@ -139,18 +139,21 @@ class ErlefSourceTest < ActiveSupport::TestCase
           ranges: [
             {
               type: "GIT",
-              repo: "https://github.com/example/repo",
+              repo: "https://github.com/erlang/otp",
               events: [{ introduced: "abc123" }, { fixed: "def456" }]
             }
           ]
         }
       ],
-      references: [],
-      aliases: []
+      references: [{ type: "ADVISORY", url: "https://github.com/erlang/otp/security/advisories/GHSA-test" }],
+      aliases: ["CVE-2025-1234"]
     }
 
     mapped = @erlef.map_osv_advisory(osv)
-    assert_nil mapped
+    assert_not_nil mapped
+    assert_equal "EEF-CVE-2025-GIT-ONLY", mapped[:uuid]
+    assert_equal [], mapped[:packages]
+    assert_includes mapped[:identifiers], "CVE-2025-1234"
   end
 
   def sample_osv_advisory(id)

@@ -29,7 +29,6 @@ module Sources
 
     def map_osv_advisory(osv)
       packages = extract_packages(osv[:affected] || [])
-      return nil if packages.empty?
 
       cvss_vector = osv.dig(:severity, 0, :score)
       cvss_score = parse_cvss_score(cvss_vector)

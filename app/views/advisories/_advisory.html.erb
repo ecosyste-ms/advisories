@@ -27,6 +27,9 @@
         <% elsif advisory.repository_url.present? %>
           <%= bootstrap_icon 'git-branch', width: 18, height: 18, class: 'flex-shrink-0 me-2' %>
           <span><%= advisory.repository_full_name %></span>
+        <% else %>
+          <%= bootstrap_icon 'shield-exclamation', width: 18, height: 18, class: 'flex-shrink-0 me-2' %>
+          <span><%= advisory.source.name %></span>
         <% end %>
       </div>
     </div>

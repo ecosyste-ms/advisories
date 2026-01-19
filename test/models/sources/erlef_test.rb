@@ -93,16 +93,28 @@ class ErlefSourceTest < ActiveSupport::TestCase
     assert_nil @erlef.severity_from_score(nil)
   end
 
-  test "parse_cvss_score extracts score from CVSS 4.0 vector" do
+  test "parse_cvss_score calculates correct CVSS 4.0 score" do
     vector = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
     score = @erlef.parse_cvss_score(vector)
-    assert score > 0
-    assert score <= 10
+    assert_equal 9.3, score
+  end
+
+  test "parse_cvss_score calculates correct CVSS 3.1 score" do
+    vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    score = @erlef.parse_cvss_score(vector)
+    assert_equal 9.8, score
+  end
+
+  test "parse_cvss_score calculates correct CVSS 3.0 score" do
+    vector = "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    score = @erlef.parse_cvss_score(vector)
+    assert_equal 9.8, score
   end
 
   test "parse_cvss_score returns nil for invalid vector" do
     assert_nil @erlef.parse_cvss_score(nil)
     assert_nil @erlef.parse_cvss_score("invalid")
+    assert_nil @erlef.parse_cvss_score("CVSS:3.1/AV:X/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
   end
 
   test "sync_advisories creates advisories in database" do

@@ -1,3 +1,5 @@
+require 'cvss_suite'
+
 module Sources
   class Erlef < Base
     BASE_URL = 'https://cna.erlef.org'.freeze
@@ -130,119 +132,10 @@ module Sources
     def parse_cvss_score(vector)
       return nil unless vector
 
-      if vector.start_with?('CVSS:4.0/')
-        parse_cvss4_score(vector)
-      elsif vector.start_with?('CVSS:3.')
-        parse_cvss3_score(vector)
-      end
-    end
+      cvss = CvssSuite.new(vector)
+      return nil unless cvss.valid?
 
-    def parse_cvss4_score(vector)
-      av = extract_metric(vector, 'AV')
-      ac = extract_metric(vector, 'AC')
-      at = extract_metric(vector, 'AT')
-      pr = extract_metric(vector, 'PR')
-      ui = extract_metric(vector, 'UI')
-      vc = extract_metric(vector, 'VC')
-      vi = extract_metric(vector, 'VI')
-      va = extract_metric(vector, 'VA')
-
-      base_score = 0.0
-      base_score += impact_weight(vc) * 3.0
-      base_score += impact_weight(vi) * 3.0
-      base_score += impact_weight(va) * 3.0
-
-      exploitability = 1.0
-      exploitability *= av_weight(av)
-      exploitability *= ac_weight(ac)
-      exploitability *= at_weight(at)
-      exploitability *= pr_weight(pr)
-      exploitability *= ui_weight(ui)
-
-      score = (base_score * exploitability).round(1)
-      [[score, 10.0].min, 0.0].max
-    end
-
-    def parse_cvss3_score(vector)
-      av = extract_metric(vector, 'AV')
-      ac = extract_metric(vector, 'AC')
-      pr = extract_metric(vector, 'PR')
-      ui = extract_metric(vector, 'UI')
-      c = extract_metric(vector, 'C')
-      i = extract_metric(vector, 'I')
-      a = extract_metric(vector, 'A')
-
-      base_score = 0.0
-      base_score += impact_weight(c) * 3.0
-      base_score += impact_weight(i) * 3.0
-      base_score += impact_weight(a) * 3.0
-
-      exploitability = 1.0
-      exploitability *= av_weight(av)
-      exploitability *= ac_weight(ac)
-      exploitability *= pr_weight(pr)
-      exploitability *= ui_weight(ui)
-
-      score = (base_score * exploitability).round(1)
-      [[score, 10.0].min, 0.0].max
-    end
-
-    def extract_metric(vector, metric)
-      match = vector.match(/#{metric}:([A-Z])/)
-      match ? match[1] : nil
-    end
-
-    def impact_weight(value)
-      case value
-      when 'H' then 1.0
-      when 'L' then 0.3
-      when 'N' then 0.0
-      else 0.0
-      end
-    end
-
-    def av_weight(value)
-      case value
-      when 'N' then 1.0
-      when 'A' then 0.85
-      when 'L' then 0.6
-      when 'P' then 0.4
-      else 0.6
-      end
-    end
-
-    def ac_weight(value)
-      case value
-      when 'L' then 1.0
-      when 'H' then 0.5
-      else 0.8
-      end
-    end
-
-    def at_weight(value)
-      case value
-      when 'N' then 1.0
-      when 'P' then 0.7
-      else 0.8
-      end
-    end
-
-    def pr_weight(value)
-      case value
-      when 'N' then 1.0
-      when 'L' then 0.7
-      when 'H' then 0.4
-      else 0.7
-      end
-    end
-
-    def ui_weight(value)
-      case value
-      when 'N' then 1.0
-      when 'P' then 0.7
-      when 'A' then 0.5
-      else 0.7
-      end
+      cvss.overall_score
     end
 
     def severity_from_score(score)

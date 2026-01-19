@@ -205,6 +205,26 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#repository_full_name" do
+    should "extract full name from GitHub repository URL" do
+      advisory = build(:advisory, repository_url: "https://github.com/erlang/otp")
+
+      assert_equal "erlang/otp", advisory.repository_full_name
+    end
+
+    should "handle repository URLs with .git suffix" do
+      advisory = build(:advisory, repository_url: "https://github.com/erlang/otp.git")
+
+      assert_equal "erlang/otp", advisory.repository_full_name
+    end
+
+    should "return nil when repository_url is nil" do
+      advisory = build(:advisory, repository_url: nil)
+
+      assert_nil advisory.repository_full_name
+    end
+  end
+
   context "#related_advisories" do
     should "find advisories sharing the same CVE" do
       github_source = create(:source, kind: "github", url: "https://github.com/advisories")

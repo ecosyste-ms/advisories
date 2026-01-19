@@ -279,6 +279,17 @@ class Advisory < ApplicationRecord
     nil
   end
 
+  def repository_full_name
+    return nil unless repository_url
+    parsed = URLParser.try_all(repository_url)
+    return nil unless parsed
+
+    uri = URI.parse(parsed)
+    uri.path.sub(/^\//, '').sub(/\.git$/, '')
+  rescue URI::InvalidURIError
+    nil
+  end
+
   def update_package_advisory_counts
     packages.each do |package|
       PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])

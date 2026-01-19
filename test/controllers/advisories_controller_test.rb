@@ -92,6 +92,30 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should display advisory with no packages and no repository_url" do
+    erlef_source = FactoryBot.create(:source, kind: "erlef", name: "Erlef", url: "https://cna.erlef.org")
+    FactoryBot.create(:advisory, source: erlef_source, packages: [], repository_url: nil)
+
+    get advisories_url, params: { source: "erlef" }
+    assert_response :success
+  end
+
+  test "should display advisory with repository_url but no packages" do
+    erlef_source = FactoryBot.create(:source, kind: "erlef", name: "Erlef", url: "https://cna.erlef.org")
+    Advisory.create!(
+      source: erlef_source,
+      uuid: "EEF-CVE-2025-TEST",
+      title: "Test Advisory",
+      packages: [],
+      repository_url: "https://github.com/erlang/otp",
+      published_at: Time.current,
+      severity: "low"
+    )
+
+    get advisories_url, params: { source: "erlef" }
+    assert_response :success
+  end
+
   test "should filter by source and show correct advisories" do
     erlef_source = FactoryBot.create(:source, kind: "erlef", url: "https://cna.erlef.org")
     FactoryBot.create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-0001")

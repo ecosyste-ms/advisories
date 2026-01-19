@@ -185,6 +185,26 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#ecosystems_repo_url" do
+    should "generate ecosyste.ms URL from GitHub repository" do
+      advisory = build(:advisory, repository_url: "https://github.com/erlang/otp")
+
+      assert_equal "https://repos.ecosyste.ms/hosts/github.com/repositories/erlang/otp", advisory.ecosystems_repo_url
+    end
+
+    should "handle repository URLs with .git suffix" do
+      advisory = build(:advisory, repository_url: "https://github.com/erlang/otp.git")
+
+      assert_equal "https://repos.ecosyste.ms/hosts/github.com/repositories/erlang/otp", advisory.ecosystems_repo_url
+    end
+
+    should "return nil when repository_url is nil" do
+      advisory = build(:advisory, repository_url: nil)
+
+      assert_nil advisory.ecosystems_repo_url
+    end
+  end
+
   context "#related_advisories" do
     should "find advisories sharing the same CVE" do
       github_source = create(:source, kind: "github", url: "https://github.com/advisories")

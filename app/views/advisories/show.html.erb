@@ -189,7 +189,12 @@
         <% end %>
         <% if @advisory.repository_url.present? %>
         <h2>Repository</h2>
-        <p><%= link_to @advisory.repository_url, @advisory.repository_url, target: :_blank %></p>
+        <p>
+          <%= link_to @advisory.repository_url, @advisory.repository_url, target: :_blank %>
+          <% if @advisory.ecosystems_repo_url %>
+            <br><small><%= link_to "View on Ecosyste.ms", @advisory.ecosystems_repo_url, target: :_blank %></small>
+          <% end %>
+        </p>
         <% end %>
         <h2>Date and time</h2>
         <h3>Published</h3>

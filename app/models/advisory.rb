@@ -265,6 +265,20 @@ class Advisory < ApplicationRecord
     Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
   end
 
+  def ecosystems_repo_url
+    return nil unless repository_url
+    parsed = URLParser.try_all(repository_url)
+    return nil unless parsed
+
+    uri = URI.parse(parsed)
+    host = uri.host
+    path = uri.path.sub(/^\//, '').sub(/\.git$/, '')
+
+    "https://repos.ecosyste.ms/hosts/#{host}/repositories/#{path}"
+  rescue URI::InvalidURIError
+    nil
+  end
+
   def update_package_advisory_counts
     packages.each do |package|
       PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])

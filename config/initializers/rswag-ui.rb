@@ -7,6 +7,7 @@ Rswag::Ui.configure do |c|
   # then the list below should correspond to the relative paths for those endpoints
 
   c.openapi_endpoint '/docs/api/v1/openapi.yaml', 'API V1 Docs'
+  c.openapi_endpoint '/docs/osv/v1/openapi.yaml', 'OSV API V1 Docs'
 
   # Add Basic Auth in case your API is private
   # c.basic_auth_enabled = true

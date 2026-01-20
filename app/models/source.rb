@@ -18,4 +18,14 @@ class Source < ApplicationRecord
   def sync_advisories
     source_instance.sync_advisories
   end
+
+  ICONS = {
+    'github' => 'github',
+    'osv' => 'google',
+    'erlef' => 'hexagon'
+  }.freeze
+
+  def icon
+    ICONS[kind]
+  end
 end

@@ -57,7 +57,17 @@
       <div class="list-group list-group-flush">
         <% @sources.each do |source, count| %>
           <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:source] == source.kind %>" href="<%= url_for(request.params.merge(source: (params[:source] == source.kind ? nil : source.kind), page: nil)) %>">
-            <%= source.name %>
+            <%= source_icon(source) %><%= source.name %>
+            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
+          </a>
+        <% end %>
+      </div>
+
+      <h3 class="h4 mt-5 mx-3">Filter by Classification</h3>
+      <div class="list-group list-group-flush">
+        <% @classifications.each do |classification, count| %>
+          <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:classification] == classification %>" href="<%= url_for(request.params.merge(classification: (params[:classification] == classification ? nil : classification), page: nil)) %>">
+            <%= classification.humanize %>
             <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
           </a>
         <% end %>

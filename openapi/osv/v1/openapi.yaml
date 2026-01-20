@@ -1,0 +1,404 @@
+openapi: 3.0.1
+info:
+  title: "Ecosyste.ms: Advisories OSV API"
+  description: "An OSV-compatible API for querying security vulnerabilities. This API follows the OSV (Open Source Vulnerabilities) specification for interoperability with other vulnerability databases."
+  contact:
+    name: Ecosyste.ms
+    email: support@ecosyste.ms
+    url: https://ecosyste.ms
+  version: 1.0.0
+  license:
+    name: CC-BY-SA-4.0
+    url: https://creativecommons.org/licenses/by-sa/4.0/
+externalDocs:
+  description: OSV Schema Specification
+  url: https://ossf.github.io/osv-schema/
+servers:
+- url: https://advisories.ecosyste.ms/v1
+paths:
+  /query:
+    post:
+      summary: "Query vulnerabilities for a package"
+      operationId: "queryVulnerabilities"
+      description: "Query for vulnerabilities affecting a specific package. You can query by package name and ecosystem, or by Package URL (PURL)."
+      tags:
+        - query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+            examples:
+              byPackage:
+                summary: Query by package name and ecosystem
+                value:
+                  package:
+                    name: lodash
+                    ecosystem: npm
+              byPurl:
+                summary: Query by PURL
+                value:
+                  purl: "pkg:npm/lodash@4.17.20"
+              withPagination:
+                summary: Query with pagination
+                value:
+                  package:
+                    name: lodash
+                    ecosystem: npm
+                  page_token: "MTAw"
+      responses:
+        200:
+          description: "List of vulnerabilities matching the query"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        400:
+          description: "Bad Request"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /querybatch:
+    post:
+      summary: "Batch query vulnerabilities"
+      operationId: "queryBatchVulnerabilities"
+      description: "Query for vulnerabilities affecting multiple packages in a single request. Maximum 1000 queries per batch. Returns summary format (id and modified only) for each vulnerability."
+      tags:
+        - query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchQueryRequest'
+            example:
+              queries:
+                - package:
+                    name: lodash
+                    ecosystem: npm
+                - package:
+                    name: django
+                    ecosystem: PyPI
+                - purl: "pkg:gem/rails"
+      responses:
+        200:
+          description: "Batch query results"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchQueryResponse'
+        400:
+          description: "Bad Request - batch size exceeds 1000"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /vulns/{id}:
+    get:
+      summary: "Get vulnerability by ID"
+      operationId: "getVulnerability"
+      description: "Retrieve a specific vulnerability by its ID. The ID can be a vulnerability UUID (e.g., GHSA-xxxx-yyyy-zzzz) or a CVE identifier (e.g., CVE-2023-12345)."
+      tags:
+        - vulnerabilities
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: "Vulnerability ID (UUID or CVE identifier)"
+          examples:
+            ghsa:
+              value: "GHSA-xxxx-yyyy-zzzz"
+              summary: GitHub Security Advisory ID
+            cve:
+              value: "CVE-2023-12345"
+              summary: CVE identifier
+      responses:
+        200:
+          description: "Vulnerability details in OSV format"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vulnerability'
+        404:
+          description: "Vulnerability not found"
+          content:
+            application/json:
+              schema:
+                type: object
+components:
+  schemas:
+    QueryRequest:
+      type: object
+      properties:
+        package:
+          $ref: '#/components/schemas/PackageQuery'
+        purl:
+          type: string
+          description: "Package URL (PURL) to query. Cannot specify version in both purl and package."
+          example: "pkg:npm/lodash@4.17.20"
+        page_token:
+          type: string
+          description: "Pagination token from previous response"
+    PackageQuery:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "Package name"
+          example: "lodash"
+        ecosystem:
+          type: string
+          description: "Package ecosystem (OSV ecosystem names)"
+          example: "npm"
+          enum:
+            - npm
+            - PyPI
+            - RubyGems
+            - Maven
+            - NuGet
+            - Go
+            - crates.io
+            - Packagist
+            - Hex
+            - Pub
+            - GitHub Actions
+            - CRAN
+            - Hackage
+            - Debian
+            - Alpine
+            - Ubuntu
+        version:
+          type: string
+          description: "Package version (optional)"
+          example: "4.17.20"
+    QueryResponse:
+      type: object
+      properties:
+        vulns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vulnerability'
+        next_page_token:
+          type: string
+          description: "Token for fetching the next page of results"
+    BatchQueryRequest:
+      type: object
+      required:
+        - queries
+      properties:
+        queries:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/QueryRequest'
+    BatchQueryResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              vulns:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VulnerabilitySummary'
+    VulnerabilitySummary:
+      type: object
+      description: "Summary format vulnerability (batch query response)"
+      required:
+        - id
+        - modified
+      properties:
+        id:
+          type: string
+          description: "Unique identifier for the vulnerability"
+          example: "GHSA-xxxx-yyyy-zzzz"
+        modified:
+          type: string
+          format: date-time
+          description: "Last modification timestamp (ISO 8601)"
+          example: "2023-01-15T10:00:00Z"
+    Vulnerability:
+      type: object
+      description: "Full OSV format vulnerability"
+      required:
+        - id
+        - modified
+      properties:
+        id:
+          type: string
+          description: "Unique identifier for the vulnerability"
+          example: "GHSA-xxxx-yyyy-zzzz"
+        summary:
+          type: string
+          description: "Short summary of the vulnerability (max 120 characters)"
+          example: "Prototype Pollution in lodash"
+        details:
+          type: string
+          description: "Detailed description of the vulnerability"
+        aliases:
+          type: array
+          description: "Other identifiers for this vulnerability (CVEs, other database IDs)"
+          items:
+            type: string
+          example: ["CVE-2023-12345"]
+        modified:
+          type: string
+          format: date-time
+          description: "Last modification timestamp (ISO 8601)"
+          example: "2023-01-15T10:00:00Z"
+        published:
+          type: string
+          format: date-time
+          description: "Publication timestamp (ISO 8601)"
+          example: "2023-01-10T08:00:00Z"
+        withdrawn:
+          type: string
+          format: date-time
+          description: "Withdrawal timestamp if vulnerability was withdrawn (ISO 8601)"
+        references:
+          type: array
+          description: "Related URLs and references"
+          items:
+            $ref: '#/components/schemas/Reference'
+        affected:
+          type: array
+          description: "Affected packages and version ranges"
+          items:
+            $ref: '#/components/schemas/Affected'
+        severity:
+          type: array
+          description: "CVSS severity scores"
+          items:
+            $ref: '#/components/schemas/Severity'
+        database_specific:
+          type: object
+          description: "Additional metadata specific to this database"
+          properties:
+            source:
+              type: string
+              description: "Source database kind"
+              example: "github"
+            url:
+              type: string
+              description: "URL to the original advisory"
+            severity:
+              type: string
+              description: "Severity level"
+              enum: [critical, high, medium, low]
+            cvss_score:
+              type: number
+              description: "CVSS score"
+              example: 9.8
+            epss_percentage:
+              type: number
+              description: "EPSS percentage"
+            epss_percentile:
+              type: number
+              description: "EPSS percentile"
+            blast_radius:
+              type: number
+              description: "Calculated blast radius score"
+    Reference:
+      type: object
+      properties:
+        type:
+          type: string
+          description: "Reference type"
+          enum:
+            - ADVISORY
+            - ARTICLE
+            - DETECTION
+            - DISCUSSION
+            - REPORT
+            - FIX
+            - GIT
+            - INTRODUCED
+            - PACKAGE
+            - EVIDENCE
+            - WEB
+          example: "ADVISORY"
+        url:
+          type: string
+          description: "Reference URL"
+          example: "https://github.com/advisories/GHSA-xxxx-yyyy-zzzz"
+    Affected:
+      type: object
+      properties:
+        package:
+          type: object
+          properties:
+            name:
+              type: string
+              description: "Package name"
+              example: "lodash"
+            ecosystem:
+              type: string
+              description: "Package ecosystem (OSV ecosystem name)"
+              example: "npm"
+        ranges:
+          type: array
+          description: "Affected version ranges"
+          items:
+            $ref: '#/components/schemas/Range'
+    Range:
+      type: object
+      properties:
+        type:
+          type: string
+          description: "Range type"
+          enum:
+            - SEMVER
+            - ECOSYSTEM
+            - GIT
+          example: "ECOSYSTEM"
+        events:
+          type: array
+          description: "Version events defining the affected range"
+          items:
+            $ref: '#/components/schemas/Event'
+    Event:
+      type: object
+      description: "A version event (introduced, fixed, last_affected, or limit)"
+      properties:
+        introduced:
+          type: string
+          description: "Version where vulnerability was introduced"
+          example: "1.0.0"
+        fixed:
+          type: string
+          description: "Version where vulnerability was fixed"
+          example: "4.17.21"
+        last_affected:
+          type: string
+          description: "Last affected version"
+        limit:
+          type: string
+          description: "Upper limit version"
+    Severity:
+      type: object
+      properties:
+        type:
+          type: string
+          description: "CVSS version"
+          enum:
+            - CVSS_V2
+            - CVSS_V3
+            - CVSS_V4
+          example: "CVSS_V3"
+        score:
+          type: string
+          description: "CVSS vector string"
+          example: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: "Error message"
+          example: "version cannot be specified in both purl and package parameters"

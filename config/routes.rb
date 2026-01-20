@@ -13,6 +13,12 @@ Rails.application.routes.draw do
   mount Sidekiq::Web => "/sidekiq"
   mount PgHero::Engine, at: "pghero"
 
+  namespace :osv, path: 'v1', defaults: { format: :json } do
+    post 'query', to: 'query#create'
+    post 'querybatch', to: 'querybatch#create'
+    get 'vulns/:id', to: 'vulns#show', as: :vuln, id: /[^\/]+/
+  end
+
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
       resources :advisories, only: [:index, :show] do

@@ -8,7 +8,25 @@ This project is part of [Ecosyste.ms](https://ecosyste.ms): Tools and open datas
 
 Documentation for the REST API is available here: [https://advisories.ecosyste.ms/docs](https://advisories.ecosyste.ms/docs)
 
-The default rate limit for the API is 5000/req per hour based on your IP address, get in contact if you need to to increase your rate limit.
+The default rate limit for the API is 5000/req per hour based on your IP address, get in contact if you need to increase your rate limit.
+
+## OSV API
+
+An [OSV-compatible API](https://ossf.github.io/osv-schema/) is available at `/v1` for interoperability with other vulnerability databases and tooling.
+
+Endpoints:
+
+- `POST /v1/query` - Query vulnerabilities by package/ecosystem or PURL
+- `POST /v1/querybatch` - Batch query up to 1000 packages
+- `GET /v1/vulns/:id` - Get vulnerability by ID (UUID or CVE)
+
+Example:
+
+```bash
+curl -X POST https://advisories.ecosyste.ms/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"package":{"name":"lodash","ecosystem":"npm"}}'
+```
 
 ## Development
 

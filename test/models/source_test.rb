@@ -37,7 +37,7 @@ class SourceTest < ActiveSupport::TestCase
                   updatedAt: "2024-01-02T00:00:00Z",
                   withdrawnAt: nil,
                   classification: "GENERAL",
-                  cvssSeverities: { cvssV4: { score: 7.5, vectorString: "CVSS:4.0/..." } },
+                  cvssSeverities: { cvssV4: { score: 7.5, vectorString: "CVSS:4.0/..." }, cvssV3: { score: nil, vectorString: nil } },
                   references: [{ url: "https://example.com/1" }],
                   identifiers: [{ value: "CVE-2024-1111" }],
                   epss: { percentage: 0.1, percentile: 0.5 }
@@ -70,7 +70,7 @@ class SourceTest < ActiveSupport::TestCase
                   updatedAt: "2024-01-02T00:00:00Z",
                   withdrawnAt: nil,
                   classification: "GENERAL",
-                  cvssSeverities: { cvssV4: { score: 5.0, vectorString: "CVSS:4.0/..." } },
+                  cvssSeverities: { cvssV4: { score: 5.0, vectorString: "CVSS:4.0/..." }, cvssV3: { score: nil, vectorString: nil } },
                   references: [{ url: "https://example.com/2" }],
                   identifiers: [{ value: "CVE-2024-2222" }],
                   epss: { percentage: 0.2, percentile: 0.6 }
@@ -174,7 +174,7 @@ class SourceTest < ActiveSupport::TestCase
                     updatedAt: "2024-01-02T00:00:00Z",
                     withdrawnAt: nil,
                     classification: "GENERAL",
-                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil } },
+                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil }, cvssV3: { score: nil, vectorString: nil } },
                     references: [{ url: "https://example.com" }],
                     identifiers: [],
                     epss: { percentage: nil, percentile: nil }
@@ -225,7 +225,7 @@ class SourceTest < ActiveSupport::TestCase
                     updatedAt: "2024-01-02T00:00:00Z",
                     withdrawnAt: nil,
                     classification: "GENERAL",
-                    cvssSeverities: { cvssV4: { score: 8.0, vectorString: nil } },
+                    cvssSeverities: { cvssV4: { score: 8.0, vectorString: nil }, cvssV3: { score: nil, vectorString: nil } },
                     references: [{ url: "https://example.com" }],
                     identifiers: [{ value: "CVE-2024-1234" }],
                     epss: { percentage: 0.5, percentile: 0.9 }
@@ -300,7 +300,7 @@ class SourceTest < ActiveSupport::TestCase
                     updatedAt: "2024-01-02T00:00:00Z",
                     withdrawnAt: nil,
                     classification: "GENERAL",
-                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil } },
+                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil }, cvssV3: { score: nil, vectorString: nil } },
                     references: [{ url: "https://example.com" }],
                     identifiers: [],
                     epss: { percentage: nil, percentile: nil }
@@ -330,6 +330,114 @@ class SourceTest < ActiveSupport::TestCase
     end
   end
 
+  test "sync_advisories falls back to cvssV3 when cvssV4 is not available" do
+    Sidekiq::Testing.fake! do
+      # Mock GraphQL response with cvssV4 null but cvssV3 present
+      response = {
+        data: {
+          securityVulnerabilities: {
+            edges: [
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-v3-fallback",
+                    permalink: "https://github.com/advisories/GHSA-v3-fallback",
+                    summary: "Advisory with CVSS V3 only",
+                    description: "This advisory only has CVSS V3 score",
+                    origin: "GITHUB",
+                    severity: "MEDIUM",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: {
+                      cvssV4: { score: nil, vectorString: nil },
+                      cvssV3: { score: 5.3, vectorString: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N" }
+                    },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [{ value: "CVE-2025-50181" }],
+                    epss: { percentage: nil, percentile: nil }
+                  },
+                  package: { name: "urllib3", ecosystem: "PIP" },
+                  vulnerableVersionRange: "< 2.0.0",
+                  firstPatchedVersion: { identifier: "2.0.0" }
+                }
+              }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+          }
+        }
+      }
+
+      stub_request(:post, "https://api.github.com/graphql")
+        .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      assert_difference 'Advisory.count', 1 do
+        @source.sync_advisories
+      end
+
+      # Verify the advisory was created with CVSS V3 data
+      advisory = Advisory.find_by(uuid: "GHSA-v3-fallback")
+      assert_not_nil advisory
+      assert_equal 5.3, advisory.cvss_score
+      assert_equal "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N", advisory.cvss_vector
+    end
+  end
+
+  test "sync_advisories prefers cvssV4 over cvssV3 when both are available" do
+    Sidekiq::Testing.fake! do
+      # Mock GraphQL response with both cvssV4 and cvssV3 present
+      response = {
+        data: {
+          securityVulnerabilities: {
+            edges: [
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-v4-preferred",
+                    permalink: "https://github.com/advisories/GHSA-v4-preferred",
+                    summary: "Advisory with both CVSS V4 and V3",
+                    description: "This advisory has both CVSS versions",
+                    origin: "GITHUB",
+                    severity: "HIGH",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: {
+                      cvssV4: { score: 8.5, vectorString: "CVSS:4.0/AV:N/AC:L/..." },
+                      cvssV3: { score: 7.5, vectorString: "CVSS:3.1/AV:N/AC:L/..." }
+                    },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [{ value: "CVE-2024-9999" }],
+                    epss: { percentage: nil, percentile: nil }
+                  },
+                  package: { name: "test-pkg", ecosystem: "NPM" },
+                  vulnerableVersionRange: "< 1.0.0",
+                  firstPatchedVersion: { identifier: "1.0.0" }
+                }
+              }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+          }
+        }
+      }
+
+      stub_request(:post, "https://api.github.com/graphql")
+        .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      assert_difference 'Advisory.count', 1 do
+        @source.sync_advisories
+      end
+
+      # Verify the advisory was created with CVSS V4 data (preferred)
+      advisory = Advisory.find_by(uuid: "GHSA-v4-preferred")
+      assert_not_nil advisory
+      assert_equal 8.5, advisory.cvss_score
+      assert_equal "CVSS:4.0/AV:N/AC:L/...", advisory.cvss_vector
+    end
+  end
+
   test "sync_advisories batches package sync jobs for multiple advisories" do
     Sidekiq::Testing.fake! do
       # Mock GraphQL response with multiple advisories affecting same package
@@ -350,7 +458,7 @@ class SourceTest < ActiveSupport::TestCase
                     updatedAt: "2024-01-02T00:00:00Z",
                     withdrawnAt: nil,
                     classification: "GENERAL",
-                    cvssSeverities: { cvssV4: { score: 7.0, vectorString: nil } },
+                    cvssSeverities: { cvssV4: { score: 7.0, vectorString: nil }, cvssV3: { score: nil, vectorString: nil } },
                     references: [{ url: "https://example.com" }],
                     identifiers: [],
                     epss: { percentage: nil, percentile: nil }
@@ -373,7 +481,7 @@ class SourceTest < ActiveSupport::TestCase
                     updatedAt: "2024-01-02T00:00:00Z",
                     withdrawnAt: nil,
                     classification: "GENERAL",
-                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil } },
+                    cvssSeverities: { cvssV4: { score: 5.0, vectorString: nil }, cvssV3: { score: nil, vectorString: nil } },
                     references: [{ url: "https://example.com" }],
                     identifiers: [],
                     epss: { percentage: nil, percentile: nil }

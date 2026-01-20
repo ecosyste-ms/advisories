@@ -351,7 +351,7 @@ class SourceTest < ActiveSupport::TestCase
                     withdrawnAt: nil,
                     classification: "GENERAL",
                     cvssSeverities: {
-                      cvssV4: { score: nil, vectorString: nil },
+                      cvssV4: { score: 0.0, vectorString: nil },
                       cvssV3: { score: 5.3, vectorString: "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N" }
                     },
                     references: [{ url: "https://example.com" }],
@@ -381,6 +381,60 @@ class SourceTest < ActiveSupport::TestCase
       assert_not_nil advisory
       assert_equal 5.3, advisory.cvss_score
       assert_equal "CVSS:3.1/AV:N/AC:H/PR:L/UI:N/S:U/C:H/I:N/A:N", advisory.cvss_vector
+    end
+  end
+
+  test "sync_advisories handles nil cvssV4 object gracefully" do
+    Sidekiq::Testing.fake! do
+      # Mock GraphQL response where cvssV4 is nil (not just score being nil)
+      response = {
+        data: {
+          securityVulnerabilities: {
+            edges: [
+              {
+                node: {
+                  advisory: {
+                    id: "GHSA-nil-v4",
+                    permalink: "https://github.com/advisories/GHSA-nil-v4",
+                    summary: "Advisory with nil cvssV4 object",
+                    description: "This advisory has cvssV4 as nil",
+                    origin: "GITHUB",
+                    severity: "MEDIUM",
+                    publishedAt: "2024-01-01T00:00:00Z",
+                    updatedAt: "2024-01-02T00:00:00Z",
+                    withdrawnAt: nil,
+                    classification: "GENERAL",
+                    cvssSeverities: {
+                      cvssV4: nil,
+                      cvssV3: { score: 6.5, vectorString: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N" }
+                    },
+                    references: [{ url: "https://example.com" }],
+                    identifiers: [{ value: "CVE-2025-99999" }],
+                    epss: { percentage: nil, percentile: nil }
+                  },
+                  package: { name: "test-nil-pkg", ecosystem: "NPM" },
+                  vulnerableVersionRange: "< 1.0.0",
+                  firstPatchedVersion: { identifier: "1.0.0" }
+                }
+              }
+            ],
+            pageInfo: { hasNextPage: false, endCursor: "cursor1" }
+          }
+        }
+      }
+
+      stub_request(:post, "https://api.github.com/graphql")
+        .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      assert_difference 'Advisory.count', 1 do
+        @source.sync_advisories
+      end
+
+      # Verify the advisory was created with CVSS V3 data
+      advisory = Advisory.find_by(uuid: "GHSA-nil-v4")
+      assert_not_nil advisory
+      assert_equal 6.5, advisory.cvss_score
+      assert_equal "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N", advisory.cvss_vector
     end
   end
 

@@ -111,8 +111,8 @@ module Sources
           updated_at: advisory[:node][:advisory][:updatedAt],
           withdrawn_at: advisory[:node][:advisory][:withdrawnAt],
           classification: advisory[:node][:advisory][:classification],
-          cvss_score: advisory[:node][:advisory][:cvssSeverities][:cvssV4][:score] || advisory[:node][:advisory][:cvssSeverities][:cvssV3][:score],
-          cvss_vector: advisory[:node][:advisory][:cvssSeverities][:cvssV4][:vectorString] || advisory[:node][:advisory][:cvssSeverities][:cvssV3][:vectorString],
+          cvss_score: cvss_score_from_severities(advisory[:node][:advisory][:cvssSeverities]),
+          cvss_vector: cvss_vector_from_severities(advisory[:node][:advisory][:cvssSeverities]),
           references: advisory[:node][:advisory][:references].map { |r| r[:url] },
           source_kind: 'github',
           identifiers: advisory[:node][:advisory][:identifiers].map { |i|i[:value] },
@@ -145,6 +145,17 @@ module Sources
         advisory[:packages] = packages
         advisory
       end
+    end
+
+    def cvss_score_from_severities(severities)
+      v4_score = severities.dig(:cvssV4, :score)
+      v3_score = severities.dig(:cvssV3, :score)
+      v4_score.to_f > 0 ? v4_score : v3_score
+    end
+
+    def cvss_vector_from_severities(severities)
+      v4_score = severities.dig(:cvssV4, :score)
+      v4_score.to_f > 0 ? severities.dig(:cvssV4, :vectorString) : severities.dig(:cvssV3, :vectorString)
     end
 
     def correct_ecosystem(ecosystem)

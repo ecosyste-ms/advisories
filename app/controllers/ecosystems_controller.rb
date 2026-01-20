@@ -16,7 +16,7 @@ class EcosystemsController < ApplicationController
     @registry = Registry.find_by_ecosystem(@ecosystem)
     scope = Advisory.not_withdrawn.ecosystem(@ecosystem)
 
-    @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
+    @severities = scope.group(:severity).count.reject { |k, _| k.nil? }.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
     @packages = scope.package_counts
@@ -62,7 +62,7 @@ class EcosystemsController < ApplicationController
     @package = Package.find_by(ecosystem: @ecosystem, name: @package_name)
     scope = Advisory.not_withdrawn.ecosystem(@ecosystem).package_name(@package_name)
 
-    @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
+    @severities = scope.group(:severity).count.reject { |k, _| k.nil? }.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
     @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse

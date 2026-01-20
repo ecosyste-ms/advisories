@@ -205,6 +205,7 @@ class Advisory < ApplicationRecord
   # TODO store affected_dependent_packages_count and affected_dependent_versions_count in the database and sync on a regular basis
 
   def enqueue_package_sync
+    return if Rails.env.development?
     packages.each do |package|
       PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
     end

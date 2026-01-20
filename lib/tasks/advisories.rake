@@ -23,4 +23,14 @@ namespace :advisories do
       puts "Erlef source not found. Run `rails db:seed` to create it."
     end
   end
+
+  desc 'Update advisories from OSV.dev'
+  task :sync_osv => :environment do
+    source = Source.find_by(kind: 'osv')
+    if source
+      source.sync_advisories
+    else
+      puts "OSV source not found. Run `rails db:seed` to create it."
+    end
+  end
 end

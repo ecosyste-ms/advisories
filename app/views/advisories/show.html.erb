@@ -15,7 +15,9 @@
 
     <div class="advisory-header__meta d-flex flex-wrap align-items-center mb-4">
       <div class="d-flex flex-wrap flex-grow-1 mb-2">
-        <span class="me-4 mb-2 badge <%= severity_class(@advisory.severity)%>"><%= @advisory.severity.humanize %></span>
+        <% if @advisory.severity.present? %>
+          <span class="me-4 mb-2 badge <%= severity_class(@advisory.severity)%>"><%= @advisory.severity.humanize %></span>
+        <% end %>
         <% if @advisory.cvss_score && @advisory.cvss_score > 0 %>
         <span class="me-4 mb-2 advisory-header__meta__text">CVSS: <%= @advisory.cvss_score %></span>
         <% end %>
@@ -153,8 +155,10 @@
           <p><%= identifier %></p>
         <% end %>
         <h2>Risk</h2>
-        <h3>Severity</h3>
-        <p><span class='me-4 badge <%= severity_class(@advisory.severity)%>'><%= @advisory.severity.humanize %></span> </p>
+        <% if @advisory.severity.present? %>
+          <h3>Severity</h3>
+          <p><span class='me-4 badge <%= severity_class(@advisory.severity)%>'><%= @advisory.severity.humanize %></span></p>
+        <% end %>
         <!--
         <h3>Blast radius</h3>
         <p><%= @advisory.blast_radius.round(1) %> </p>

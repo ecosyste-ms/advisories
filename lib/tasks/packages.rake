@@ -11,6 +11,6 @@ namespace :packages do
 
   desc 'clean up sidekiq unique jobs'
   task clean_up_sidekiq_unique_jobs: :environment do
-    SidekiqUniqueJobs::Digests.delete_by_pattern("*")
+    SidekiqUniqueJobs::Digests.new.delete_by_pattern("*")
   end
 end

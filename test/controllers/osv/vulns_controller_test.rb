@@ -29,6 +29,8 @@ class Osv::VulnsControllerTest < ActionDispatch::IntegrationTest
   test "gets vulnerability by uuid" do
     get osv_vuln_url("GHSA-xxxx-yyyy-zzzz"), as: :json
     assert_response :success
+    assert_match /max-age=3600/, response.headers["Cache-Control"]
+    assert_match /public/, response.headers["Cache-Control"]
 
     json = JSON.parse(response.body)
     assert_equal "GHSA-xxxx-yyyy-zzzz", json["id"]

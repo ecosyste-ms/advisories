@@ -12,6 +12,7 @@ class Api::V1::SourcesControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get api_v1_sources_url, as: :json
     assert_response :success
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
 
     json_response = JSON.parse(response.body)
     assert_equal 2, json_response.length
@@ -57,6 +58,7 @@ class Api::V1::SourcesControllerTest < ActionDispatch::IntegrationTest
   test "should get show by kind" do
     get api_v1_source_url("github"), as: :json
     assert_response :success
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
 
     json_response = JSON.parse(response.body)
     assert_equal "GitHub Advisory Database", json_response["name"]

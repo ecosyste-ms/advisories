@@ -1,5 +1,7 @@
 class EcosystemsController < ApplicationController
   def index
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     ecosystem_counts = Advisory.not_withdrawn.ecosystem_counts
     @ecosystems = ecosystem_counts.map do |ecosystem, count|
       registry = Registry.find_by_ecosystem(ecosystem)
@@ -12,6 +14,8 @@ class EcosystemsController < ApplicationController
   end
 
   def show
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @ecosystem = params[:ecosystem_id]
     @registry = Registry.find_by_ecosystem(@ecosystem)
     scope = Advisory.not_withdrawn.ecosystem(@ecosystem)
@@ -56,6 +60,8 @@ class EcosystemsController < ApplicationController
   end
 
   def package
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @ecosystem = params[:ecosystem_id]
     @package_name = params[:package_name]
     @registry = Registry.find_by_ecosystem(@ecosystem)

@@ -9,6 +9,7 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get advisories_url
     assert_response :success
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
   test "should handle valid sort parameters" do
@@ -45,6 +46,16 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
   test "should get recent advisories data" do
     get recent_advisories_data_url
     assert_response :success
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
+  end
+
+  test "should set cache headers on show" do
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_match /max-age=3600/, response.headers["Cache-Control"]
+    assert_match /public/, response.headers["Cache-Control"]
+    assert_match /stale-while-revalidate=3600/, response.headers["Cache-Control"]
+    assert response.headers["ETag"].present?
   end
 
   test "should redirect ecosystem filter to ecosystem path" do

@@ -1,5 +1,7 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   def index
+    expires_in 5.minutes, public: true, stale_while_revalidate: 1.hour
+
     scope = Advisory.all
     
     scope = scope.severity(params[:severity]) if params[:severity].present?
@@ -25,10 +27,13 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
   def show
     @advisory = Advisory.find_by_uuid!(params[:id])
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end
 
   def packages
+    expires_in 5.minutes, public: true, stale_while_revalidate: 1.hour
+
     render json: Advisory.packages
   end
 
@@ -46,6 +51,8 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
       render json: { error: 'Invalid PURL format' }, status: :bad_request
       return
     end
+
+    expires_in 5.minutes, public: true, stale_while_revalidate: 1.hour
 
     advisories = Advisory.ecosystem(parsed_purl[:ecosystem])
                         .package_name(parsed_purl[:package_name])

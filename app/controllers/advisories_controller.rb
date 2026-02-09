@@ -60,10 +60,14 @@ class AdvisoriesController < ApplicationController
       scope = scope.order(Advisory.arel_table[:published_at].desc)
     end
 
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @pagy, @advisories = pagy(scope.includes(:source))
   end
 
   def recent_advisories_data
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @recent_advisories = Rails.cache.fetch("all_recent_advisories_data", expires_in: 1.hour) do
       Advisory.where('published_at > ?', 3.months.ago.beginning_of_day).group_by_day(:published_at).count
     end
@@ -72,6 +76,7 @@ class AdvisoriesController < ApplicationController
 
   def show
     @advisory = Advisory.find_by!(uuid: params[:id])
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end
 end

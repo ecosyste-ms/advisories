@@ -5,6 +5,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get '/'
     assert_response :success
     assert_template 'home/index'
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
   test 'assigns recent advisories' do

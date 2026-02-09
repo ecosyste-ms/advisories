@@ -16,18 +16,21 @@ class EcosystemsControllerTest < ActionDispatch::IntegrationTest
     get ecosystems_url
     assert_response :success
     assert_select "h2", /Browse Advisories by Ecosystems/
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
   test "should get ecosystem show page" do
     get ecosystem_url("pypi")
     assert_response :success
     assert_select "h2", /pypi/
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
   test "should get package advisories page" do
     get ecosystem_package_url("pypi", "tensorflow")
     assert_response :success
     assert_select "h2", /tensorflow/
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
   test "should handle severity filter on ecosystem page" do

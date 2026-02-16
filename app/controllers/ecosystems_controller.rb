@@ -2,8 +2,13 @@ class EcosystemsController < ApplicationController
   def index
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
-    ecosystem_counts = Advisory.not_withdrawn.ecosystem_counts
-    @ecosystems = ecosystem_counts.map do |ecosystem, count|
+    ecosystem_counts = Advisory.not_withdrawn.ecosystem_counts.to_h
+    related_ecosystems = Package.joins(:related_packages).distinct.group(:ecosystem).count
+    related_ecosystems.each do |ecosystem, _count|
+      ecosystem_counts[ecosystem] ||= 0
+    end
+
+    @ecosystems = ecosystem_counts.sort_by { |_, count| -count }.map do |ecosystem, count|
       registry = Registry.find_by_ecosystem(ecosystem)
       {
         name: ecosystem,

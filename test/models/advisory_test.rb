@@ -378,6 +378,105 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#sync_related_packages" do
+    should "create related package records from API response" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/psf/requests/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "requests", "versions" => [] }]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "requests" },
+            { "ecosystem" => "conda", "name" => "requests" },
+            { "ecosystem" => "homebrew", "name" => "python-requests" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 2, advisory.related_package_records.count
+        ecosystems = advisory.related_package_records.pluck(:ecosystem).sort
+        assert_equal ["conda", "homebrew"], ecosystems
+      end
+    end
+
+    should "filter out packages already in the advisory" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/pallets/flask/issues/1"],
+          packages: [
+            { "ecosystem" => "pypi", "package_name" => "flask", "versions" => [] },
+            { "ecosystem" => "conda", "package_name" => "flask", "versions" => [] }
+          ]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "flask" },
+            { "ecosystem" => "conda", "name" => "flask" },
+            { "ecosystem" => "homebrew", "name" => "python-flask" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 1, advisory.related_package_records.count
+        assert_equal "homebrew", advisory.related_package_records.first.ecosystem
+      end
+    end
+
+    should "return early when repository_url is blank" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, repository_url: nil)
+
+        advisory.sync_related_packages
+
+        assert_equal 0, advisory.related_package_records.count
+      end
+    end
+
+    should "handle API failure gracefully" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, references: ["https://github.com/owner/repo/issues/1"])
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 500, body: "Internal Server Error")
+
+        assert_nothing_raised do
+          advisory.sync_related_packages
+        end
+        assert_equal 0, advisory.related_package_records.count
+      end
+    end
+
+    should "remove stale related packages no longer in API response" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/repo/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "mypkg", "versions" => [] }]
+        )
+
+        stale_pkg = create(:package, ecosystem: "alpine", name: "mypkg")
+        create(:related_package, advisory: advisory, package: stale_pkg)
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "mypkg" },
+            { "ecosystem" => "conda", "name" => "mypkg" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 1, advisory.related_package_records.count
+        assert_equal "conda", advisory.related_package_records.first.ecosystem
+      end
+    end
+  end
+
   context "#affected_versions" do
     should "return original invalid versions that match the range after normalization" do
       package = { "ecosystem" => "nuget", "package_name" => "Mammoth" }

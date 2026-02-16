@@ -26,6 +26,9 @@ Rails.application.routes.draw do
           get :packages
           get :lookup
         end
+        member do
+          get :related_packages
+        end
       end
       resources :sources, only: [:index, :show]
     end

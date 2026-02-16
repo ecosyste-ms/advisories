@@ -17,6 +17,7 @@ module Sources
       cursor = 'null'
       total_synced = 0
       packages_to_sync = Set.new
+      changed_advisory_uuids = Set.new
 
       loop do
         res = fetch_advisories_page(cursor)
@@ -38,6 +39,8 @@ module Sources
             advisory[:packages].each do |pkg|
               packages_to_sync.add([pkg[:ecosystem], pkg[:package_name]])
             end
+
+            changed_advisory_uuids << advisory[:uuid]
 
             # Prepare record for upsert
             records_to_upsert << advisory.merge(
@@ -77,6 +80,13 @@ module Sources
       Rails.logger.info "Enqueueing sync jobs for #{packages_to_sync.size} unique packages"
       packages_to_sync.each do |ecosystem, package_name|
         PackageSyncWorker.perform_async(ecosystem, package_name)
+      end
+
+      # Enqueue related packages sync for changed advisories
+      if changed_advisory_uuids.any?
+        Advisory.where(uuid: changed_advisory_uuids.to_a).where.not(repository_url: [nil, '']).pluck(:id).each do |advisory_id|
+          RelatedPackagesSyncWorker.perform_async(advisory_id)
+        end
       end
 
       total_synced

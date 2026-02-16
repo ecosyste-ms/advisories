@@ -37,6 +37,12 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
     render json: Advisory.packages
   end
 
+  def related_packages
+    @advisory = Advisory.find_by_uuid!(params[:id])
+    @related_packages = @advisory.related_package_records
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+  end
+
   def lookup
     purl = params[:purl]
     

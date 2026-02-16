@@ -20,4 +20,9 @@ class ActiveSupport::TestCase
       with.library :rails
     end
   end
+
+  setup do
+    stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+      .to_return(status: 200, body: [].to_json, headers: { 'Content-Type' => 'application/json' })
+  end
 end

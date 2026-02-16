@@ -58,6 +58,7 @@ class Package < ApplicationRecord
       self.registry_url = json['registry_url']
       self.versions_count = json['versions_count']
       self.critical = json['critical'] || false
+      self.repo_metadata = json['repo_metadata']
       self.owner = extract_owner
       self.package_etag = package_response[:etag]
       save

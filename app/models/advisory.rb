@@ -238,6 +238,7 @@ class Advisory < ApplicationRecord
       next if existing_pairs.include?([ecosystem, name.downcase])
 
       pkg = Package.find_or_create_by(ecosystem: ecosystem, name: name)
+      next unless pkg.persisted?
       related = RelatedPackage.find_or_create_by(advisory: self, package: pkg)
       current_related_ids << related.id
     end

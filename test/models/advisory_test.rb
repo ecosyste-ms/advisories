@@ -402,46 +402,46 @@ class AdvisoryTest < ActiveSupport::TestCase
       end
     end
 
-    should "set name_match and repo_package_count on related packages" do
+    should "set name_match, fork, and repo_package_count on related packages" do
       Sidekiq::Testing.fake! do
         advisory = create(:advisory,
-          references: ["https://github.com/psf/requests/issues/1"],
-          packages: [{ "ecosystem" => "pypi", "package_name" => "requests", "versions" => [] }]
+          references: ["https://github.com/crewjam/saml/issues/1"],
+          packages: [{ "ecosystem" => "go", "package_name" => "github.com/crewjam/saml", "versions" => [] }]
         )
 
         WebMock.reset!
         stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
           .to_return(status: 200, body: [
-            { "ecosystem" => "pypi", "name" => "requests" },
-            { "ecosystem" => "conda", "name" => "requests" },
-            { "ecosystem" => "homebrew", "name" => "python-requests" },
-            { "ecosystem" => "nixpkgs", "name" => "python312Packages.requests" },
+            { "ecosystem" => "go", "name" => "github.com/crewjam/saml" },
+            { "ecosystem" => "go", "name" => "github.com/jelmund/saml", "repo_metadata" => { "fork" => true, "source_name" => "crewjam/saml" } },
+            { "ecosystem" => "conda", "name" => "saml" },
             { "ecosystem" => "alpine", "name" => "unrelated-thing" }
           ].to_json, headers: { 'Content-Type' => 'application/json' })
 
         advisory.sync_related_packages
 
         related = advisory.related_packages.includes(:package)
+        fork_rel = related.find { |r| r.package.name == "github.com/jelmund/saml" }
         conda_rel = related.find { |r| r.package.ecosystem == "conda" }
-        homebrew_rel = related.find { |r| r.package.ecosystem == "homebrew" }
-        nix_rel = related.find { |r| r.package.ecosystem == "nixpkgs" }
         alpine_rel = related.find { |r| r.package.ecosystem == "alpine" }
 
-        # conda "requests" matches advisory "requests"
+        # Go fork name-matches (both extract "saml" from path)
+        assert fork_rel.name_match
+
+        # Go fork has fork: true from repo_metadata
+        assert fork_rel.fork
+
+        # conda "saml" matches advisory "github.com/crewjam/saml" (extracts "saml")
         assert conda_rel.name_match
-
-        # homebrew "python-requests" strips to "requests", matches
-        assert homebrew_rel.name_match
-
-        # nix "python312Packages.requests" strips to "requests", matches
-        assert nix_rel.name_match
+        refute conda_rel.fork
 
         # alpine "unrelated-thing" does not match
         refute alpine_rel.name_match
+        refute alpine_rel.fork
 
-        # All should have repo_package_count = 5 (total API response size)
-        assert_equal 5, conda_rel.repo_package_count
-        assert_equal 5, alpine_rel.repo_package_count
+        # All should have repo_package_count = 4 (total API response size)
+        assert_equal 4, fork_rel.repo_package_count
+        assert_equal 4, alpine_rel.repo_package_count
       end
     end
 

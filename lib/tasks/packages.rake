@@ -24,7 +24,8 @@ namespace :packages do
 
       advisory.related_packages.includes(:package).each do |related|
         name_match = RelatedPackage.compute_name_match(related.package.name, advisory_package_names)
-        related.update_columns(name_match: name_match, repo_package_count: repo_package_count)
+        is_fork = related.package.repo_metadata&.dig('fork') == true
+        related.update_columns(name_match: name_match, repo_package_count: repo_package_count, fork: is_fork)
       end
     end
   end

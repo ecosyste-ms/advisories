@@ -125,6 +125,16 @@ class RelatedPackageTest < ActiveSupport::TestCase
       refute_includes results, unmatched
     end
 
+    should "filter by forked" do
+      advisory = create(:advisory)
+      forked = create(:related_package, advisory: advisory, fork: true)
+      not_forked = create(:related_package, advisory: advisory, fork: false)
+
+      results = RelatedPackage.forked
+      assert_includes results, forked
+      refute_includes results, not_forked
+    end
+
     should "filter by not_monorepo" do
       advisory = create(:advisory)
       small_repo = create(:related_package, advisory: advisory, repo_package_count: 5)

@@ -70,6 +70,36 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert response.headers["ETag"].present?
   end
 
+  test "should include related_packages_url in show response" do
+    get api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert json_response.key?("related_packages_url")
+    assert_match %r{/api/v1/advisories/#{@advisory.uuid}/related_packages}, json_response["related_packages_url"]
+  end
+
+  test "should get related_packages endpoint" do
+    pkg = create(:package, ecosystem: "conda", name: "lodash-conda")
+    create(:related_package, advisory: @advisory, package: pkg)
+
+    get related_packages_api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    assert_equal "conda", json_response.first["ecosystem"]
+    assert_equal "lodash-conda", json_response.first["name"]
+  end
+
+  test "should return empty array from related_packages when none exist" do
+    get related_packages_api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 0, json_response.length
+  end
+
   test "should filter by source" do
     erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
     create(:advisory, source: erlef_source, packages: [{"ecosystem" => "hex", "package_name" => "phoenix", "versions" => []}])

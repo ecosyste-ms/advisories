@@ -133,6 +133,39 @@
     </table>
   </div>
 
+  <% if @advisory.related_package_records.any? %>
+  <h3 class="h4 mt-4">Potentially Affected Packages</h3>
+  <p class="text-muted small">These packages share the same source repository and may be affected by this vulnerability, but are not listed in the advisory.</p>
+  <div class="table-wrapper table-responsive-lg">
+    <table class="table table-bordered ecosystems-table mb-5">
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Ecosystem</th>
+          <th>Registry</th>
+          <th>PURL</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @advisory.related_package_records.each do |pkg| %>
+          <tr>
+            <td>
+              <% if pkg.registry %>
+                <%= link_to pkg.name, pkg.packages_url, target: :_blank %>
+              <% else %>
+                <%= pkg.name %>
+              <% end %>
+            </td>
+            <td><%= pkg.ecosystem %></td>
+            <td><%= pkg.registry_name %></td>
+            <td><code><%= pkg.purl %></code></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <% end %>
+
 	<div class="row">
 		<div class="col-lg-8">
 			<div class="page-content mt-4 pe-lg-3">

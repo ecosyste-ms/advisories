@@ -4,6 +4,8 @@ json.packages advisory.packages_with_records do |package, package_record|
   json.partial! 'package', package: package, package_record: package_record
 end
 
+json.related_packages_url related_packages_api_v1_advisory_url(advisory)
+
 json.related_advisories advisory.related_advisories do |related|
   json.extract! related, :uuid, :source_kind, :url
 end

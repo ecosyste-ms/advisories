@@ -3,6 +3,9 @@ class Advisory < ApplicationRecord
 
   belongs_to :source
 
+  has_many :related_packages, dependent: :delete_all
+  has_many :related_package_records, through: :related_packages, source: :package
+
   validates :uuid, presence: true, uniqueness: true
 
   counter_culture :source
@@ -25,6 +28,7 @@ class Advisory < ApplicationRecord
   before_save :set_repository_url
   before_save :set_blast_radius
   after_commit :enqueue_package_sync
+  after_commit :enqueue_related_packages_sync
 
   def to_s
     uuid
@@ -208,6 +212,37 @@ class Advisory < ApplicationRecord
     packages.each do |package|
       PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
     end
+  end
+
+  def enqueue_related_packages_sync
+    RelatedPackagesSyncWorker.perform_async(id) if repository_url.present?
+  end
+
+  def sync_related_packages
+    return if repository_url.blank?
+
+    conn = EcosystemsFaradayClient.build
+    resp = conn.get("/api/v1/packages/lookup", { repository_url: repository_url })
+    return unless resp.success?
+
+    api_packages = resp.body
+    return unless api_packages.is_a?(Array)
+
+    existing_pairs = packages.map { |p| [p['ecosystem'].downcase, p['package_name'].downcase] }.to_set
+
+    current_related_ids = Set.new
+    api_packages.each do |api_pkg|
+      ecosystem = api_pkg['ecosystem']&.downcase
+      name = api_pkg['name']
+      next if ecosystem.blank? || name.blank?
+      next if existing_pairs.include?([ecosystem, name.downcase])
+
+      pkg = Package.find_or_create_by(ecosystem: ecosystem, name: name)
+      related = RelatedPackage.find_or_create_by(advisory: self, package: pkg)
+      current_related_ids << related.id
+    end
+
+    related_packages.where.not(id: current_related_ids).delete_all
   end
 
   def sync_packages

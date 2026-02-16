@@ -127,6 +127,22 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should show potentially affected packages section when present" do
+    pkg = FactoryBot.create(:package, ecosystem: "conda", name: "requests")
+    FactoryBot.create(:related_package, advisory: @advisory, package: pkg)
+
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "h3", text: "Potentially Affected Packages"
+    assert_select "td", text: "conda"
+  end
+
+  test "should not show potentially affected packages section when empty" do
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "h3", text: "Potentially Affected Packages", count: 0
+  end
+
   test "should filter by source and show correct advisories" do
     erlef_source = FactoryBot.create(:source, kind: "erlef", url: "https://cna.erlef.org")
     FactoryBot.create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-0001")

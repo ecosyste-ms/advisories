@@ -1,6 +1,9 @@
 class Package < ApplicationRecord
   include VersionNormalization
 
+  has_many :related_packages, dependent: :delete_all
+  has_many :related_advisories, through: :related_packages, source: :advisory
+
   validates :ecosystem, presence: true
   validates :name, presence: true, uniqueness: { scope: :ecosystem }
 

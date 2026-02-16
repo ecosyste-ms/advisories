@@ -133,7 +133,7 @@
     </table>
   </div>
 
-  <% if @advisory.related_package_records.any? %>
+  <% if @advisory.related_packages.any? %>
   <h3 class="h4 mt-4">Potentially Affected Packages</h3>
   <p class="text-muted small">These packages share the same source repository and may be affected by this vulnerability, but are not listed in the advisory.</p>
   <div class="table-wrapper table-responsive-lg">
@@ -144,10 +144,12 @@
           <th>Ecosystem</th>
           <th>Registry</th>
           <th>PURL</th>
+          <th>Name Match</th>
         </tr>
       </thead>
       <tbody>
-        <% @advisory.related_package_records.each do |pkg| %>
+        <% @advisory.related_packages.includes(:package).each do |related| %>
+          <% pkg = related.package %>
           <tr>
             <td>
               <% if pkg.registry %>
@@ -159,10 +161,20 @@
             <td><%= pkg.ecosystem %></td>
             <td><%= pkg.registry_name %></td>
             <td><code><%= pkg.purl %></code></td>
+            <td>
+              <% if related.name_match? %>
+                <span class="badge bg-success">Yes</span>
+              <% else %>
+                <span class="badge bg-secondary">No</span>
+              <% end %>
+            </td>
           </tr>
         <% end %>
       </tbody>
     </table>
+    <% if @advisory.related_packages.first&.repo_package_count %>
+      <p class="text-muted small"><%= @advisory.related_packages.first.repo_package_count %> packages share this source repository.</p>
+    <% end %>
   </div>
   <% end %>
 

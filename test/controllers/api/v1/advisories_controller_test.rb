@@ -79,17 +79,20 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{/api/v1/advisories/#{@advisory.uuid}/related_packages}, json_response["related_packages_url"]
   end
 
-  test "should get related_packages endpoint" do
+  test "should get related_packages endpoint with confidence fields" do
     pkg = create(:package, ecosystem: "conda", name: "lodash-conda")
-    create(:related_package, advisory: @advisory, package: pkg)
+    create(:related_package, advisory: @advisory, package: pkg, name_match: true, repo_package_count: 5)
 
     get related_packages_api_v1_advisory_url(@advisory), as: :json
     assert_response :success
 
     json_response = JSON.parse(response.body)
     assert_equal 1, json_response.length
-    assert_equal "conda", json_response.first["ecosystem"]
-    assert_equal "lodash-conda", json_response.first["name"]
+    entry = json_response.first
+    assert_equal "conda", entry["ecosystem"]
+    assert_equal "lodash-conda", entry["name"]
+    assert_equal true, entry["name_match"]
+    assert_equal 5, entry["repo_package_count"]
   end
 
   test "should return empty array from related_packages when none exist" do

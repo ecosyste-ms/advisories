@@ -229,6 +229,8 @@ class Advisory < ApplicationRecord
     return unless api_packages.is_a?(Array)
 
     existing_pairs = packages.map { |p| [p['ecosystem'].downcase, p['package_name'].downcase] }.to_set
+    advisory_package_names = packages.map { |p| p['package_name'] }
+    repo_package_count = api_packages.size
 
     current_related_ids = Set.new
     api_packages.each do |api_pkg|
@@ -239,7 +241,10 @@ class Advisory < ApplicationRecord
 
       pkg = Package.find_or_create_by(ecosystem: ecosystem, name: name)
       next unless pkg.persisted?
+
+      name_match = RelatedPackage.compute_name_match(name, advisory_package_names)
       related = RelatedPackage.find_or_create_by(advisory: self, package: pkg)
+      related.update(name_match: name_match, repo_package_count: repo_package_count)
       current_related_ids << related.id
     end
 

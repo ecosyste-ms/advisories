@@ -26,6 +26,10 @@ class Package < ApplicationRecord
     "#{packages_api_url}/ping"
   end
 
+  def sync_async
+    PackageSyncWorker.perform_async(ecosystem, name)
+  end
+
   def ping_for_resync
     return if registry.nil?
     conn = EcosystemsFaradayClient.build

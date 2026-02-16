@@ -4,7 +4,7 @@ module EcosystemsFaradayClient
       f.request :json
       f.request :retry
       f.response :json
-      f.headers['User-Agent'] = 'advisories.ecosyste.ms'
+      f.headers['User-Agent'] = 'advisories.ecosyste.ms (hello@ecosyste.ms)'
       f.headers['X-API-Key'] = ENV['ECOSYSTEMS_API_KEY'] if ENV['ECOSYSTEMS_API_KEY']
     end
   end

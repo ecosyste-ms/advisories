@@ -133,22 +133,24 @@
     </table>
   </div>
 
-  <% if @advisory.related_packages.any? %>
+  <% classified = @advisory.classified_related_packages %>
+  <% unclassified = @advisory.unclassified_related_packages %>
+  <% if classified.any? || unclassified.any? %>
   <h3 class="h4 mt-4">Potentially Affected Packages</h3>
   <p class="text-muted small">These packages share the same source repository and may be affected by this vulnerability, but are not listed in the advisory.</p>
+  <% if classified.any? %>
   <div class="table-wrapper table-responsive-lg">
     <table class="table table-bordered ecosystems-table mb-5">
       <thead>
         <tr>
           <th>Package</th>
           <th>Ecosystem</th>
-          <th>Registry</th>
-          <th>PURL</th>
-          <th>Name Match</th>
+          <th>Latest Version</th>
+          <th>Classification</th>
         </tr>
       </thead>
       <tbody>
-        <% @advisory.related_packages.includes(:package).each do |related| %>
+        <% classified.each do |related| %>
           <% pkg = related.package %>
           <tr>
             <td>
@@ -159,23 +161,59 @@
               <% end %>
             </td>
             <td><%= pkg.ecosystem %></td>
-            <td><%= pkg.registry_name %></td>
-            <td><code><%= pkg.purl %></code></td>
+            <td><%= pkg.latest_release_number %></td>
             <td>
-              <% if related.name_match? %>
-                <span class="badge bg-success">Yes</span>
-              <% else %>
-                <span class="badge bg-secondary">No</span>
+              <% case related.match_kind %>
+              <% when "repo_fork" %>
+                <span class="badge bg-danger">Fork</span>
+              <% when "likely_fork" %>
+                <span class="badge bg-warning text-dark">Likely Fork</span>
+              <% when "repackage" %>
+                <span class="badge bg-info text-dark">Repackage</span>
               <% end %>
             </td>
           </tr>
         <% end %>
       </tbody>
     </table>
-    <% if @advisory.related_packages.first&.repo_package_count %>
-      <p class="text-muted small"><%= @advisory.related_packages.first.repo_package_count %> packages share this source repository.</p>
-    <% end %>
   </div>
+  <% end %>
+  <% if unclassified.any? %>
+    <p class="text-muted small">
+      <a data-bs-toggle="collapse" href="#unclassifiedPackages" role="button" aria-expanded="false" aria-controls="unclassifiedPackages">
+        <%= pluralize(unclassified.count, 'other package') %> <%= unclassified.count == 1 ? 'shares' : 'share' %> this repository
+      </a>
+    </p>
+    <div class="collapse" id="unclassifiedPackages">
+      <div class="table-wrapper table-responsive-lg">
+        <table class="table table-bordered ecosystems-table mb-5">
+          <thead>
+            <tr>
+              <th>Package</th>
+              <th>Ecosystem</th>
+              <th>Latest Version</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% unclassified.each do |related| %>
+              <% pkg = related.package %>
+              <tr>
+                <td>
+                  <% if pkg.registry %>
+                    <%= link_to pkg.name, pkg.packages_url, target: :_blank %>
+                  <% else %>
+                    <%= pkg.name %>
+                  <% end %>
+                </td>
+                <td><%= pkg.ecosystem %></td>
+                <td><%= pkg.latest_release_number %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
   <% end %>
 
 	<div class="row">

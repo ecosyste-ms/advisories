@@ -123,16 +123,54 @@ class RelatedPackageTest < ActiveSupport::TestCase
     should "match case insensitively" do
       assert RelatedPackage.compute_name_match("Ruby-Rails", ["rails"])
     end
+
+    should "match debian Go package by suffix" do
+      assert RelatedPackage.compute_name_match(
+        "golang-github-go-viper-mapstructure",
+        ["github.com/go-viper/mapstructure/v2"],
+        package_ecosystem: "debian"
+      )
+    end
+
+    should "match debian Go package with multi-segment name by suffix" do
+      assert RelatedPackage.compute_name_match(
+        "golang-github-aws-aws-sdk-go",
+        ["github.com/aws/aws-sdk-go"],
+        package_ecosystem: "debian"
+      )
+    end
+
+    should "not suffix match when name does not end with advisory name" do
+      refute RelatedPackage.compute_name_match(
+        "golang-github-foo-bar",
+        ["github.com/baz/qux"],
+        package_ecosystem: "debian"
+      )
+    end
+
+    should "not suffix match for non-distro ecosystems" do
+      refute RelatedPackage.compute_name_match(
+        "@redwoodjs/auth-netlify-api",
+        ["@redwoodjs/api"],
+        package_ecosystem: "npm"
+      )
+    end
   end
 
   context ".compute_match_kind" do
-    should "return repo_fork when repo_fork is true" do
-      assert_equal "repo_fork", RelatedPackage.compute_match_kind(
+    should "return likely_fork when repo_fork and name_match in same ecosystem" do
+      assert_equal "likely_fork", RelatedPackage.compute_match_kind(
         name_match: true, repo_fork: true, package_ecosystem: "go", advisory_ecosystems: ["go"]
       )
     end
 
-    should "return repo_fork even without name match" do
+    should "return repackage when repo_fork and name_match in different ecosystem" do
+      assert_equal "repackage", RelatedPackage.compute_match_kind(
+        name_match: true, repo_fork: true, package_ecosystem: "debian", advisory_ecosystems: ["go"]
+      )
+    end
+
+    should "return repo_fork when repo_fork without name match" do
       assert_equal "repo_fork", RelatedPackage.compute_match_kind(
         name_match: false, repo_fork: true, package_ecosystem: "go", advisory_ecosystems: ["go"]
       )

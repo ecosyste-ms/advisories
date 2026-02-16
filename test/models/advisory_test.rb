@@ -425,10 +425,10 @@ class AdvisoryTest < ActiveSupport::TestCase
         conda_rel = related.find { |r| r.package.ecosystem == "conda" }
         alpine_rel = related.find { |r| r.package.ecosystem == "alpine" }
 
-        # Go fork: name matches, repo_fork true, match_kind = "repo_fork"
+        # Go fork: name matches, repo_fork true, same ecosystem = "likely_fork"
         assert fork_rel.name_match
         assert fork_rel.repo_fork
-        assert_equal "repo_fork", fork_rel.match_kind
+        assert_equal "likely_fork", fork_rel.match_kind
 
         # conda "saml" matches advisory name, different ecosystem = "repackage"
         assert conda_rel.name_match
@@ -468,6 +468,40 @@ class AdvisoryTest < ActiveSupport::TestCase
 
         assert_equal 1, advisory.related_package_records.count
         assert_equal "homebrew", advisory.related_package_records.first.ecosystem
+      end
+    end
+
+    should "filter out Go module version variants as duplicates" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/go-viper/mapstructure/issues/1"],
+          packages: [
+            { "ecosystem" => "Go", "package_name" => "github.com/go-viper/mapstructure/v2", "versions" => [] }
+          ]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "go", "name" => "github.com/go-viper/mapstructure/v2" },
+            { "ecosystem" => "go", "name" => "github.com/go-viper/mapstructure" },
+            { "ecosystem" => "go", "name" => "github.com/go-vipeR/mapstructure" },
+            { "ecosystem" => "debian", "name" => "golang-github-go-viper-mapstructure" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        related = advisory.related_packages.includes(:package)
+        ecosystems = related.map { |r| r.package.ecosystem }
+        names = related.map { |r| r.package.name }
+
+        # v2 is the advisory package itself, v1 and case variant are version variants — all filtered
+        refute_includes names, "github.com/go-viper/mapstructure/v2"
+        refute_includes names, "github.com/go-viper/mapstructure"
+        refute_includes names, "github.com/go-vipeR/mapstructure"
+
+        # debian repackage should remain
+        assert_includes names, "golang-github-go-viper-mapstructure"
       end
     end
 

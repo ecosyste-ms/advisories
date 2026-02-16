@@ -228,7 +228,7 @@ class Advisory < ApplicationRecord
     api_packages = resp.body
     return unless api_packages.is_a?(Array)
 
-    existing_pairs = packages.map { |p| [p['ecosystem'].downcase, p['package_name'].downcase] }.to_set
+    existing_pairs = packages.map { |p| [p['ecosystem'].downcase, p['package_name'].downcase.sub(%r{/v\d+\z}, '')] }.to_set
     advisory_package_names = packages.map { |p| p['package_name'] }
     advisory_ecosystems = packages.map { |p| p['ecosystem'] }
     repo_package_count = api_packages.size
@@ -238,12 +238,12 @@ class Advisory < ApplicationRecord
       ecosystem = api_pkg['ecosystem']&.downcase
       name = api_pkg['name']
       next if ecosystem.blank? || name.blank?
-      next if existing_pairs.include?([ecosystem, name.downcase])
+      next if existing_pairs.include?([ecosystem, name.downcase.sub(%r{/v\d+\z}, '')])
 
       pkg = Package.find_or_create_by(ecosystem: ecosystem, name: name)
       next unless pkg.persisted?
 
-      name_match = RelatedPackage.compute_name_match(name, advisory_package_names)
+      name_match = RelatedPackage.compute_name_match(name, advisory_package_names, package_ecosystem: ecosystem)
       is_fork = api_pkg.dig('repo_metadata', 'fork') == true
       match_kind = RelatedPackage.compute_match_kind(
         name_match: name_match, repo_fork: is_fork,
@@ -305,6 +305,18 @@ class Advisory < ApplicationRecord
 
   def cve
     identifiers.find{|id| id.start_with?('CVE-') }
+  end
+
+  MATCH_KIND_ORDER = %w[repo_fork likely_fork repackage].freeze
+
+  def classified_related_packages
+    related_packages.where(match_kind: MATCH_KIND_ORDER).includes(:package).order(
+      Arel.sql("CASE match_kind WHEN 'repo_fork' THEN 0 WHEN 'likely_fork' THEN 1 WHEN 'repackage' THEN 2 END")
+    )
+  end
+
+  def unclassified_related_packages
+    related_packages.where(match_kind: [nil, "unknown"]).includes(:package)
   end
 
   def related_advisories

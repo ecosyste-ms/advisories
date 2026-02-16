@@ -24,7 +24,7 @@ namespace :packages do
       repo_package_count = advisory.related_packages.count + advisory.packages.size
 
       advisory.related_packages.includes(:package).each do |related|
-        name_match = RelatedPackage.compute_name_match(related.package.name, advisory_package_names)
+        name_match = RelatedPackage.compute_name_match(related.package.name, advisory_package_names, package_ecosystem: related.package.ecosystem)
         is_fork = related.package.repo_metadata&.dig('fork') == true
         match_kind = RelatedPackage.compute_match_kind(
           name_match: name_match, repo_fork: is_fork,

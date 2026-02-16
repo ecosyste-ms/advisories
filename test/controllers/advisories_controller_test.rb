@@ -127,14 +127,51 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should show potentially affected packages section when present" do
-    pkg = FactoryBot.create(:package, ecosystem: "conda", name: "requests")
-    FactoryBot.create(:related_package, advisory: @advisory, package: pkg)
+  test "should show classified related packages with badges" do
+    fork_pkg = FactoryBot.create(:package, ecosystem: "conda", name: "requests-fork")
+    likely_pkg = FactoryBot.create(:package, ecosystem: "npm", name: "requests-alt", latest_release_number: "3.2.1")
+    repackage_pkg = FactoryBot.create(:package, ecosystem: "homebrew", name: "requests")
+
+    FactoryBot.create(:related_package, advisory: @advisory, package: fork_pkg, match_kind: "repo_fork")
+    FactoryBot.create(:related_package, advisory: @advisory, package: likely_pkg, match_kind: "likely_fork")
+    FactoryBot.create(:related_package, advisory: @advisory, package: repackage_pkg, match_kind: "repackage")
 
     get advisory_url(@advisory)
     assert_response :success
     assert_select "h3", text: "Potentially Affected Packages"
-    assert_select "td", text: "conda"
+    assert_select "span.badge.bg-danger", text: "Fork"
+    assert_select "span.badge.bg-warning", text: "Likely Fork"
+    assert_select "span.badge.bg-info", text: "Repackage"
+    assert_select "th", text: "Latest Version"
+    assert_select "td", text: "3.2.1"
+  end
+
+  test "should not show unknown related packages in main table" do
+    unknown_pkg = FactoryBot.create(:package, ecosystem: "npm", name: "some-monorepo-pkg")
+    FactoryBot.create(:related_package, advisory: @advisory, package: unknown_pkg, match_kind: "unknown")
+
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "h3", text: "Potentially Affected Packages"
+    assert_select "span.badge", text: "Fork", count: 0
+    assert_select "span.badge", text: "Likely Fork", count: 0
+    assert_select "span.badge", text: "Repackage", count: 0
+    assert_select "a[href='#unclassifiedPackages']", text: "1 other package shares this repository"
+  end
+
+  test "should show count of unclassified packages when both types exist" do
+    fork_pkg = FactoryBot.create(:package, ecosystem: "conda", name: "requests-fork")
+    unknown_pkg1 = FactoryBot.create(:package, ecosystem: "npm", name: "monorepo-a")
+    unknown_pkg2 = FactoryBot.create(:package, ecosystem: "npm", name: "monorepo-b")
+
+    FactoryBot.create(:related_package, advisory: @advisory, package: fork_pkg, match_kind: "repo_fork")
+    FactoryBot.create(:related_package, advisory: @advisory, package: unknown_pkg1, match_kind: "unknown")
+    FactoryBot.create(:related_package, advisory: @advisory, package: unknown_pkg2, match_kind: nil)
+
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "span.badge.bg-danger", text: "Fork"
+    assert_select "a[href='#unclassifiedPackages']", text: "2 other packages share this repository"
   end
 
   test "should not show potentially affected packages section when empty" do

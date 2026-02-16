@@ -45,14 +45,23 @@ class RelatedPackage < ApplicationRecord
     stripped.downcase
   end
 
-  def self.compute_name_match(package_name, advisory_package_names)
+  DISTRO_ECOSYSTEMS = %w[debian ubuntu alpine adelie nixpkgs spack homebrew].freeze
+
+  def self.compute_name_match(package_name, advisory_package_names, package_ecosystem: nil)
     normalized = normalize_name(package_name)
     normalized_advisory_names = advisory_package_names.map { |n| normalize_advisory_name(n) }
-    normalized_advisory_names.include?(normalized)
+    return true if normalized_advisory_names.include?(normalized)
+
+    # Suffix match for distro packages only: "github-go-viper-mapstructure" ends with "-mapstructure"
+    if package_ecosystem && DISTRO_ECOSYSTEMS.include?(package_ecosystem.downcase)
+      return normalized_advisory_names.any? { |advisory_name| normalized.end_with?("-#{advisory_name}") }
+    end
+
+    false
   end
 
   def self.compute_match_kind(name_match:, repo_fork:, package_ecosystem:, advisory_ecosystems:)
-    return "repo_fork" if repo_fork
+    return "repo_fork" if repo_fork && !name_match
     return "unknown" unless name_match
     if advisory_ecosystems.any? { |e| e.downcase == package_ecosystem.downcase }
       "likely_fork"

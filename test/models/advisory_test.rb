@@ -402,7 +402,7 @@ class AdvisoryTest < ActiveSupport::TestCase
       end
     end
 
-    should "set name_match, fork, and repo_package_count on related packages" do
+    should "set name_match, repo_fork, match_kind, and repo_package_count on related packages" do
       Sidekiq::Testing.fake! do
         advisory = create(:advisory,
           references: ["https://github.com/crewjam/saml/issues/1"],
@@ -425,19 +425,20 @@ class AdvisoryTest < ActiveSupport::TestCase
         conda_rel = related.find { |r| r.package.ecosystem == "conda" }
         alpine_rel = related.find { |r| r.package.ecosystem == "alpine" }
 
-        # Go fork name-matches (both extract "saml" from path)
+        # Go fork: name matches, repo_fork true, match_kind = "repo_fork"
         assert fork_rel.name_match
-
-        # Go fork has fork: true from repo_metadata
         assert fork_rel.repo_fork
+        assert_equal "repo_fork", fork_rel.match_kind
 
-        # conda "saml" matches advisory "github.com/crewjam/saml" (extracts "saml")
+        # conda "saml" matches advisory name, different ecosystem = "repackage"
         assert conda_rel.name_match
         refute conda_rel.repo_fork
+        assert_equal "repackage", conda_rel.match_kind
 
-        # alpine "unrelated-thing" does not match
+        # alpine "unrelated-thing" does not match = "unknown"
         refute alpine_rel.name_match
         refute alpine_rel.repo_fork
+        assert_equal "unknown", alpine_rel.match_kind
 
         # All should have repo_package_count = 4 (total API response size)
         assert_equal 4, fork_rel.repo_package_count

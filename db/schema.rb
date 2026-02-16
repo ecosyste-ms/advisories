@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_16_163629) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_16_165230) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -102,6 +102,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_16_163629) do
   create_table "related_packages", force: :cascade do |t|
     t.bigint "advisory_id", null: false
     t.datetime "created_at", null: false
+    t.string "match_kind"
     t.boolean "name_match", default: false
     t.bigint "package_id", null: false
     t.boolean "repo_fork"

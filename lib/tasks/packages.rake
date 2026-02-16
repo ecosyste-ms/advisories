@@ -20,12 +20,17 @@ namespace :packages do
   task backfill_related_package_confidence: :environment do
     Advisory.joins(:related_packages).distinct.find_each do |advisory|
       advisory_package_names = advisory.packages.map { |p| p['package_name'] }
+      advisory_ecosystems = advisory.packages.map { |p| p['ecosystem'] }
       repo_package_count = advisory.related_packages.count + advisory.packages.size
 
       advisory.related_packages.includes(:package).each do |related|
         name_match = RelatedPackage.compute_name_match(related.package.name, advisory_package_names)
         is_fork = related.package.repo_metadata&.dig('fork') == true
-        related.update_columns(name_match: name_match, repo_package_count: repo_package_count, repo_fork: is_fork)
+        match_kind = RelatedPackage.compute_match_kind(
+          name_match: name_match, repo_fork: is_fork,
+          package_ecosystem: related.package.ecosystem, advisory_ecosystems: advisory_ecosystems
+        )
+        related.update_columns(name_match: name_match, repo_package_count: repo_package_count, repo_fork: is_fork, match_kind: match_kind)
       end
     end
   end

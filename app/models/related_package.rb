@@ -4,9 +4,12 @@ class RelatedPackage < ApplicationRecord
 
   validates :package_id, uniqueness: { scope: :advisory_id }
 
+  MATCH_KINDS = %w[repo_fork likely_fork repackage unknown].freeze
+
   scope :name_matched, -> { where(name_match: true) }
   scope :forked, -> { where(repo_fork: true) }
   scope :not_monorepo, -> { where("repo_package_count < ?", 20) }
+  scope :match_kind, ->(kind) { where(match_kind: kind) }
 
   ECOSYSTEM_PREFIXES = /\A(python\d*-|py\d*-|py-|ruby-|node-|lib|ghc-|haskell-|perl-|r-|erlang-|elixir-|ocaml-|lua-|php-|golang-|rust-|apache-)/i
   DISTRO_SUFFIXES = /-(dev|devel|doc|dbg|openrc|bash-completion|zsh-completion|fish-completion|libs?|static|common|utils?|tools|data|lang|locales|examples?|tests?)\z/i
@@ -46,5 +49,15 @@ class RelatedPackage < ApplicationRecord
     normalized = normalize_name(package_name)
     normalized_advisory_names = advisory_package_names.map { |n| normalize_advisory_name(n) }
     normalized_advisory_names.include?(normalized)
+  end
+
+  def self.compute_match_kind(name_match:, repo_fork:, package_ecosystem:, advisory_ecosystems:)
+    return "repo_fork" if repo_fork
+    return "unknown" unless name_match
+    if advisory_ecosystems.any? { |e| e.downcase == package_ecosystem.downcase }
+      "likely_fork"
+    else
+      "repackage"
+    end
   end
 end

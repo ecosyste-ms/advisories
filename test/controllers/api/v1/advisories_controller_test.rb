@@ -81,7 +81,7 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
 
   test "should get related_packages endpoint with confidence fields" do
     pkg = create(:package, ecosystem: "conda", name: "lodash-conda")
-    create(:related_package, advisory: @advisory, package: pkg, name_match: true, repo_fork: true, repo_package_count: 5)
+    create(:related_package, advisory: @advisory, package: pkg, name_match: true, repo_fork: true, match_kind: "repo_fork", repo_package_count: 5)
 
     get related_packages_api_v1_advisory_url(@advisory), as: :json
     assert_response :success
@@ -93,6 +93,7 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "lodash-conda", entry["name"]
     assert_equal true, entry["name_match"]
     assert_equal true, entry["repo_fork"]
+    assert_equal "repo_fork", entry["match_kind"]
     assert_equal 5, entry["repo_package_count"]
   end
 

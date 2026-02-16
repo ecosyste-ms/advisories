@@ -114,6 +114,44 @@ class RelatedPackageTest < ActiveSupport::TestCase
     end
   end
 
+  context ".compute_match_kind" do
+    should "return repo_fork when repo_fork is true" do
+      assert_equal "repo_fork", RelatedPackage.compute_match_kind(
+        name_match: true, repo_fork: true, package_ecosystem: "go", advisory_ecosystems: ["go"]
+      )
+    end
+
+    should "return repo_fork even without name match" do
+      assert_equal "repo_fork", RelatedPackage.compute_match_kind(
+        name_match: false, repo_fork: true, package_ecosystem: "go", advisory_ecosystems: ["go"]
+      )
+    end
+
+    should "return likely_fork for same-ecosystem name match" do
+      assert_equal "likely_fork", RelatedPackage.compute_match_kind(
+        name_match: true, repo_fork: false, package_ecosystem: "npm", advisory_ecosystems: ["npm"]
+      )
+    end
+
+    should "return repackage for cross-ecosystem name match" do
+      assert_equal "repackage", RelatedPackage.compute_match_kind(
+        name_match: true, repo_fork: false, package_ecosystem: "conda", advisory_ecosystems: ["pypi"]
+      )
+    end
+
+    should "return unknown when no name match and not a fork" do
+      assert_equal "unknown", RelatedPackage.compute_match_kind(
+        name_match: false, repo_fork: false, package_ecosystem: "alpine", advisory_ecosystems: ["pypi"]
+      )
+    end
+
+    should "match ecosystems case insensitively" do
+      assert_equal "likely_fork", RelatedPackage.compute_match_kind(
+        name_match: true, repo_fork: false, package_ecosystem: "npm", advisory_ecosystems: ["NPM"]
+      )
+    end
+  end
+
   context "scopes" do
     should "filter by name_matched" do
       advisory = create(:advisory)
@@ -143,6 +181,16 @@ class RelatedPackageTest < ActiveSupport::TestCase
       results = RelatedPackage.not_monorepo
       assert_includes results, small_repo
       refute_includes results, monorepo
+    end
+
+    should "filter by match_kind" do
+      advisory = create(:advisory)
+      fork_pkg = create(:related_package, advisory: advisory, match_kind: "repo_fork")
+      repackage_pkg = create(:related_package, advisory: advisory, match_kind: "repackage")
+
+      results = RelatedPackage.match_kind("repo_fork")
+      assert_includes results, fork_pkg
+      refute_includes results, repackage_pkg
     end
   end
 end

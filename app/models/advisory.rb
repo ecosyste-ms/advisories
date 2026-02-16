@@ -230,6 +230,7 @@ class Advisory < ApplicationRecord
 
     existing_pairs = packages.map { |p| [p['ecosystem'].downcase, p['package_name'].downcase] }.to_set
     advisory_package_names = packages.map { |p| p['package_name'] }
+    advisory_ecosystems = packages.map { |p| p['ecosystem'] }
     repo_package_count = api_packages.size
 
     current_related_ids = Set.new
@@ -244,8 +245,12 @@ class Advisory < ApplicationRecord
 
       name_match = RelatedPackage.compute_name_match(name, advisory_package_names)
       is_fork = api_pkg.dig('repo_metadata', 'fork') == true
+      match_kind = RelatedPackage.compute_match_kind(
+        name_match: name_match, repo_fork: is_fork,
+        package_ecosystem: ecosystem, advisory_ecosystems: advisory_ecosystems
+      )
       related = RelatedPackage.find_or_create_by(advisory: self, package: pkg)
-      related.update(name_match: name_match, repo_package_count: repo_package_count, repo_fork: is_fork)
+      related.update(name_match: name_match, repo_package_count: repo_package_count, repo_fork: is_fork, match_kind: match_kind)
       current_related_ids << related.id
     end
 

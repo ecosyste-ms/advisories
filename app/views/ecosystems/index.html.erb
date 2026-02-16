@@ -22,7 +22,12 @@
             <p class="text-muted mb-0">
               <%= number_with_delimiter ecosystem[:package_count] %> <%= 'package'.pluralize(ecosystem[:package_count]) %>
               <br>
-              <%= number_with_delimiter ecosystem[:advisory_count] %> <%= 'advisory'.pluralize(ecosystem[:advisory_count]) %>
+              <% if ecosystem[:advisory_count] > 0 %>
+                <%= number_with_delimiter ecosystem[:advisory_count] %> <%= 'advisory'.pluralize(ecosystem[:advisory_count]) %>
+              <% end %>
+              <% if ecosystem[:related_advisory_count] > 0 %>
+                <%= number_with_delimiter ecosystem[:related_advisory_count] %> possible <%= 'advisory'.pluralize(ecosystem[:related_advisory_count]) %>
+              <% end %>
             </p>
           </div>
         <% end %>

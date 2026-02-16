@@ -4,15 +4,16 @@ class EcosystemsController < ApplicationController
 
     advisory_counts = Advisory.not_withdrawn.ecosystem_counts.to_h
     package_counts = Package.group(:ecosystem).count
-    related_ecosystems = Package.joins(:related_packages).distinct.group(:ecosystem).count
+    related_advisory_counts = RelatedPackage.joins(:package).group("packages.ecosystem").count("DISTINCT advisory_id")
 
-    ecosystems = (advisory_counts.keys + package_counts.keys + related_ecosystems.keys).uniq
+    ecosystems = (advisory_counts.keys + package_counts.keys + related_advisory_counts.keys).uniq
 
     @ecosystems = ecosystems.map do |ecosystem|
       registry = Registry.find_by_ecosystem(ecosystem)
       {
         name: ecosystem,
         advisory_count: advisory_counts[ecosystem] || 0,
+        related_advisory_count: related_advisory_counts[ecosystem] || 0,
         package_count: package_counts[ecosystem] || 0,
         registry: registry
       }

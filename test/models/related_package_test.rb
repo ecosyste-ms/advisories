@@ -127,8 +127,8 @@ class RelatedPackageTest < ActiveSupport::TestCase
 
     should "filter by forked" do
       advisory = create(:advisory)
-      forked = create(:related_package, advisory: advisory, fork: true)
-      not_forked = create(:related_package, advisory: advisory, fork: false)
+      forked = create(:related_package, advisory: advisory, repo_fork: true)
+      not_forked = create(:related_package, advisory: advisory, repo_fork: false)
 
       results = RelatedPackage.forked
       assert_includes results, forked

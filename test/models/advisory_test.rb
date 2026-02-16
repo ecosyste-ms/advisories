@@ -429,15 +429,15 @@ class AdvisoryTest < ActiveSupport::TestCase
         assert fork_rel.name_match
 
         # Go fork has fork: true from repo_metadata
-        assert fork_rel.fork
+        assert fork_rel.repo_fork
 
         # conda "saml" matches advisory "github.com/crewjam/saml" (extracts "saml")
         assert conda_rel.name_match
-        refute conda_rel.fork
+        refute conda_rel.repo_fork
 
         # alpine "unrelated-thing" does not match
         refute alpine_rel.name_match
-        refute alpine_rel.fork
+        refute alpine_rel.repo_fork
 
         # All should have repo_package_count = 4 (total API response size)
         assert_equal 4, fork_rel.repo_package_count

@@ -245,7 +245,7 @@ class Advisory < ApplicationRecord
       name_match = RelatedPackage.compute_name_match(name, advisory_package_names)
       is_fork = api_pkg.dig('repo_metadata', 'fork') == true
       related = RelatedPackage.find_or_create_by(advisory: self, package: pkg)
-      related.update(name_match: name_match, repo_package_count: repo_package_count, fork: is_fork)
+      related.update(name_match: name_match, repo_package_count: repo_package_count, repo_fork: is_fork)
       current_related_ids << related.id
     end
 

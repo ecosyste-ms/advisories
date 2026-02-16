@@ -5,7 +5,7 @@ class RelatedPackage < ApplicationRecord
   validates :package_id, uniqueness: { scope: :advisory_id }
 
   scope :name_matched, -> { where(name_match: true) }
-  scope :forked, -> { where(fork: true) }
+  scope :forked, -> { where(repo_fork: true) }
   scope :not_monorepo, -> { where("repo_package_count < ?", 20) }
 
   ECOSYSTEM_PREFIXES = /\A(python\d*-|py\d*-|py-|ruby-|node-|lib|ghc-|haskell-|perl-|r-|erlang-|elixir-|ocaml-|lua-|php-|golang-|rust-|apache-)/i

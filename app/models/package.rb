@@ -39,7 +39,10 @@ class Package < ApplicationRecord
   end
 
   def sync
-    return if registry.nil?
+    if registry.nil?
+      Rails.logger.warn "[PackageSync] No registry for #{ecosystem}/#{name}"
+      return
+    end
 
     # Fetch package data with conditional request using ETag
     package_response = EcosystemsFaradayClient.conditional_get(
@@ -69,6 +72,8 @@ class Package < ApplicationRecord
     elsif package_response[:not_modified]
       # Data hasn't changed, just update last_synced_at
       update_column(:last_synced_at, Time.now)
+    else
+      Rails.logger.warn "[PackageSync] Failed to fetch #{ecosystem}/#{name}: HTTP #{package_response[:status]}"
     end
 
     return nil unless package_response[:success]

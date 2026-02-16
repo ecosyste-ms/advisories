@@ -26,6 +26,7 @@
                 <%= number_with_delimiter ecosystem[:advisory_count] %> <%= 'advisory'.pluralize(ecosystem[:advisory_count]) %>
               <% end %>
               <% if ecosystem[:related_advisory_count] > 0 %>
+                <br>
                 <%= number_with_delimiter ecosystem[:related_advisory_count] %> possible <%= 'advisory'.pluralize(ecosystem[:related_advisory_count]) %>
               <% end %>
             </p>

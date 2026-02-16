@@ -11,8 +11,8 @@ class RelatedPackage < ApplicationRecord
   scope :not_monorepo, -> { where("repo_package_count < ?", 20) }
   scope :match_kind, ->(kind) { where(match_kind: kind) }
 
-  ECOSYSTEM_PREFIXES = /\A(python\d*-|py\d*-|py-|ruby-|node-|lib|ghc-|haskell-|perl-|r-|erlang-|elixir-|ocaml-|lua-|php-|golang-|rust-|apache-)/i
-  DISTRO_SUFFIXES = /-(dev|devel|doc|dbg|openrc|bash-completion|zsh-completion|fish-completion|libs?|static|common|utils?|tools|data|lang|locales|examples?|tests?)\z/i
+  ECOSYSTEM_PREFIXES = /\A(python\d*-|py\d*-|py-|ruby-|rb-|node-|lib|ghc-|haskell-|perl-|r-|erlang-|elixir-|ocaml-|lua-|php-|golang-|rust-|apache-)/i
+  DISTRO_SUFFIXES = /-(dev|devel|doc|dbg|openrc|bash-completion|zsh-completion|fish-completion|libs?|static|common|utils?|tools|data|lang|locales|examples?|tests?|base|core|all)\z/i
   NIX_PACKAGE_SETS = /\A(python\d*Packages(_latest)?|rubyPackages|perlPackages|nodePackages(_latest)?|haskellPackages|luaPackages|ocamlPackages|beam\.packages\.\w+)\./i
 
   def self.normalize_name(name)

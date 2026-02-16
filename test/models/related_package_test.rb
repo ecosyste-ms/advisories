@@ -53,6 +53,17 @@ class RelatedPackageTest < ActiveSupport::TestCase
       assert_equal "alertmanager", RelatedPackage.normalize_name("alertmanager-openrc")
     end
 
+    should "strip conda subpackage suffixes" do
+      assert_equal "numpy", RelatedPackage.normalize_name("numpy-base")
+      assert_equal "nbconvert", RelatedPackage.normalize_name("nbconvert-core")
+      assert_equal "nbconvert", RelatedPackage.normalize_name("nbconvert-all")
+    end
+
+    should "strip rb prefix" do
+      assert_equal "octokit", RelatedPackage.normalize_name("rb-octokit")
+      assert_equal "tzinfo", RelatedPackage.normalize_name("rb-tzinfo")
+    end
+
     should "strip lib prefix" do
       assert_equal "xml2", RelatedPackage.normalize_name("libxml2")
     end

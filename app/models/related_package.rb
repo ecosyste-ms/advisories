@@ -60,4 +60,64 @@ class RelatedPackage < ApplicationRecord
       "repackage"
     end
   end
+
+  # Signal: what does the ecosystem distribution of the repo look like?
+  # Returns a hash with the signal type and supporting data.
+  #
+  #   ecosystem_counts: { "npm" => 150, "go" => 2 }
+  #   package_ecosystem: "npm"
+  #   advisory_ecosystems: ["npm"]
+  #
+  REPACKAGER_ECOSYSTEMS = %w[conda homebrew nixpkgs debian alpine ubuntu spack adelie].freeze
+
+  def self.compute_ecosystem_signal(ecosystem_counts:, package_ecosystem:, advisory_ecosystems:)
+    total = ecosystem_counts.values.sum
+    return { signal: "too_few", total: total } if total < 2
+
+    dominant_ecosystem, dominant_count = ecosystem_counts.max_by { |_, v| v }
+    dominant_ratio = dominant_count.to_f / total
+    ecosystem_count = ecosystem_counts.keys.size
+
+    repackager_ecosystems = ecosystem_counts.keys.select { |e| REPACKAGER_ECOSYSTEMS.include?(e.downcase) }
+    same_ecosystem = advisory_ecosystems.any? { |e| e.downcase == package_ecosystem.downcase }
+
+    if same_ecosystem && dominant_ratio > 0.8 && total > 100
+      { signal: "fork_farm", total: total, dominant_ecosystem: dominant_ecosystem, dominant_ratio: dominant_ratio }
+    elsif ecosystem_count > 3 && repackager_ecosystems.any?
+      { signal: "repackaging", total: total, ecosystem_count: ecosystem_count, repackager_ecosystems: repackager_ecosystems }
+    elsif same_ecosystem && dominant_ratio > 0.8
+      { signal: "same_ecosystem", total: total, dominant_ecosystem: dominant_ecosystem, dominant_ratio: dominant_ratio }
+    else
+      { signal: "mixed", total: total, ecosystem_count: ecosystem_count }
+    end
+  end
+
+  # Signal: how much do the related package's version numbers overlap
+  # with the advisory package's version numbers?
+  # Returns a hash with overlap count, ratio, and the overlapping versions.
+  #
+  #   related_versions: ["2.28.0", "2.29.0", "2.31.0"]
+  #   advisory_versions: ["2.28.0", "2.28.1", "2.29.0", "2.31.0", "2.32.0"]
+  #
+  MIN_VERSIONS_FOR_OVERLAP = 3
+
+  def self.compute_version_overlap(related_versions, advisory_versions, min_versions: MIN_VERSIONS_FOR_OVERLAP)
+    insufficient = { overlap_count: 0, overlap_ratio: 0.0, overlapping_versions: [], sufficient_data: false }
+    return insufficient if related_versions.blank? || advisory_versions.blank?
+
+    # Normalize both sets using SemanticRange.clean
+    normalize = ->(versions) {
+      versions.filter_map { |v| SemanticRange.clean(v, loose: true) }.to_set
+    }
+
+    normalized_related = normalize.call(related_versions)
+    normalized_advisory = normalize.call(advisory_versions)
+
+    return insufficient if normalized_related.size < min_versions || normalized_advisory.size < min_versions
+
+    overlapping = normalized_related & normalized_advisory
+    ratio = overlapping.size.to_f / normalized_related.size
+
+    { overlap_count: overlapping.size, overlap_ratio: ratio, overlapping_versions: overlapping.to_a, sufficient_data: true }
+  end
 end

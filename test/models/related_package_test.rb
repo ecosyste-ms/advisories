@@ -152,6 +152,146 @@ class RelatedPackageTest < ActiveSupport::TestCase
     end
   end
 
+  context ".compute_ecosystem_signal" do
+    should "return fork_farm for large same-ecosystem repos" do
+      result = RelatedPackage.compute_ecosystem_signal(
+        ecosystem_counts: { "npm" => 150, "go" => 2 },
+        package_ecosystem: "npm",
+        advisory_ecosystems: ["npm"]
+      )
+      assert_equal "fork_farm", result[:signal]
+      assert_equal 152, result[:total]
+    end
+
+    should "return repackaging when many ecosystems include known repackagers" do
+      result = RelatedPackage.compute_ecosystem_signal(
+        ecosystem_counts: { "pypi" => 1, "conda" => 1, "homebrew" => 1, "nixpkgs" => 1 },
+        package_ecosystem: "conda",
+        advisory_ecosystems: ["pypi"]
+      )
+      assert_equal "repackaging", result[:signal]
+      assert_includes result[:repackager_ecosystems], "conda"
+    end
+
+    should "return same_ecosystem for small same-ecosystem repos" do
+      result = RelatedPackage.compute_ecosystem_signal(
+        ecosystem_counts: { "npm" => 8, "go" => 1 },
+        package_ecosystem: "npm",
+        advisory_ecosystems: ["npm"]
+      )
+      assert_equal "same_ecosystem", result[:signal]
+    end
+
+    should "return mixed for diverse repos without repackagers" do
+      result = RelatedPackage.compute_ecosystem_signal(
+        ecosystem_counts: { "npm" => 3, "go" => 3, "pypi" => 3, "cargo" => 3 },
+        package_ecosystem: "npm",
+        advisory_ecosystems: ["npm"]
+      )
+      assert_equal "mixed", result[:signal]
+    end
+
+    should "return too_few for repos with fewer than 2 packages" do
+      result = RelatedPackage.compute_ecosystem_signal(
+        ecosystem_counts: { "npm" => 1 },
+        package_ecosystem: "npm",
+        advisory_ecosystems: ["npm"]
+      )
+      assert_equal "too_few", result[:signal]
+    end
+
+    should "not return fork_farm for cross-ecosystem packages" do
+      result = RelatedPackage.compute_ecosystem_signal(
+        ecosystem_counts: { "npm" => 150 },
+        package_ecosystem: "conda",
+        advisory_ecosystems: ["npm"]
+      )
+      refute_equal "fork_farm", result[:signal]
+    end
+  end
+
+  context ".compute_version_overlap" do
+    should "compute overlap between matching version sets" do
+      result = RelatedPackage.compute_version_overlap(
+        ["2.28.0", "2.29.0", "2.31.0"],
+        ["2.28.0", "2.28.1", "2.29.0", "2.31.0", "2.32.0"]
+      )
+      assert result[:sufficient_data]
+      assert_equal 3, result[:overlap_count]
+      assert_in_delta 1.0, result[:overlap_ratio], 0.01
+    end
+
+    should "compute partial overlap" do
+      result = RelatedPackage.compute_version_overlap(
+        ["1.0.0", "2.0.0", "3.0.0", "4.0.0"],
+        ["1.0.0", "2.0.0", "5.0.0"]
+      )
+      assert result[:sufficient_data]
+      assert_equal 2, result[:overlap_count]
+      assert_in_delta 0.5, result[:overlap_ratio], 0.01
+    end
+
+    should "return zero for no overlap" do
+      result = RelatedPackage.compute_version_overlap(
+        ["1.0.0", "2.0.0", "3.0.0"],
+        ["4.0.0", "5.0.0", "6.0.0"]
+      )
+      assert result[:sufficient_data]
+      assert_equal 0, result[:overlap_count]
+      assert_in_delta 0.0, result[:overlap_ratio], 0.01
+    end
+
+    should "return insufficient data for empty arrays" do
+      result = RelatedPackage.compute_version_overlap([], ["1.0.0"])
+      refute result[:sufficient_data]
+      assert_equal 0, result[:overlap_count]
+    end
+
+    should "return insufficient data when below min_versions threshold" do
+      result = RelatedPackage.compute_version_overlap(
+        ["1.0.0", "2.0.0"],
+        ["1.0.0", "2.0.0", "3.0.0"]
+      )
+      refute result[:sufficient_data]
+
+      result = RelatedPackage.compute_version_overlap(
+        ["1.0.0", "2.0.0", "3.0.0"],
+        ["1.0.0", "2.0.0"]
+      )
+      refute result[:sufficient_data]
+    end
+
+    should "allow custom min_versions threshold" do
+      result = RelatedPackage.compute_version_overlap(
+        ["1.0.0", "2.0.0"],
+        ["1.0.0", "2.0.0"],
+        min_versions: 2
+      )
+      assert result[:sufficient_data]
+      assert_equal 2, result[:overlap_count]
+    end
+
+    should "normalize versions before comparing" do
+      result = RelatedPackage.compute_version_overlap(
+        ["v1.0.0", "2.0.0", "3.0.0"],
+        ["1.0.0", "v2.0.0", "v3.0.0"]
+      )
+      assert result[:sufficient_data]
+      assert_equal 3, result[:overlap_count]
+      assert_in_delta 1.0, result[:overlap_ratio], 0.01
+    end
+
+    should "skip non-semver versions" do
+      result = RelatedPackage.compute_version_overlap(
+        ["1.0.0", "not-a-version", "2.0.0", "3.0.0"],
+        ["1.0.0", "2.0.0", "3.0.0", "also-bad"]
+      )
+      assert result[:sufficient_data]
+      assert_equal 3, result[:overlap_count]
+      assert_in_delta 1.0, result[:overlap_ratio], 0.01
+    end
+  end
+
   context "scopes" do
     should "filter by name_matched" do
       advisory = create(:advisory)

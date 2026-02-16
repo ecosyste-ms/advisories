@@ -33,6 +33,34 @@ class EcosystemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
+  test "should get ecosystem packages page" do
+    FactoryBot.create(:package, ecosystem: "pypi", name: "numpy", advisories_count: 5, latest_release_number: "1.26.0", downloads: 1000000)
+    get ecosystem_packages_url("pypi")
+    assert_response :success
+    assert_select "h2", /pypi Packages/
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
+  end
+
+  test "should show package data on ecosystem packages page" do
+    FactoryBot.create(:package, ecosystem: "pypi", name: "numpy", advisories_count: 5, latest_release_number: "1.26.0", downloads: 1000000)
+    FactoryBot.create(:package, ecosystem: "pypi", name: "requests", advisories_count: 2, latest_release_number: "2.31.0", downloads: 500000)
+    get ecosystem_packages_url("pypi")
+    assert_response :success
+    assert_select "a.list-group-item", /numpy/
+    assert_select "a.list-group-item", /requests/
+  end
+
+  test "should filter ecosystem packages to related advisories only" do
+    package_with_related = FactoryBot.create(:package, ecosystem: "pypi", name: "numpy", advisories_count: 0)
+    package_without_related = FactoryBot.create(:package, ecosystem: "pypi", name: "pandas", advisories_count: 0)
+    FactoryBot.create(:related_package, package: package_with_related, advisory: @advisory)
+
+    get ecosystem_packages_url("pypi"), params: { related: "true" }
+    assert_response :success
+    assert_select "a.list-group-item", /numpy/
+    assert_select "a.list-group-item", { text: /pandas/, count: 0 }
+  end
+
   test "should handle severity filter on ecosystem page" do
     get ecosystem_url("pypi"), params: { severity: "high" }
     assert_response :success

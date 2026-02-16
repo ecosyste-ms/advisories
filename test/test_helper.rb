@@ -24,5 +24,7 @@ class ActiveSupport::TestCase
   setup do
     stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
       .to_return(status: 200, body: [].to_json, headers: { 'Content-Type' => 'application/json' })
+    stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/})
+      .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 end

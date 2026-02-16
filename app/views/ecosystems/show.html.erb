@@ -11,7 +11,7 @@
         <h2 class="h1 mb-0"><%= @ecosystem %></h2>
         <% if @registry %>
           <p class="text-muted mb-0">
-            <%= number_with_delimiter @registry.packages_count %> packages
+            <%= link_to "#{number_with_delimiter Package.ecosystem(@ecosystem).count} packages", ecosystem_packages_path(@ecosystem) %>
             <% if @registry.url.present? %>
               · <a href="<%= @registry.url %>" target="_blank" rel="noopener"><%= @registry.name %></a>
             <% end %>

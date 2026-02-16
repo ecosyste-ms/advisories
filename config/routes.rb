@@ -38,6 +38,7 @@ Rails.application.routes.draw do
 
   get 'ecosystems', to: 'ecosystems#index', as: 'ecosystems'
   get 'ecosystems/:ecosystem_id', to: 'ecosystems#show', as: 'ecosystem'
+  get 'ecosystems/:ecosystem_id/packages', to: 'ecosystems#packages', as: 'ecosystem_packages'
   get 'ecosystems/:ecosystem_id/*package_name', to: 'ecosystems#package', as: 'ecosystem_package', format: false
 
   get :recent_advisories_data, to: 'advisories#recent_advisories_data'

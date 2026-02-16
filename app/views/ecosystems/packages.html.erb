@@ -1,0 +1,48 @@
+<% @meta_title = "#{@ecosystem.humanize} Packages" %>
+<% @meta_description = "Browse packages in the #{@ecosystem} ecosystem with advisory counts, versions, and download stats." %>
+
+<div class="container">
+  <div class="mb-5">
+    <div class="d-flex align-items-center mb-3">
+      <% if @registry&.icon_url.present? %>
+        <img src="<%= @registry.icon_url %>" alt="<%= @ecosystem %>" class="me-3" style="width: 64px; height: 64px; object-fit: contain;">
+      <% end %>
+      <div>
+        <h2 class="h1 mb-0"><%= @ecosystem %> Packages</h2>
+        <p class="text-muted mb-0">
+          <%= link_to 'Advisories', ecosystem_path(@ecosystem) %>
+        </p>
+        <p class="mb-0 mt-2">
+          <% if params[:related].present? %>
+            <%= link_to 'All packages', ecosystem_packages_path(@ecosystem), class: 'btn btn-sm btn-outline-secondary' %>
+            <span class="btn btn-sm btn-primary">Related advisories only</span>
+          <% else %>
+            <span class="btn btn-sm btn-primary">All packages</span>
+            <%= link_to 'Related advisories only', ecosystem_packages_path(@ecosystem, related: true), class: 'btn btn-sm btn-outline-secondary' %>
+          <% end %>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="list-group list-group-flush">
+    <% @packages.each do |package| %>
+      <%= link_to ecosystem_package_path(@ecosystem, package.name), class: "list-group-item list-group-item-action d-flex justify-content-between align-items-center" do %>
+        <div>
+          <strong><%= package.name %></strong>
+          <% if package.latest_release_number.present? %>
+            <span class="text-muted ms-2"><%= package.latest_release_number %></span>
+          <% end %>
+        </div>
+        <div>
+          <% if package.downloads %>
+            <span class="text-muted me-3"><%= number_to_human(package.downloads) %> downloads</span>
+          <% end %>
+          <span class="badge bg-primary rounded-pill"><%= number_with_delimiter package.advisories_count %></span>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>

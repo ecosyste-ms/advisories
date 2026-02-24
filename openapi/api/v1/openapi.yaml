@@ -257,6 +257,12 @@ components:
           type: number
         epss_percentile:
           type: number
+        api_url:
+          type: string
+          description: "API URL for this advisory"
+        html_url:
+          type: string
+          description: "HTML URL for this advisory"
         related_advisories:
           type: array
           description: "Advisories from other sources for the same vulnerability (matched by CVE)"

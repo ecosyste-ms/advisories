@@ -70,6 +70,17 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert response.headers["ETag"].present?
   end
 
+  test "should include api_url and html_url in response" do
+    get api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert json_response.key?("api_url")
+    assert json_response.key?("html_url")
+    assert_match %r{/api/v1/advisories/#{@advisory.uuid}}, json_response["api_url"]
+    assert_match %r{/advisories/#{@advisory.uuid}}, json_response["html_url"]
+  end
+
   test "should include related_packages_url in show response" do
     get api_v1_advisory_url(@advisory), as: :json
     assert_response :success

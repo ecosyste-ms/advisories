@@ -2,50 +2,40 @@ module VersionNormalization
   extend ActiveSupport::Concern
 
   def clean_version(version)
-    # Only attempt normalization if version looks roughly like semver (has at least x.x.x pattern)
-    # Handle optional "v" prefix for Go packages
-    return nil unless version.match?(/^v?\d+\.\d+\.\d+/)
-
-    # Check if we need to normalize the prerelease part
-    # Example: "1.7.0-alpha.2" -> "1.7.0-alpha"
-    if version.include?('-')
-      parts = version.split('-', 2)
-      base = parts[0]
-      prerelease = parts[1]
-
-      # If prerelease has dots, keep only the first part
-      if prerelease && prerelease.include?('.')
-        first_prerelease = prerelease.split('.').first
-        normalized = "#{base}-#{first_prerelease}"
-
-        # Try cleaning the normalized version
-        cleaned = SemanticRange.clean(normalized, loose: true)
-        return cleaned if cleaned.present?
-      end
-    end
-
-    # Otherwise try standard cleaning
-    SemanticRange.clean(version, loose: true)
+    return nil unless version.match?(/\Av?\d+\.\d+\.\d+/)
+    version.sub(/\Av/, '')
   end
 
   def build_version_map(versions)
-    versions.map do |original|
+    versions.filter_map do |original|
       cleaned = clean_version(original)
-      [original, cleaned] if cleaned.present?
-    end.compact.to_h
+      [original, cleaned] if cleaned
+    end.to_h
   end
 
-  def version_satisfies_range?(cleaned_version, range, platform)
-    # First try the standard check
-    if SemanticRange.satisfies?(cleaned_version, range, platform: platform, loose: true)
-      true
-    elsif cleaned_version.include?('-')
-      # For prerelease versions, also check if the base version would satisfy the range
-      # This handles cases where "1.7.0-alpha" should match "< 1.11.0"
-      base_version = cleaned_version.split('-').first
-      SemanticRange.satisfies?(base_version, range, platform: platform, loose: true)
-    else
+  def version_satisfies_range?(version, range, ecosystem)
+    scheme = vers_scheme(ecosystem)
+    sub_ranges = range.split('||').map(&:strip).reject(&:empty?)
+    sub_ranges.any? do |sub_range|
+      normalized = normalize_range_for_vers(sub_range, scheme)
+      Vers.satisfies?(version, normalized, scheme)
+    rescue ArgumentError
       false
+    end
+  end
+
+  def vers_scheme(ecosystem)
+    PurlParser.reverse_map_ecosystem(ecosystem) || ecosystem&.downcase
+  end
+
+  def normalize_range_for_vers(range, scheme)
+    case scheme
+    when "gem", "pypi"
+      range
+    when "npm"
+      range.gsub(/\s*,\s*/, ' ').gsub(/(>=|<=|!=|[<>=])\s+/, '\1')
+    else
+      range.gsub(/\s*,\s*/, '|')
     end
   end
 end

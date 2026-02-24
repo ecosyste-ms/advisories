@@ -117,11 +117,9 @@ class Advisory < ApplicationRecord
   def affected_versions(package, range)
     originals = version_numbers(package)
     version_map = build_version_map(originals)
-    platform = package['ecosystem'].humanize
 
-    # Filter using cleaned versions, return originals
     version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, package['ecosystem'])
     end.keys
   end
 
@@ -141,14 +139,11 @@ class Advisory < ApplicationRecord
 
   def latest_resolved_version(package, version_numbers, range)
     version_map = build_version_map(version_numbers)
-    platform = package['ecosystem'].humanize
 
-    # Filter using cleaned versions
     matching_versions = version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, package['ecosystem'])
     end
 
-    # Return the max cleaned version (not original) for comparison purposes
     matching_versions.values.max
   end
 
@@ -164,7 +159,8 @@ class Advisory < ApplicationRecord
     return [] unless resp.success?
     json = resp.body
     json.select do |dep|
-      SemanticRange.satisfies?(latest_resolved_version(package, version_numbers, dep['requirements']), affected_range_for(package), platform: package['ecosystem'].humanize, loose: true)
+      resolved = latest_resolved_version(package, version_numbers, dep['requirements'])
+      resolved && version_satisfies_range?(resolved, affected_range_for(package), package['ecosystem'])
     end
   end
 

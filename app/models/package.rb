@@ -99,33 +99,24 @@ class Package < ApplicationRecord
   end
 
   def affected_versions(range)
-    # Map original versions to cleaned versions
     version_map = build_version_map(version_numbers)
-    platform = ecosystem.humanize
 
-    # Filter using cleaned versions, return originals
     original_affected = version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, ecosystem)
     end.keys
 
-    # Sort the results
     sort_versions_with_originals(original_affected)
   end
 
   def fixed_versions(range)
-    # Map original versions to cleaned versions
     version_map = build_version_map(version_numbers)
-    platform = ecosystem.humanize
 
-    # Get affected originals
     affected_originals = version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, ecosystem)
     end.keys
 
-    # Get fixed versions (all versions minus affected)
     original_fixed = version_map.keys - affected_originals
 
-    # ignore prerelease versions for now and sort
     sort_versions_with_originals original_fixed.reject {|v| v.include?('-') }
   end
 
@@ -162,17 +153,13 @@ class Package < ApplicationRecord
   end
 
   def sort_versions_with_originals(versions)
-    # Create mapping of cleaned version to original
     version_map = {}
     versions.each do |v|
-      cleaned = SemanticRange.clean(v, loose: true)
+      cleaned = clean_version(v)
       version_map[cleaned] = v if cleaned
     end
 
-    # Sort cleaned versions
     sorted_cleaned = sort_versions(version_map.keys)
-
-    # Map back to originals
     sorted_cleaned.map {|v| version_map[v] }
   end
 

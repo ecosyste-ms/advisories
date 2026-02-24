@@ -251,7 +251,6 @@ GEM
       cgi (>= 0.1)
     securerandom (0.4.1)
     semantic (1.6.1)
-    semantic_range (3.1.0)
     shoulda-context (3.0.0.rc1)
     shoulda-matchers (7.0.1)
       activesupport (>= 7.1)
@@ -291,6 +290,7 @@ GEM
       concurrent-ruby (~> 1.0)
     uri (1.1.1)
     useragent (0.16.11)
+    vers (1.0.3)
     web-console (4.3.0)
       actionview (>= 8.0.0)
       bindex (>= 0.4.0)
@@ -354,7 +354,6 @@ DEPENDENCIES
   sassc-rails
   secure_headers
   semantic
-  semantic_range
   shoulda-context (~> 3.0.0.rc1)
   shoulda-matchers
   sidekiq
@@ -362,6 +361,7 @@ DEPENDENCIES
   sitemap_generator
   spdx (= 2.0.12)
   sprockets-rails
+  vers
   web-console
   webmock
 
@@ -486,7 +486,6 @@ CHECKSUMS
   secure_headers (7.2.0) sha256=713b3d20af12b8c6633d97e276b286f1520e57be0d84b00f3bf43d22a1b70f83
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
   semantic (1.6.1) sha256=3cdbb48f59198ebb782a3fdfb87b559e0822a311610db153bae22777a7d0c163
-  semantic_range (3.1.0) sha256=9fc01ee40f2e5f81042e95d421837f688177dd603753b5eab41ff9bba50a34a1
   shoulda-context (3.0.0.rc1) sha256=6e0d9d52ab798c13bc2b490c8537d4bf30cfd318a1ea839c39a66d1d293c6a1a
   shoulda-matchers (7.0.1) sha256=b4bfd8744c10e0a36c8ac1a687f921ee7e25ed529e50488d61b79a8688749c77
   sidekiq (8.1.1) sha256=afdf2736883e1e80c1c9b7c47afe0387e1a4997c87170978a45560d35d429151
@@ -505,6 +504,7 @@ CHECKSUMS
   tzinfo (2.0.6) sha256=8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b
   uri (1.1.1) sha256=379fa58d27ffb1387eaada68c749d1426738bd0f654d812fcc07e7568f5c57c6
   useragent (0.16.11) sha256=700e6413ad4bb954bb63547fa098dddf7b0ebe75b40cc6f93b8d54255b173844
+  vers (1.0.3) sha256=d1ef5b0f146a23515ab94b0a6d7ad7338494f90af358857da83a7d8a9921bc89
   web-console (4.3.0) sha256=e13b71301cdfc2093f155b5aa3a622db80b4672d1f2f713119cc7ec7ac6a6da4
   webmock (3.26.1) sha256=4f696fb57c90a827c20aadb2d4f9058bbff10f7f043bd0d4c3f58791143b1cd7
   zeitwerk (2.7.5) sha256=d8da92128c09ea6ec62c949011b00ed4a20242b255293dd66bf41545398f73dd

@@ -28,7 +28,7 @@ gem 'rswag-api'
 gem 'rswag-ui'
 gem 'spdx', '2.0.12'
 gem "semantic"
-gem "semantic_range"
+gem "vers"
 gem "cvss-suite"
 gem "chartkick"
 gem "groupdate"

@@ -114,10 +114,14 @@ class RelatedPackage < ApplicationRecord
     insufficient = { overlap_count: 0, overlap_ratio: 0.0, overlapping_versions: [], sufficient_data: false }
     return insufficient if related_versions.blank? || advisory_versions.blank?
 
-    # Normalize both sets using SemanticRange.clean
-    normalize = ->(versions) {
-      versions.filter_map { |v| SemanticRange.clean(v, loose: true) }.to_set
-    }
+    normalize = ->(versions) do
+      versions.filter_map do |v|
+        next nil unless v.match?(/\Av?\d+\.\d+\.\d+/)
+        Vers.normalize(v.sub(/\Av/, ''))
+      rescue ArgumentError
+        nil
+      end.to_set
+    end
 
     normalized_related = normalize.call(related_versions)
     normalized_advisory = normalize.call(advisory_versions)

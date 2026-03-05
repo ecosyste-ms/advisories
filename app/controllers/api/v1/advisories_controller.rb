@@ -1,6 +1,6 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   def index
-    expires_in 5.minutes, public: true, stale_while_revalidate: 1.hour
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
     scope = Advisory.all
     
@@ -32,7 +32,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   end
 
   def packages
-    expires_in 5.minutes, public: true, stale_while_revalidate: 1.hour
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
     render json: Advisory.packages
   end
@@ -58,7 +58,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
       return
     end
 
-    expires_in 5.minutes, public: true, stale_while_revalidate: 1.hour
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
     advisories = Advisory.ecosystem(parsed_purl[:ecosystem])
                         .package_name(parsed_purl[:package_name])

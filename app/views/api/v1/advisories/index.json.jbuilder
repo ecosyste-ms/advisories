@@ -1,1 +1,1 @@
-json.partial! 'api/v1/advisories/advisory', collection: @advisories, as: :advisory, cached: true
+json.partial! 'api/v1/advisories/advisory', collection: @advisories, as: :advisory

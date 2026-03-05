@@ -155,7 +155,7 @@ class Package < ApplicationRecord
   def sort_versions_with_originals(versions)
     version_map = {}
     versions.each do |v|
-      cleaned = clean_version(v)
+      cleaned = Vers.clean(v)
       version_map[cleaned] = v if cleaned
     end
 

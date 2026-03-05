@@ -9,34 +9,6 @@ class VersionNormalizationTest < ActiveSupport::TestCase
     @model = DummyModel.new
   end
 
-  context "#clean_version" do
-    should "return version for valid semver" do
-      assert_equal "1.0.0", @model.clean_version("1.0.0")
-    end
-
-    should "strip v prefix for Go packages" do
-      assert_equal "1.0.0", @model.clean_version("v1.0.0")
-      assert_equal "2.5.3", @model.clean_version("v2.5.3")
-    end
-
-    should "preserve prerelease versions" do
-      assert_equal "1.7.0-alpha.2", @model.clean_version("1.7.0-alpha.2")
-      assert_equal "2.0.0-beta.1", @model.clean_version("2.0.0-beta.1")
-    end
-
-    should "return nil for completely invalid versions" do
-      assert_nil @model.clean_version("not-a-version")
-      assert_nil @model.clean_version("abcdef")
-      assert_nil @model.clean_version("random-string")
-    end
-
-    should "return nil for versions without x.x.x pattern" do
-      assert_nil @model.clean_version("1.0")
-      assert_nil @model.clean_version("latest")
-      assert_nil @model.clean_version("v1.0")
-    end
-  end
-
   context "#build_version_map" do
     should "create hash mapping original to cleaned versions" do
       versions = ["1.0.0", "1.7.0-alpha.2", "v2.0.0"]
@@ -249,20 +221,4 @@ class VersionNormalizationTest < ActiveSupport::TestCase
     end
   end
 
-  context "#vers_scheme" do
-    should "map ecosystem names to vers schemes via purl type" do
-      assert_equal "gem", @model.vers_scheme("rubygems")
-      assert_equal "npm", @model.vers_scheme("npm")
-      assert_equal "pypi", @model.vers_scheme("pypi")
-      assert_equal "maven", @model.vers_scheme("maven")
-      assert_equal "nuget", @model.vers_scheme("nuget")
-      assert_equal "go", @model.vers_scheme("go")
-      assert_equal "cargo", @model.vers_scheme("cargo")
-    end
-
-    should "fall back to lowercase ecosystem name" do
-      assert_equal "hex", @model.vers_scheme("hex")
-      assert_equal "packagist", @model.vers_scheme("packagist")
-    end
-  end
 end

@@ -41,6 +41,10 @@ class VersionNormalizationTest < ActiveSupport::TestCase
       refute @model.version_satisfies_range?("0.9.0", ">= 1.0.0", "npm")
     end
 
+    should "return false when ecosystem is nil" do
+      refute @model.version_satisfies_range?("1.0.0", "< 2.0.0", nil)
+    end
+
     should "handle OR ranges with ||" do
       assert @model.version_satisfies_range?("1.5.0", ">= 1.0.0, < 2.0.0 || >= 3.0.0, < 4.0.0", "rubygems")
       assert @model.version_satisfies_range?("3.5.0", ">= 1.0.0, < 2.0.0 || >= 3.0.0, < 4.0.0", "rubygems")

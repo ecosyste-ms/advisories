@@ -10,6 +10,7 @@ module VersionNormalization
 
   def version_satisfies_range?(version, range, ecosystem)
     scheme = PurlParser.reverse_map_ecosystem(ecosystem) || ecosystem&.downcase
+    return false unless scheme
     Vers.satisfies?(version, range, scheme)
   rescue ArgumentError
     false

@@ -1,0 +1,23 @@
+config/initializers/pagy.rb
+  773701c130365939 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "40e2b2d3c1e3a32417163193295e0dc8689c9ba8",
+  "prompts": {
+    "773701c130365939": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d64b1614-e2e1-49eb-b9ed-85c4665b97be",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}

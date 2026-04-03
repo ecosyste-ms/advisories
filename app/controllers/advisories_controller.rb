@@ -20,15 +20,23 @@ class AdvisoriesController < ApplicationController
 
     scope = Advisory.not_withdrawn
 
-    @sources = Source.joins(:advisories).group(:id).order(:name).count.to_a.map { |id, count| [Source.find(id), count] }
+    @sources = Rails.cache.fetch("advisories_sources", expires_in: 1.hour) do
+      Source.joins(:advisories).group(:id).order(:name).count.to_a.map { |id, count| [Source.find(id), count] }
+    end
     scope = scope.source_kind(params[:source]) if params[:source].present?
 
     @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
-    @ecosystems = scope.ecosystem_counts
+    cache_key = "advisories_ecosystem_counts_#{scope.to_sql.hash}"
+    @ecosystems = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.ecosystem_counts
+    end
 
-    @packages = scope.package_counts
+    cache_key = "advisories_package_counts_#{scope.to_sql.hash}"
+    @packages = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.package_counts
+    end
 
     @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?

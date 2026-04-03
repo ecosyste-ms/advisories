@@ -1,6 +1,62 @@
 require "test_helper"
 
 class AdvisoryTest < ActiveSupport::TestCase
+  context ".packages" do
+    should "return unique packages without versions via SQL" do
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [{"vulnerable_version_range" => "< 1.0"}] },
+        { "ecosystem" => "rubygems", "package_name" => "rails", "versions" => [] }
+      ])
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [{"vulnerable_version_range" => "< 2.0"}] }
+      ])
+
+      result = Advisory.packages
+
+      assert_equal 2, result.length
+      assert_includes result, { "ecosystem" => "npm", "package_name" => "lodash" }
+      assert_includes result, { "ecosystem" => "rubygems", "package_name" => "rails" }
+      result.each { |p| assert_nil p["versions"] }
+    end
+
+    should "respect scope filters" do
+      create(:advisory, packages: [{ "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] }])
+      create(:advisory, withdrawn_at: Time.current, packages: [{ "ecosystem" => "pypi", "package_name" => "django", "versions" => [] }])
+
+      result = Advisory.not_withdrawn.packages
+
+      assert_equal 1, result.length
+      assert_equal "npm", result.first["ecosystem"]
+    end
+  end
+
+  context ".ecosystems" do
+    should "return unique ecosystem names via SQL" do
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] },
+        { "ecosystem" => "rubygems", "package_name" => "rails", "versions" => [] }
+      ])
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "express", "versions" => [] }
+      ])
+
+      result = Advisory.ecosystems
+
+      assert_equal 2, result.length
+      assert_includes result, "npm"
+      assert_includes result, "rubygems"
+    end
+
+    should "respect scope filters" do
+      create(:advisory, packages: [{ "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] }])
+      create(:advisory, withdrawn_at: Time.current, packages: [{ "ecosystem" => "pypi", "package_name" => "django", "versions" => [] }])
+
+      result = Advisory.not_withdrawn.ecosystems
+
+      assert_equal ["npm"], result
+    end
+  end
+
   context ".ecosystem_counts" do
     should "return ecosystem counts sorted by count descending" do
       # Create advisories with different ecosystems

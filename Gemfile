@@ -13,6 +13,7 @@ gem "secure_headers"
 gem "sprockets-rails"
 gem "pg"
 gem "puma", "~> 7.0"
+gem "puma_worker_killer"
 gem "jbuilder"
 gem "bootsnap", require: false
 gem "sassc-rails"

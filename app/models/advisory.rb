@@ -43,11 +43,28 @@ class Advisory < ApplicationRecord
   end
 
   def self.packages
-    all.select(:packages).map{|a| a.packages.map{|p| p.except("versions") } }.flatten.uniq
+    connection.select_all(<<~SQL).rows.map { |row| JSON.parse(row[0]) }
+      SELECT DISTINCT jsonb_build_object(
+        'ecosystem', package_element->>'ecosystem',
+        'package_name', package_element->>'package_name'
+      )::text as package
+      FROM (
+        SELECT jsonb_array_elements(packages) as package_element
+        FROM (#{all.to_sql}) as scoped_advisories
+      ) as package_elements
+      ORDER BY package
+    SQL
   end
 
   def self.ecosystems
-    all.select(:packages).map{|a| a.packages.map{|p| p['ecosystem'] } }.flatten.uniq
+    connection.select_values(<<~SQL)
+      SELECT DISTINCT package_element->>'ecosystem' as ecosystem
+      FROM (
+        SELECT jsonb_array_elements(packages) as package_element
+        FROM (#{all.to_sql}) as scoped_advisories
+      ) as package_elements
+      ORDER BY ecosystem
+    SQL
   end
 
   def self.ecosystem_counts

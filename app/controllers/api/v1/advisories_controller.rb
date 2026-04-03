@@ -34,7 +34,10 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   def packages
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
-    render json: Advisory.packages
+    result = Rails.cache.fetch("api_advisory_packages", expires_in: 1.hour) do
+      Advisory.packages
+    end
+    render json: result
   end
 
   def related_packages

@@ -611,6 +611,78 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#cache_affected_versions!" do
+    should "store affected and unaffected versions in packages JSONB" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        pkg = create(:package, ecosystem: "npm", name: "lodash",
+          version_numbers: ["4.17.0", "4.17.1", "4.17.21"],
+          last_synced_at: Time.current)
+
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "lodash",
+            "versions" => [{ "vulnerable_version_range" => "< 4.17.21" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        package_data = advisory.packages.first
+        assert_includes package_data['affected_versions'], "4.17.0"
+        assert_includes package_data['affected_versions'], "4.17.1"
+        refute_includes package_data['affected_versions'], "4.17.21"
+        assert_includes package_data['unaffected_versions'], "4.17.21"
+      end
+    end
+
+    should "set empty arrays when package record has no version_numbers" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "nonexistent-package",
+            "versions" => [{ "vulnerable_version_range" => "< 1.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        package_data = advisory.packages.first
+        assert_equal [], package_data['affected_versions']
+        assert_equal [], package_data['unaffected_versions']
+      end
+    end
+
+    should "preserve existing package fields" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        create(:package, ecosystem: "npm", name: "lodash",
+          version_numbers: ["1.0.0"],
+          last_synced_at: Time.current)
+
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "lodash",
+            "versions" => [{ "vulnerable_version_range" => "< 2.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        package_data = advisory.packages.first
+        assert_equal "npm", package_data['ecosystem']
+        assert_equal "lodash", package_data['package_name']
+        assert_equal [{ "vulnerable_version_range" => "< 2.0.0" }], package_data['versions']
+      end
+    end
+  end
+
   context "#affected_versions" do
     should "return original invalid versions that match the range after normalization" do
       package = { "ecosystem" => "nuget", "package_name" => "Mammoth" }

@@ -392,4 +392,29 @@ class Advisory < ApplicationRecord
       [package, package_record]
     end
   end
+
+  def cache_affected_versions!
+    return if packages.blank?
+
+    package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
+    package_records = Package.where(
+      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+      *package_keys.flatten
+    ).index_by { |p| [p.ecosystem, p.name] }
+
+    updated_packages = packages.map do |package|
+      pkg = package_records[[package['ecosystem'], package['package_name']]]
+      if pkg&.version_numbers.present?
+        vulnerable_range = (package['versions'] || []).map { |v| v['vulnerable_version_range'] }.compact.join(' || ')
+        package.merge(
+          'affected_versions' => pkg.affected_versions(vulnerable_range),
+          'unaffected_versions' => pkg.fixed_versions(vulnerable_range)
+        )
+      else
+        package.merge('affected_versions' => [], 'unaffected_versions' => [])
+      end
+    end
+
+    update_column(:packages, updated_packages)
+  end
 end

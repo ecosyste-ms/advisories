@@ -60,23 +60,30 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
-    advisories = Advisory.ecosystem(parsed_purl[:ecosystem])
-                        .package_name(parsed_purl[:package_name])
-                        .includes(:source)
+    scope = Advisory.ecosystem(parsed_purl[:ecosystem])
+                    .package_name(parsed_purl[:package_name])
 
     @purl = purl
-    @advisories = deduplicate_by_cve(advisories)
+    @advisories = deduplicate_by_cve(scope)
   end
 
-  def deduplicate_by_cve(advisories)
-    grouped = advisories.group_by(&:cve)
+  def deduplicate_by_cve(scope)
+    no_cve_condition = "NOT EXISTS (SELECT 1 FROM unnest(identifiers) AS ident WHERE ident LIKE 'CVE-%')"
+    has_cve_condition = "EXISTS (SELECT 1 FROM unnest(identifiers) AS ident WHERE ident LIKE 'CVE-%')"
 
-    no_cve = grouped.delete(nil) || []
+    no_cve_ids = scope.where(no_cve_condition).pluck(:id)
 
-    deduped = grouped.map do |_cve, dupes|
-      dupes.max_by { |a| [a.packages.size, a.id] }
-    end
+    with_cve_sql = scope.where(has_cve_condition).to_sql
 
-    no_cve + deduped
+    deduped_ids = Advisory.connection.select_values(<<~SQL)
+      SELECT DISTINCT ON (cve) id
+      FROM (
+        SELECT a.id, a.packages, (SELECT ident FROM unnest(a.identifiers) AS ident WHERE ident LIKE 'CVE-%' LIMIT 1) AS cve
+        FROM (#{with_cve_sql}) AS a
+      ) AS with_cves
+      ORDER BY cve, jsonb_array_length(packages) DESC, id DESC
+    SQL
+
+    Advisory.where(id: no_cve_ids + deduped_ids).includes(:source)
   end
 end

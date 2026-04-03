@@ -42,7 +42,10 @@ class EcosystemsController < ApplicationController
     end
     scope = scope.package_name(params[:package_name]) if params[:package_name].present?
 
-    @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    cache_key = "ecosystem_#{@ecosystem}_repository_urls_#{scope.to_sql.hash}"
+    @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    end
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
@@ -112,7 +115,10 @@ class EcosystemsController < ApplicationController
     @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
-    @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    cache_key = "ecosystem_#{@ecosystem}_package_#{@package_name}_repository_urls_#{scope.to_sql.hash}"
+    @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    end
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?

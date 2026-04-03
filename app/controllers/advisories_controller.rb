@@ -38,7 +38,10 @@ class AdvisoriesController < ApplicationController
       scope.package_counts
     end
 
-    @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    cache_key = "advisories_repository_urls_#{scope.to_sql.hash}"
+    @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    end
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?

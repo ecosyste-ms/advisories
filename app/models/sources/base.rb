@@ -48,7 +48,10 @@ module Sources
       list_advisories.each do |advisory|
         a = source.advisories.find_or_initialize_by(uuid: advisory[:uuid])
         a.assign_attributes(advisory)
-        a.save! if a.changed?
+        if a.changed?
+          a.save!
+          a.cache_affected_versions!
+        end
       end
     end
   end

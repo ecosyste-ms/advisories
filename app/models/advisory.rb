@@ -246,15 +246,44 @@ class Advisory < ApplicationRecord
     advisory_ecosystems = packages.map { |p| p['ecosystem'] }
     repo_package_count = api_packages.size
 
-    current_related_ids = Set.new
-    api_packages.each do |api_pkg|
+    # Filter to only new/related packages (not already in advisory)
+    filtered_api_packages = api_packages.filter_map do |api_pkg|
       ecosystem = api_pkg['ecosystem']&.downcase
       name = api_pkg['name']
       next if ecosystem.blank? || name.blank?
       next if existing_pairs.include?([ecosystem, name.downcase.sub(%r{/v\d+\z}, '')])
+      api_pkg
+    end
 
-      pkg = Package.find_or_create_by(ecosystem: ecosystem, name: name)
-      next unless pkg.persisted?
+    return related_packages.delete_all if filtered_api_packages.empty?
+
+    # Batch find or create all packages in 2 queries instead of N
+    package_keys = filtered_api_packages.map { |p| [p['ecosystem'].downcase, p['name']] }
+    existing_packages = Package.where(
+      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+      *package_keys.flatten
+    ).index_by { |p| [p.ecosystem, p.name] }
+
+    missing_packages = package_keys.reject { |key| existing_packages.key?(key) }
+    if missing_packages.any?
+      now = Time.current
+      Package.insert_all(
+        missing_packages.map { |eco, name| { ecosystem: eco, name: name, created_at: now, updated_at: now } }
+      )
+      # Reload to get IDs for newly inserted packages
+      existing_packages = Package.where(
+        package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+        *package_keys.flatten
+      ).index_by { |p| [p.ecosystem, p.name] }
+    end
+
+    # Build related package records in bulk
+    now = Time.current
+    related_records = filtered_api_packages.filter_map do |api_pkg|
+      ecosystem = api_pkg['ecosystem'].downcase
+      name = api_pkg['name']
+      pkg = existing_packages[[ecosystem, name]]
+      next unless pkg
 
       name_match = RelatedPackage.compute_name_match(name, advisory_package_names, package_ecosystem: ecosystem)
       is_fork = api_pkg.dig('repo_metadata', 'fork') == true
@@ -262,12 +291,31 @@ class Advisory < ApplicationRecord
         name_match: name_match, repo_fork: is_fork,
         package_ecosystem: ecosystem, advisory_ecosystems: advisory_ecosystems
       )
-      related = RelatedPackage.find_or_create_by(advisory: self, package: pkg)
-      related.update(name_match: name_match, repo_package_count: repo_package_count, repo_fork: is_fork, match_kind: match_kind)
-      current_related_ids << related.id
+
+      {
+        advisory_id: id,
+        package_id: pkg.id,
+        name_match: name_match,
+        repo_fork: is_fork,
+        match_kind: match_kind,
+        repo_package_count: repo_package_count,
+        created_at: now,
+        updated_at: now
+      }
     end
 
-    related_packages.where.not(id: current_related_ids).delete_all
+    # Upsert all related packages in one query
+    if related_records.any?
+      RelatedPackage.upsert_all(
+        related_records,
+        unique_by: [:advisory_id, :package_id],
+        update_only: [:name_match, :repo_fork, :match_kind, :repo_package_count]
+      )
+    end
+
+    # Remove stale related packages
+    current_package_ids = related_records.map { |r| r[:package_id] }
+    related_packages.where.not(package_id: current_package_ids).delete_all
   end
 
   def sync_packages

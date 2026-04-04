@@ -1,0 +1,23 @@
+app/views/api/v1/advisories/_package.json.jbuilder
+  773701c130365939 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "6784bfbe5a458af9688dc47e576bc94080bf43bf",
+  "prompts": {
+    "773701c130365939": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d64b1614-e2e1-49eb-b9ed-85c4665b97be",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 8,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}

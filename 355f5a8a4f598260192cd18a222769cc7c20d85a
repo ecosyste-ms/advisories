@@ -1,0 +1,23 @@
+app/models/advisory.rb
+  773701c130365939 445-446,451,453-457,459,461-462,464-474
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "355f5a8a4f598260192cd18a222769cc7c20d85a",
+  "prompts": {
+    "773701c130365939": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d64b1614-e2e1-49eb-b9ed-85c4665b97be",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt",
+      "messages": [],
+      "total_additions": 26,
+      "total_deletions": 27,
+      "accepted_lines": 26,
+      "overriden_lines": 0
+    }
+  }
+}

@@ -51,6 +51,7 @@ module Sources
         if a.changed?
           a.save!
           a.cache_affected_versions!
+          a.cache_related_advisories!
         end
       end
     end

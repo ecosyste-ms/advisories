@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_16_165230) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_04_091715) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_16_165230) do
 
   create_table "advisories", force: :cascade do |t|
     t.float "blast_radius", default: 0.0
+    t.jsonb "cached_related_advisories", default: []
     t.string "classification"
     t.datetime "created_at", null: false
     t.float "cvss_score"

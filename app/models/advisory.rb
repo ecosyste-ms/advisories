@@ -381,9 +381,15 @@ class Advisory < ApplicationRecord
   end
 
   def related_advisories
-    return @preloaded_related_advisories if instance_variable_defined?(:@preloaded_related_advisories)
     return Advisory.none unless cve
     Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
+  end
+
+  def cache_related_advisories!
+    summaries = related_advisories.map do |r|
+      { 'uuid' => r.uuid, 'source_kind' => r.source_kind, 'url' => r.url }
+    end
+    update_column(:cached_related_advisories, summaries)
   end
 
   def ecosystems_repo_url
@@ -426,68 +432,14 @@ class Advisory < ApplicationRecord
   def packages_with_records
     package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
 
-    pkg_records = if instance_variable_defined?(:@preloaded_package_records)
-      @preloaded_package_records
-    else
-      Package.where(
-        package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
-        *package_keys.flatten
-      ).index_by { |p| [p.ecosystem, p.name] }
-    end
+    pkg_records = Package.where(
+      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+      *package_keys.flatten
+    ).index_by { |p| [p.ecosystem, p.name] }
 
     packages.map do |package|
       package_record = pkg_records[[package['ecosystem'], package['package_name']]]
       [package, package_record]
-    end
-  end
-
-  # Batch preload package records and related advisories for a collection.
-  # Uses subqueries on advisory IDs so Postgres extracts the JSONB/array
-  # values itself, instead of passing hundreds of parameters.
-  def self.preload_associations(advisories)
-    advisories = advisories.to_a
-    return if advisories.empty?
-
-    advisory_ids = advisories.map(&:id)
-
-    # Batch load all package records via subquery on the JSONB packages column
-    all_pkg_records = Package.where(
-      "(ecosystem, name) IN (SELECT pe->>'ecosystem', pe->>'package_name' FROM advisories, jsonb_array_elements(packages) AS pe WHERE advisories.id IN (?))",
-      advisory_ids
-    ).index_by { |p| [p.ecosystem, p.name] }
-
-    advisories.each { |a| a.instance_variable_set(:@preloaded_package_records, all_pkg_records) }
-
-    # Batch load related advisories via subquery extracting CVEs from identifiers
-    has_cves = advisories.any? { |a| a.cve }
-
-    if has_cves
-      related = Advisory.where(
-        "identifiers && (SELECT array_agg(DISTINCT ident) FROM advisories, unnest(identifiers) AS ident WHERE advisories.id IN (?) AND ident LIKE 'CVE-%')::varchar[]",
-        advisory_ids
-      ).where.not(id: advisory_ids).includes(:source)
-
-      cve_to_advisory = {}
-      advisories.each do |a|
-        c = a.cve
-        cve_to_advisory[c] = a if c
-      end
-
-      grouped = {}
-      related.each do |r|
-        r.identifiers.each do |ident|
-          if cve_to_advisory.key?(ident)
-            grouped[ident] ||= []
-            grouped[ident] << r
-          end
-        end
-      end
-
-      advisories.each do |a|
-        a.instance_variable_set(:@preloaded_related_advisories, grouped[a.cve] || [])
-      end
-    else
-      advisories.each { |a| a.instance_variable_set(:@preloaded_related_advisories, []) }
     end
   end
 
@@ -502,15 +454,27 @@ class Advisory < ApplicationRecord
 
     updated_packages = packages.map do |package|
       pkg = package_records[[package['ecosystem'], package['package_name']]]
+      cached = {}
+
       if pkg&.version_numbers.present?
         vulnerable_range = (package['versions'] || []).map { |v| v['vulnerable_version_range'] }.compact.join(' || ')
-        package.merge(
-          'affected_versions' => pkg.affected_versions(vulnerable_range),
-          'unaffected_versions' => pkg.fixed_versions(vulnerable_range)
-        )
+        cached['affected_versions'] = pkg.affected_versions(vulnerable_range)
+        cached['unaffected_versions'] = pkg.fixed_versions(vulnerable_range)
       else
-        package.merge('affected_versions' => [], 'unaffected_versions' => [])
+        cached['affected_versions'] = []
+        cached['unaffected_versions'] = []
       end
+
+      if pkg&.last_synced_at
+        cached['statistics'] = {
+          'dependent_packages_count' => pkg.dependent_packages_count,
+          'dependent_repos_count' => pkg.dependent_repos_count,
+          'downloads' => pkg.downloads,
+          'downloads_period' => pkg.downloads_period
+        }
+      end
+
+      package.merge(cached)
     end
 
     update_column(:packages, updated_packages)

@@ -281,13 +281,16 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     should "include related_advisories in response" do
       erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
 
-      create(:advisory, source: @source,
+      a1 = create(:advisory, source: @source,
         packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
         identifiers: ["CVE-2025-1234", "GHSA-test-1234"])
 
-      create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-1234",
+      a2 = create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-1234",
         packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
         identifiers: ["CVE-2025-1234", "EEF-CVE-2025-1234"])
+
+      a1.cache_related_advisories!
+      a2.cache_related_advisories!
 
       get lookup_api_v1_advisories_url, params: { purl: "pkg:npm/test-pkg" }, as: :json
       assert_response :success

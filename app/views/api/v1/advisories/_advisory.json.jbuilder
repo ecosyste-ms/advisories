@@ -2,12 +2,14 @@ json.extract! advisory, :uuid, :url, :title, :description, :origin, :severity, :
 json.api_url api_v1_advisory_url(advisory)
 json.html_url advisory_url(advisory)
 
-json.packages advisory.packages_with_records do |package, package_record|
-  json.partial! 'package', package: package, package_record: package_record
+json.packages advisory.packages do |package|
+  json.partial! 'package', package: package
 end
 
 json.related_packages_url related_packages_api_v1_advisory_url(advisory)
 
-json.related_advisories advisory.related_advisories do |related|
-  json.extract! related, :uuid, :source_kind, :url
+json.related_advisories advisory.cached_related_advisories do |related|
+  json.uuid related['uuid']
+  json.source_kind related['source_kind']
+  json.url related['url']
 end

@@ -442,37 +442,36 @@ class Advisory < ApplicationRecord
   end
 
   # Batch preload package records and related advisories for a collection.
-  # Replaces N*2 queries with 2 queries total.
+  # Uses subqueries on advisory IDs so Postgres extracts the JSONB/array
+  # values itself, instead of passing hundreds of parameters.
   def self.preload_associations(advisories)
     advisories = advisories.to_a
     return if advisories.empty?
 
-    # Batch load all package records across all advisories
-    all_package_keys = advisories.flat_map do |a|
-      a.packages.map { |p| [p['ecosystem'], p['package_name']] }
-    end.uniq
+    advisory_ids = advisories.map(&:id)
 
-    if all_package_keys.any?
-      all_pkg_records = Package.where(
-        all_package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
-        *all_package_keys.flatten
-      ).index_by { |p| [p.ecosystem, p.name] }
+    # Batch load all package records via subquery on the JSONB packages column
+    all_pkg_records = Package.where(
+      "(ecosystem, name) IN (SELECT pe->>'ecosystem', pe->>'package_name' FROM advisories, jsonb_array_elements(packages) AS pe WHERE advisories.id IN (?))",
+      advisory_ids
+    ).index_by { |p| [p.ecosystem, p.name] }
 
-      advisories.each { |a| a.instance_variable_set(:@preloaded_package_records, all_pkg_records) }
-    end
+    advisories.each { |a| a.instance_variable_set(:@preloaded_package_records, all_pkg_records) }
 
-    # Batch load all related advisories by CVE
-    cve_to_advisory = {}
-    advisories.each do |a|
-      c = a.cve
-      cve_to_advisory[c] = a if c
-    end
+    # Batch load related advisories via subquery extracting CVEs from identifiers
+    has_cves = advisories.any? { |a| a.cve }
 
-    if cve_to_advisory.any?
-      advisory_ids = advisories.map(&:id)
-      related = Advisory.where("identifiers && ARRAY[?]::varchar[]", cve_to_advisory.keys)
-                        .where.not(id: advisory_ids)
-                        .includes(:source)
+    if has_cves
+      related = Advisory.where(
+        "identifiers && (SELECT array_agg(DISTINCT ident) FROM advisories, unnest(identifiers) AS ident WHERE advisories.id IN (?) AND ident LIKE 'CVE-%')::varchar[]",
+        advisory_ids
+      ).where.not(id: advisory_ids).includes(:source)
+
+      cve_to_advisory = {}
+      advisories.each do |a|
+        c = a.cve
+        cve_to_advisory[c] = a if c
+      end
 
       grouped = {}
       related.each do |r|

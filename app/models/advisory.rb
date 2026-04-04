@@ -381,6 +381,7 @@ class Advisory < ApplicationRecord
   end
 
   def related_advisories
+    return @preloaded_related_advisories if instance_variable_defined?(:@preloaded_related_advisories)
     return Advisory.none unless cve
     Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
   end
@@ -423,21 +424,71 @@ class Advisory < ApplicationRecord
   end
 
   def packages_with_records
-    # Collect all unique ecosystem/name pairs
     package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
 
-    # Batch load all package records in a single query
-    package_records = Package.where(
-      package_keys.map { |ecosystem, name|
-        "(ecosystem = ? AND name = ?)"
-      }.join(" OR "),
-      *package_keys.flatten
-    ).index_by { |p| [p.ecosystem, p.name] }
+    pkg_records = if instance_variable_defined?(:@preloaded_package_records)
+      @preloaded_package_records
+    else
+      Package.where(
+        package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+        *package_keys.flatten
+      ).index_by { |p| [p.ecosystem, p.name] }
+    end
 
-    # Map packages with their records
     packages.map do |package|
-      package_record = package_records[[package['ecosystem'], package['package_name']]]
+      package_record = pkg_records[[package['ecosystem'], package['package_name']]]
       [package, package_record]
+    end
+  end
+
+  # Batch preload package records and related advisories for a collection.
+  # Replaces N*2 queries with 2 queries total.
+  def self.preload_associations(advisories)
+    advisories = advisories.to_a
+    return if advisories.empty?
+
+    # Batch load all package records across all advisories
+    all_package_keys = advisories.flat_map do |a|
+      a.packages.map { |p| [p['ecosystem'], p['package_name']] }
+    end.uniq
+
+    if all_package_keys.any?
+      all_pkg_records = Package.where(
+        all_package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+        *all_package_keys.flatten
+      ).index_by { |p| [p.ecosystem, p.name] }
+
+      advisories.each { |a| a.instance_variable_set(:@preloaded_package_records, all_pkg_records) }
+    end
+
+    # Batch load all related advisories by CVE
+    cve_to_advisory = {}
+    advisories.each do |a|
+      c = a.cve
+      cve_to_advisory[c] = a if c
+    end
+
+    if cve_to_advisory.any?
+      advisory_ids = advisories.map(&:id)
+      related = Advisory.where("identifiers && ARRAY[?]::varchar[]", cve_to_advisory.keys)
+                        .where.not(id: advisory_ids)
+                        .includes(:source)
+
+      grouped = {}
+      related.each do |r|
+        r.identifiers.each do |ident|
+          if cve_to_advisory.key?(ident)
+            grouped[ident] ||= []
+            grouped[ident] << r
+          end
+        end
+      end
+
+      advisories.each do |a|
+        a.instance_variable_set(:@preloaded_related_advisories, grouped[a.cve] || [])
+      end
+    else
+      advisories.each { |a| a.instance_variable_set(:@preloaded_related_advisories, []) }
     end
   end
 

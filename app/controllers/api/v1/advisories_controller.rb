@@ -23,10 +23,12 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
     end
 
     @pagy, @advisories = pagy(scope.includes(:source))
+    Advisory.preload_associations(@advisories)
   end
 
   def show
     @advisory = Advisory.find_by_uuid!(params[:id])
+    Advisory.preload_associations([@advisory])
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end
@@ -68,6 +70,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
     @purl = purl
     @advisories = deduplicate_by_cve(scope)
+    Advisory.preload_associations(@advisories)
   end
 
   def deduplicate_by_cve(scope)

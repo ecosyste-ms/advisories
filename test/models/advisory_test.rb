@@ -306,6 +306,61 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context ".preload_associations" do
+    should "preload package records for all advisories in one query" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        pkg1 = create(:package, ecosystem: "npm", name: "lodash", last_synced_at: Time.current)
+        pkg2 = create(:package, ecosystem: "npm", name: "express", last_synced_at: Time.current)
+
+        a1 = create(:advisory, packages: [
+          { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] }
+        ])
+        a2 = create(:advisory, packages: [
+          { "ecosystem" => "npm", "package_name" => "express", "versions" => [] }
+        ])
+
+        advisories = [a1, a2]
+        Advisory.preload_associations(advisories)
+
+        # Should use preloaded data without additional queries
+        pairs1 = a1.packages_with_records
+        pairs2 = a2.packages_with_records
+
+        assert_equal pkg1.id, pairs1.first[1].id
+        assert_equal pkg2.id, pairs2.first[1].id
+      end
+    end
+
+    should "preload related advisories for all advisories in one query" do
+      github_source = create(:source, kind: "github", url: "https://github.com/advisories")
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      a1 = create(:advisory, source: github_source, uuid: "GHSA-1111", identifiers: ["CVE-2025-1111", "GHSA-1111"])
+      a2 = create(:advisory, source: erlef_source, uuid: "EEF-1111", identifiers: ["CVE-2025-1111", "EEF-1111"])
+      a3 = create(:advisory, source: github_source, uuid: "GHSA-2222", identifiers: ["CVE-2025-2222", "GHSA-2222"])
+
+      Advisory.preload_associations([a1, a3])
+
+      assert_includes a1.related_advisories, a2
+      assert_empty a3.related_advisories
+    end
+
+    should "handle advisories without CVEs" do
+      a1 = create(:advisory, identifiers: ["GHSA-no-cve"])
+
+      Advisory.preload_associations([a1])
+
+      assert_equal [], a1.related_advisories
+    end
+
+    should "handle empty collection" do
+      assert_nothing_raised do
+        Advisory.preload_associations([])
+      end
+    end
+  end
+
   context ".source_kind scope" do
     should "filter advisories by source kind" do
       github_source = create(:source, kind: "github", url: "https://github.com/advisories")

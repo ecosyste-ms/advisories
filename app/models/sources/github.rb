@@ -82,10 +82,11 @@ module Sources
         PackageSyncWorker.perform_async(ecosystem, package_name)
       end
 
-      # Cache affected versions for changed advisories
+      # Cache affected versions and related advisories for changed advisories
       if changed_advisory_uuids.any?
         Advisory.where(uuid: changed_advisory_uuids.to_a).find_each do |advisory|
           advisory.cache_affected_versions!
+          advisory.cache_related_advisories!
         end
       end
 

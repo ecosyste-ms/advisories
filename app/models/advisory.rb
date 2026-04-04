@@ -385,6 +385,13 @@ class Advisory < ApplicationRecord
     Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
   end
 
+  def cache_related_advisories!
+    summaries = related_advisories.map do |r|
+      { 'uuid' => r.uuid, 'source_kind' => r.source_kind, 'url' => r.url }
+    end
+    update_column(:cached_related_advisories, summaries)
+  end
+
   def ecosystems_repo_url
     return nil unless repository_url
     parsed = URLParser.try_all(repository_url)
@@ -423,20 +430,15 @@ class Advisory < ApplicationRecord
   end
 
   def packages_with_records
-    # Collect all unique ecosystem/name pairs
     package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
 
-    # Batch load all package records in a single query
-    package_records = Package.where(
-      package_keys.map { |ecosystem, name|
-        "(ecosystem = ? AND name = ?)"
-      }.join(" OR "),
+    pkg_records = Package.where(
+      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
       *package_keys.flatten
     ).index_by { |p| [p.ecosystem, p.name] }
 
-    # Map packages with their records
     packages.map do |package|
-      package_record = package_records[[package['ecosystem'], package['package_name']]]
+      package_record = pkg_records[[package['ecosystem'], package['package_name']]]
       [package, package_record]
     end
   end
@@ -452,15 +454,27 @@ class Advisory < ApplicationRecord
 
     updated_packages = packages.map do |package|
       pkg = package_records[[package['ecosystem'], package['package_name']]]
+      cached = {}
+
       if pkg&.version_numbers.present?
         vulnerable_range = (package['versions'] || []).map { |v| v['vulnerable_version_range'] }.compact.join(' || ')
-        package.merge(
-          'affected_versions' => pkg.affected_versions(vulnerable_range),
-          'unaffected_versions' => pkg.fixed_versions(vulnerable_range)
-        )
+        cached['affected_versions'] = pkg.affected_versions(vulnerable_range)
+        cached['unaffected_versions'] = pkg.fixed_versions(vulnerable_range)
       else
-        package.merge('affected_versions' => [], 'unaffected_versions' => [])
+        cached['affected_versions'] = []
+        cached['unaffected_versions'] = []
       end
+
+      if pkg&.last_synced_at
+        cached['statistics'] = {
+          'dependent_packages_count' => pkg.dependent_packages_count,
+          'dependent_repos_count' => pkg.dependent_repos_count,
+          'downloads' => pkg.downloads,
+          'downloads_period' => pkg.downloads_period
+        }
+      end
+
+      package.merge(cached)
     end
 
     update_column(:packages, updated_packages)

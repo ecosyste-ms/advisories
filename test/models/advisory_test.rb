@@ -306,6 +306,47 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#cache_related_advisories!" do
+    should "cache related advisory summaries" do
+      github_source = create(:source, kind: "github", url: "https://github.com/advisories")
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      github_advisory = create(:advisory, source: github_source, uuid: "GHSA-1111",
+        url: "https://github.com/advisories/GHSA-1111", source_kind: "github",
+        identifiers: ["CVE-2025-1111", "GHSA-1111"])
+      erlef_advisory = create(:advisory, source: erlef_source, uuid: "EEF-1111",
+        url: "https://cna.erlef.org/EEF-1111", source_kind: "erlef",
+        identifiers: ["CVE-2025-1111", "EEF-1111"])
+
+      github_advisory.cache_related_advisories!
+      github_advisory.reload
+
+      assert_equal 1, github_advisory.cached_related_advisories.length
+      related = github_advisory.cached_related_advisories.first
+      assert_equal "EEF-1111", related['uuid']
+      assert_equal "erlef", related['source_kind']
+      assert_equal "https://cna.erlef.org/EEF-1111", related['url']
+    end
+
+    should "set empty array when no CVE" do
+      advisory = create(:advisory, identifiers: ["GHSA-no-cve"])
+
+      advisory.cache_related_advisories!
+      advisory.reload
+
+      assert_equal [], advisory.cached_related_advisories
+    end
+
+    should "set empty array when no related advisories exist" do
+      advisory = create(:advisory, identifiers: ["CVE-2025-9999"])
+
+      advisory.cache_related_advisories!
+      advisory.reload
+
+      assert_equal [], advisory.cached_related_advisories
+    end
+  end
+
   context ".source_kind scope" do
     should "filter advisories by source kind" do
       github_source = create(:source, kind: "github", url: "https://github.com/advisories")
@@ -776,6 +817,53 @@ class AdvisoryTest < ActiveSupport::TestCase
         assert_equal "npm", package_data['ecosystem']
         assert_equal "lodash", package_data['package_name']
         assert_equal [{ "vulnerable_version_range" => "< 2.0.0" }], package_data['versions']
+      end
+    end
+
+    should "cache package statistics" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        create(:package, ecosystem: "npm", name: "lodash",
+          version_numbers: ["1.0.0"],
+          last_synced_at: Time.current,
+          dependent_packages_count: 5000,
+          dependent_repos_count: 100000,
+          downloads: 50000000,
+          downloads_period: "last-month")
+
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "lodash",
+            "versions" => [{ "vulnerable_version_range" => "< 2.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        stats = advisory.packages.first['statistics']
+        assert_equal 5000, stats['dependent_packages_count']
+        assert_equal 100000, stats['dependent_repos_count']
+        assert_equal 50000000, stats['downloads']
+        assert_equal "last-month", stats['downloads_period']
+      end
+    end
+
+    should "not include statistics when package has not been synced" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "nonexistent",
+            "versions" => [{ "vulnerable_version_range" => "< 1.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        assert_nil advisory.packages.first['statistics']
       end
     end
   end

@@ -586,6 +586,103 @@ class AdvisoryTest < ActiveSupport::TestCase
       end
     end
 
+    should "reuse existing package records instead of creating duplicates" do
+      Sidekiq::Testing.fake! do
+        existing_pkg = create(:package, ecosystem: "conda", name: "requests")
+
+        advisory = create(:advisory,
+          references: ["https://github.com/psf/requests/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "requests", "versions" => [] }]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "requests" },
+            { "ecosystem" => "conda", "name" => "requests" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 1, advisory.related_package_records.count
+        assert_equal existing_pkg.id, advisory.related_packages.first.package_id
+      end
+    end
+
+    should "update existing related packages on re-sync" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/repo/issues/1"],
+          packages: [{ "ecosystem" => "npm", "package_name" => "mypkg", "versions" => [] }]
+        )
+
+        conda_pkg = create(:package, ecosystem: "conda", name: "mypkg")
+        existing_related = create(:related_package,
+          advisory: advisory, package: conda_pkg,
+          name_match: false, match_kind: "unknown", repo_package_count: 5
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "npm", "name" => "mypkg" },
+            { "ecosystem" => "conda", "name" => "mypkg" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        existing_related.reload
+        assert existing_related.name_match
+        assert_equal "repackage", existing_related.match_kind
+        assert_equal 2, existing_related.repo_package_count
+      end
+    end
+
+    should "handle large API responses with many packages" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/monorepo/issues/1"],
+          packages: [{ "ecosystem" => "npm", "package_name" => "core", "versions" => [] }]
+        )
+
+        api_response = 50.times.map do |i|
+          { "ecosystem" => "npm", "name" => "pkg-#{i}" }
+        end
+        api_response << { "ecosystem" => "npm", "name" => "core" } # already in advisory
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: api_response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 50, advisory.related_packages.count
+        assert_equal 50, Package.where("name LIKE 'pkg-%'").count
+      end
+    end
+
+    should "clean up all related packages when API returns only advisory packages" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/repo/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "mypkg", "versions" => [] }]
+        )
+
+        stale_pkg = create(:package, ecosystem: "conda", name: "mypkg")
+        create(:related_package, advisory: advisory, package: stale_pkg)
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "mypkg" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 0, advisory.related_packages.count
+      end
+    end
+
     should "remove stale related packages no longer in API response" do
       Sidekiq::Testing.fake! do
         advisory = create(:advisory,

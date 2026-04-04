@@ -1,0 +1,37 @@
+db/migrate/20260404091715_add_cached_related_advisories_to_advisories.rb
+  773701c130365939 3
+app/models/advisory.rb
+  773701c130365939 388-392,435-438,457-458,461-462,464-465,467-477
+test/models/advisory_test.rb
+  773701c130365939 309-310,314-319,321-322,324-328,331-332,334-335,337,340-344,346,822-868
+app/models/sources/base.rb
+  773701c130365939 54
+test/controllers/api/v1/advisories_controller_test.rb
+  773701c130365939 284,288,292-293
+app/views/api/v1/advisories/_advisory.json.jbuilder
+  773701c130365939 5-6,11-14
+app/models/sources/github.rb
+  773701c130365939 85,89
+app/views/api/v1/advisories/_package.json.jbuilder
+  773701c130365939 9,11-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "83cd96bc6ca6ce4b3253de640fab447ae0756bc3",
+  "prompts": {
+    "773701c130365939": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d64b1614-e2e1-49eb-b9ed-85c4665b97be",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Andrew Nesbitt",
+      "messages": [],
+      "total_additions": 126,
+      "total_deletions": 125,
+      "accepted_lines": 123,
+      "overriden_lines": 0
+    }
+  }
+}

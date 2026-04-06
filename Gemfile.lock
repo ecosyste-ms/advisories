@@ -114,8 +114,8 @@ GEM
     get_process_mem (1.0.0)
       bigdecimal (>= 2.0)
       ffi (~> 1.0)
-    groupdate (6.7.0)
-      activesupport (>= 7.1)
+    groupdate (6.8.0)
+      activesupport (>= 7.2)
     hashdiff (1.2.1)
     i18n (1.14.8)
       concurrent-ruby (~> 1.0)
@@ -428,7 +428,7 @@ CHECKSUMS
   ffi (1.17.4-x86_64-linux-musl) sha256=3fdf9888483de005f8ef8d1cf2d3b20d86626af206cbf780f6a6a12439a9c49e
   fuzzy_match (2.1.0) sha256=e97e25d0eaee48a5f77ed970d007c7b6ff3c6a6858303fead2d1986859204dfc
   get_process_mem (1.0.0) sha256=d54024f3bcbf776a4d6e0155ec2b21bc3ba44e2fd158c4c00c80aa8a36e0b4aa
-  groupdate (6.7.0) sha256=beaa8d5bf3856814681914a1d4a20e77436a2214b85d0017dc2ea5c355fb6777
+  groupdate (6.8.0) sha256=16f90ea18ca981c38e41e592416480b28353aa5e5cc3e7cb13a68b8fb5d40510
   hashdiff (1.2.1) sha256=9c079dbc513dfc8833ab59c0c2d8f230fa28499cc5efb4b8dd276cf931457cd1
   i18n (1.14.8) sha256=285778639134865c5e0f6269e0b818256017e8cde89993fdfcbfb64d088824a5
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc

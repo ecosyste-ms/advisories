@@ -12,7 +12,7 @@ gem "railties", "~> 8.1.1"
 gem "secure_headers"
 gem "sprockets-rails"
 gem "pg"
-gem "puma", "~> 7.0"
+gem "puma", "~> 8.0"
 gem "puma_worker_killer"
 gem "jbuilder"
 gem "bootsnap", require: false

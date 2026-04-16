@@ -117,22 +117,29 @@ paths:
                   $ref: '#/components/schemas/Package'
   /advisories/lookup:
     get:
-      summary: "lookup advisories by Package URL (PURL)"
-      operationId: "lookupAdvisoriesByPurl"
-      description: "Lookup security advisories for a package using Package URL (PURL) specification. Supports multiple ecosystems including npm, pypi, rubygems, maven, nuget, go, and cargo."
+      summary: "lookup advisories by Package URL (PURL) or repository URL"
+      operationId: "lookupAdvisories"
+      description: "Lookup security advisories for a package using Package URL (PURL) specification or by source repository URL. One of purl or repository_url must be provided. Results are deduplicated by CVE identifier."
       tags:
         - advisories
       parameters:
         - name: purl
           in: query
           description: "Package URL (PURL) to lookup advisories for. Format: pkg:type/namespace/name@version"
-          required: true
+          required: false
           schema:
             type: string
           example: "pkg:npm/lodash@4.17.20"
+        - name: repository_url
+          in: query
+          description: "Source repository URL to lookup advisories for"
+          required: false
+          schema:
+            type: string
+          example: "https://github.com/rails/rails"
       responses:
         200:
-          description: "List of advisories for the specified package"
+          description: "List of advisories for the specified package or repository"
           content:
             application/json:
               schema:
@@ -140,7 +147,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Advisory'
         400:
-          description: "Bad Request - Invalid or missing PURL parameter"
+          description: "Bad Request - Invalid or missing parameter"
           content:
             application/json:
               schema:
@@ -148,7 +155,7 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "PURL parameter is required"
+                    example: "purl or repository_url parameter is required"
   /advisories/{advisoryUUID}:
     get:
       summary: get a advisories by uuid

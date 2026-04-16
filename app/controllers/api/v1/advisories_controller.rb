@@ -48,25 +48,30 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
   def lookup
     purl = params[:purl]
-    
-    if purl.blank?
-      render json: { error: 'PURL parameter is required' }, status: :bad_request
+    repository_url = params[:repository_url]
+
+    if purl.blank? && repository_url.blank?
+      render json: { error: 'purl or repository_url parameter is required' }, status: :bad_request
       return
     end
 
-    parsed_purl = PurlParser.parse(purl)
-    
-    if parsed_purl.nil?
-      render json: { error: 'Invalid PURL format' }, status: :bad_request
-      return
+    if purl.present?
+      parsed_purl = PurlParser.parse(purl)
+
+      if parsed_purl.nil?
+        render json: { error: 'Invalid PURL format' }, status: :bad_request
+        return
+      end
+
+      scope = Advisory.ecosystem(parsed_purl[:ecosystem])
+                      .package_name(parsed_purl[:package_name])
+      @purl = purl
+    else
+      scope = Advisory.repository_url(repository_url)
     end
 
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
-    scope = Advisory.ecosystem(parsed_purl[:ecosystem])
-                    .package_name(parsed_purl[:package_name])
-
-    @purl = purl
     @advisories = deduplicate_by_cve(scope)
   end
 

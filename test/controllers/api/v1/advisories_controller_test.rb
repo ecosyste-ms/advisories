@@ -181,22 +181,67 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
       assert_equal 0, json_response.length
     end
 
-    should "return bad request for missing purl parameter" do
+    should "return bad request for missing parameters" do
       get lookup_api_v1_advisories_url, as: :json
-      
+
       assert_response :bad_request
       json_response = JSON.parse(response.body)
-      
-      assert_equal "PURL parameter is required", json_response["error"]
+
+      assert_equal "purl or repository_url parameter is required", json_response["error"]
     end
 
     should "return bad request for blank purl parameter" do
       get lookup_api_v1_advisories_url, params: { purl: "" }, as: :json
-      
+
       assert_response :bad_request
       json_response = JSON.parse(response.body)
-      
-      assert_equal "PURL parameter is required", json_response["error"]
+
+      assert_equal "purl or repository_url parameter is required", json_response["error"]
+    end
+
+    should "return advisories for repository_url" do
+      create(:advisory,
+        source: @source,
+        references: ["https://github.com/rails/rails/issues/1"],
+        packages: [{"ecosystem" => "rubygems", "package_name" => "rails", "versions" => []}]
+      )
+
+      get lookup_api_v1_advisories_url, params: { repository_url: "https://github.com/rails/rails" }, as: :json
+
+      assert_response :success
+      json_response = JSON.parse(response.body)
+
+      assert_equal 1, json_response.length
+      assert_equal "https://github.com/rails/rails", json_response.first["repository_url"]
+    end
+
+    should "return empty advisories for repository_url with no advisories" do
+      get lookup_api_v1_advisories_url, params: { repository_url: "https://github.com/foo/bar" }, as: :json
+
+      assert_response :success
+      json_response = JSON.parse(response.body)
+
+      assert_equal 0, json_response.length
+    end
+
+    should "deduplicate advisories with same CVE for repository_url" do
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      create(:advisory, source: @source,
+        references: ["https://github.com/rails/rails/issues/1"],
+        packages: [{"ecosystem" => "rubygems", "package_name" => "rails", "versions" => []}],
+        identifiers: ["CVE-2025-9999", "GHSA-test-9999"])
+
+      create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-9999",
+        references: ["https://github.com/rails/rails/issues/1"],
+        packages: [{"ecosystem" => "rubygems", "package_name" => "rails", "versions" => []}],
+        identifiers: ["CVE-2025-9999", "EEF-CVE-2025-9999"])
+
+      get lookup_api_v1_advisories_url, params: { repository_url: "https://github.com/rails/rails" }, as: :json
+      assert_response :success
+
+      json_response = JSON.parse(response.body)
+      assert_equal 1, json_response.length
     end
 
     should "return bad request for invalid purl format" do

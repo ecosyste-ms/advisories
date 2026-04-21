@@ -8,7 +8,7 @@
     <div class="text-muted float-end listing__time">
         <% if advisory.withdrawn? %>
           <span title="<%= advisory.withdrawn_at %>">Withdrawn <%= time_ago_in_words advisory.withdrawn_at %> ago</span>
-        <% else %>
+        <% elsif advisory.published_at %>
           <span title="<%= advisory.published_at %>"><%= time_ago_in_words advisory.published_at %> ago</span>
         <% end %>
     </div>

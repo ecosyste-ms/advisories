@@ -187,8 +187,8 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should render advisory without published_at on show" do
-    advisory = FactoryBot.create(:advisory, source: @source, published_at: nil)
+  test "should render advisory without published_at or severity on show" do
+    advisory = FactoryBot.create(:advisory, source: @source, published_at: nil, severity: nil)
 
     get advisory_url(advisory)
     assert_response :success

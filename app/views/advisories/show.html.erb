@@ -280,8 +280,10 @@
         </p>
         <% end %>
         <h2>Date and time</h2>
+        <% if @advisory.published_at %>
         <h3>Published</h3>
         <p><span title="<%= @advisory.published_at %>"><%= time_ago_in_words @advisory.published_at %> ago</span></p>
+        <% end %>
         <h3>Updated</h3>
         <p><span title="<%= @advisory.updated_at %>"><%= time_ago_in_words @advisory.updated_at %> ago</span></p>
         <% if @advisory.withdrawn_at %>

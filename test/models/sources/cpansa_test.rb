@@ -72,6 +72,65 @@ class CpansaSourceTest < ActiveSupport::TestCase
     assert_equal "1.23", package[:versions].first[:first_patched_version]
   end
 
+  test "map_advisories merges duplicate ids into one advisory with combined ranges" do
+    entries = [
+      {
+        "id" => "CPANSA-Dup-2021-01",
+        "distribution" => "Dup-Dist",
+        "description" => "Issue",
+        "affected_versions" => [">=2.1.0,<=2.1.1"],
+        "fixed_versions" => [],
+        "cves" => ["CVE-2021-0001"],
+        "references" => ["https://a"],
+        "reported" => nil
+      },
+      {
+        "id" => "CPANSA-Dup-2021-01",
+        "distribution" => "Dup-Dist",
+        "description" => "Issue",
+        "affected_versions" => ["==2.5.0"],
+        "fixed_versions" => [">=2.6.0"],
+        "cves" => ["CVE-2021-0001"],
+        "references" => ["https://b"],
+        "reported" => "2021-03-01"
+      }
+    ]
+
+    mapped = @cpansa.map_advisories(entries)
+
+    assert_equal 1, mapped.length
+    advisory = mapped.first
+    assert_equal "CPANSA-Dup-2021-01", advisory[:uuid]
+    assert_equal "2021-03-01", advisory[:published_at]
+    assert_equal ["https://a", "https://b"], advisory[:references]
+
+    versions = advisory[:packages].first[:versions]
+    assert_equal 2, versions.length
+    assert_equal ">= 2.1.0, <= 2.1.1", versions[0][:vulnerable_version_range]
+    assert_equal "= 2.5.0", versions[1][:vulnerable_version_range]
+    assert_equal "2.6.0", versions[1][:first_patched_version]
+  end
+
+  test "derive_published_at prefers reported date" do
+    advisory = { "reported" => "2020-05-01", "cves" => ["CVE-2019-0001"], "id" => "CPANSA-Foo-2018-01" }
+    assert_equal "2020-05-01", @cpansa.derive_published_at(advisory)
+  end
+
+  test "derive_published_at falls back to CVE year" do
+    advisory = { "reported" => nil, "cves" => ["CVE-2019-0001"], "id" => "CPANSA-Foo-2018-01" }
+    assert_equal "2019-01-01", @cpansa.derive_published_at(advisory)
+  end
+
+  test "derive_published_at falls back to id year when no CVE" do
+    advisory = { "reported" => nil, "cves" => [], "id" => "CPANSA-Foo-2018-01-jquery" }
+    assert_equal "2018-01-01", @cpansa.derive_published_at(advisory)
+  end
+
+  test "derive_published_at returns nil when nothing available" do
+    advisory = { "reported" => nil, "cves" => [], "id" => "CPANSA-MySQL-Admin-1-1" }
+    assert_nil @cpansa.derive_published_at(advisory)
+  end
+
   test "map_advisory pairs multiple affected ranges with fixed versions" do
     advisory = {
       "id" => "CPANSA-Multi-2020-01",

@@ -18,7 +18,22 @@ module Sources
     end
 
     def map_advisories(advisories)
-      advisories.map { |advisory| map_advisory(advisory) }
+      advisories.group_by { |a| a['id'] }.map do |_id, entries|
+        map_advisory(merge_entries(entries))
+      end
+    end
+
+    def merge_entries(entries)
+      return entries.first if entries.length == 1
+
+      base = entries.first.dup
+      base['affected_versions'] = entries.flat_map { |e| Array(e['affected_versions']) }.uniq
+      base['fixed_versions'] = entries.flat_map { |e| Array(e['fixed_versions']) }.uniq
+      base['references'] = entries.flat_map { |e| Array(e['references']) }.compact.uniq
+      base['cves'] = entries.flat_map { |e| Array(e['cves']) }.compact.uniq
+      base['reported'] ||= entries.map { |e| e['reported'] }.compact.first
+      base['severity'] ||= entries.map { |e| e['severity'] }.compact.first
+      base
     end
 
     def map_advisory(advisory)
@@ -31,7 +46,7 @@ module Sources
         description: advisory['description']&.strip,
         origin: 'CPANSA',
         severity: normalize_severity(advisory['severity']),
-        published_at: advisory['reported'],
+        published_at: derive_published_at(advisory),
         withdrawn_at: nil,
         classification: nil,
         cvss_score: nil,
@@ -43,6 +58,28 @@ module Sources
         epss_percentile: nil,
         packages: extract_packages(advisory)
       }
+    end
+
+    def derive_published_at(advisory)
+      return advisory['reported'] if advisory['reported'].present?
+
+      year = year_from_cve(advisory['cves']) || year_from_id(advisory['id'])
+      return nil unless year
+
+      "#{year}-01-01"
+    end
+
+    def year_from_cve(cves)
+      Array(cves).each do |cve|
+        return $1 if cve =~ /\ACVE-(\d{4})-/
+      end
+      nil
+    end
+
+    def year_from_id(id)
+      return nil unless id
+      return $1 if id =~ /-((?:19|20)\d{2})-/
+      nil
     end
 
     def derive_title(advisory)

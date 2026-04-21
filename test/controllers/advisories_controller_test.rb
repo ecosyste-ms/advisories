@@ -180,8 +180,8 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: "Potentially Affected Packages", count: 0
   end
 
-  test "should render advisory without published_at on index" do
-    FactoryBot.create(:advisory, source: @source, published_at: nil)
+  test "should render advisory without published_at or severity on index" do
+    FactoryBot.create(:advisory, source: @source, published_at: nil, severity: nil)
 
     get advisories_url
     assert_response :success

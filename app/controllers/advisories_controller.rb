@@ -25,7 +25,7 @@ class AdvisoriesController < ApplicationController
     end
     scope = scope.source_kind(params[:source]) if params[:source].present?
 
-    @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
+    @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
     cache_key = "advisories_ecosystem_counts_#{scope.to_sql.hash}"

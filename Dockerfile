@@ -1,6 +1,6 @@
 # =============================================
 # Builder stage
-FROM ruby:4.0.2-alpine AS builder
+FROM ruby:4.0.3-alpine AS builder
 
 ENV APP_ROOT=/usr/src/app
 WORKDIR $APP_ROOT
@@ -32,7 +32,7 @@ RUN bundle exec bootsnap precompile --gemfile app/ lib/ \
 
 # =============================================
 # Final stage
-FROM ruby:4.0.2-alpine
+FROM ruby:4.0.3-alpine
 
 ENV APP_ROOT=/usr/src/app
 ENV DATABASE_PORT=5432

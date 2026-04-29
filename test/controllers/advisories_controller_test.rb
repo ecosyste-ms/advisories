@@ -12,6 +12,30 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
+
+  test "provides RSS and Atom auto discovery links" do
+    get advisories_url
+    assert_response :success
+    assert_select 'link[rel="alternate"][type="application/rss+xml"]'
+    assert_select 'link[rel="alternate"][type="application/atom+xml"]'
+  end
+
+  test "renders RSS feed" do
+    get advisories_url(format: :rss)
+    assert_response :success
+    assert_equal 'application/rss+xml', response.media_type
+    assert_includes response.body, '<rss'
+    assert_includes response.body, @advisory.uuid
+  end
+
+  test "renders Atom feed" do
+    get advisories_url(format: :atom)
+    assert_response :success
+    assert_equal 'application/atom+xml', response.media_type
+    assert_includes response.body, '<feed'
+    assert_includes response.body, @advisory.uuid
+  end
+
   test "should handle valid sort parameters" do
     get advisories_url, params: { sort: "epss_percentage", order: "desc" }
     assert_response :success

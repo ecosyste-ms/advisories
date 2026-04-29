@@ -74,6 +74,12 @@ class AdvisoriesController < ApplicationController
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
     @pagy, @advisories = pagy(scope.includes(:source))
+
+    respond_to do |format|
+      format.html
+      format.rss
+      format.atom
+    end
   end
 
   def recent_advisories_data

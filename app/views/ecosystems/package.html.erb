@@ -1,3 +1,8 @@
+<% content_for :head do %>
+  <%= auto_discovery_link_tag(:rss, url_for(request.query_parameters.merge(format: :rss)), title: "Package Advisories RSS") %>
+  <%= auto_discovery_link_tag(:atom, url_for(request.query_parameters.merge(format: :atom)), title: "Package Advisories Atom") %>
+<% end %>
+
 <% @meta_title = "#{@package_name} Security Advisories - #{@ecosystem.humanize}" %>
 <% if @package&.description.present? %>
   <% @meta_description = "Security advisories for #{@package_name} (#{@ecosystem}): #{@package.description.truncate(120)}" %>

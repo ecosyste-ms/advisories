@@ -2,7 +2,7 @@ module ApplicationHelper
   include Pagy::Frontend
 
   def severity_class(severity)
-    case severity.downcase
+    case severity&.downcase
     when 'low'
       'bg-success'
     when 'moderate'

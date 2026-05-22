@@ -61,6 +61,24 @@ class EcosystemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.list-group-item", { text: /pandas/, count: 0 }
   end
 
+  test "should render ecosystem page with nil severity advisories" do
+    FactoryBot.create(:advisory, source: @source, severity: nil, packages: [
+      { "ecosystem" => "pypi", "package_name" => "tensorflow", "versions" => [{"vulnerable_version_range" => "< 1.0"}] }
+    ])
+
+    get ecosystem_url("pypi")
+    assert_response :success
+  end
+
+  test "should render package page with nil severity advisories" do
+    FactoryBot.create(:advisory, source: @source, severity: nil, packages: [
+      { "ecosystem" => "pypi", "package_name" => "tensorflow", "versions" => [{"vulnerable_version_range" => "< 1.0"}] }
+    ])
+
+    get ecosystem_package_url("pypi", "tensorflow")
+    assert_response :success
+  end
+
   test "should handle severity filter on ecosystem page" do
     get ecosystem_url("pypi"), params: { severity: "high" }
     assert_response :success

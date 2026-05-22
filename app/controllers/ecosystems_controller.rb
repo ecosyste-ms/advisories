@@ -33,7 +33,7 @@ class EcosystemsController < ApplicationController
     @registry = Registry.find_by_ecosystem(@ecosystem)
     scope = Advisory.not_withdrawn.ecosystem(@ecosystem)
 
-    @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
+    @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
     cache_key = "ecosystem_#{@ecosystem}_package_counts_#{scope.to_sql.hash}"
@@ -112,7 +112,7 @@ class EcosystemsController < ApplicationController
       scope = direct_scope
     end
 
-    @severities = scope.group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
+    @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
     cache_key = "ecosystem_#{@ecosystem}_package_#{@package_name}_repository_urls_#{scope.to_sql.hash}"

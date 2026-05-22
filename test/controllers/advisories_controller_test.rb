@@ -180,6 +180,20 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: "Potentially Affected Packages", count: 0
   end
 
+  test "should render advisory without published_at or severity on index" do
+    FactoryBot.create(:advisory, source: @source, published_at: nil, severity: nil)
+
+    get advisories_url
+    assert_response :success
+  end
+
+  test "should render advisory without published_at or severity on show" do
+    advisory = FactoryBot.create(:advisory, source: @source, published_at: nil, severity: nil)
+
+    get advisory_url(advisory)
+    assert_response :success
+  end
+
   test "should filter by source and show correct advisories" do
     erlef_source = FactoryBot.create(:source, kind: "erlef", url: "https://cna.erlef.org")
     FactoryBot.create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-0001")

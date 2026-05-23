@@ -347,7 +347,7 @@ class Advisory < ApplicationRecord
     ecosystems.map do |ecosystem|
       packages = package_records.select{|p| p.ecosystem == ecosystem }
       package = packages.max_by{|p| p.dependent_repos_count || 0}
-      if package && package.dependent_repos_count && package.dependent_repos_count > 0
+      if package && package.dependent_repos_count && package.dependent_repos_count > 0 && cvss_score
         Math.log10(package.dependent_repos_count) * cvss_score
       else
         1

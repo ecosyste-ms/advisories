@@ -455,6 +455,19 @@ class AdvisoryTest < ActiveSupport::TestCase
       end
     end
 
+    should "fall back to 1 per ecosystem when cvss_score is nil" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        create(:package, ecosystem: "npm", name: "test-package", dependent_repos_count: 100)
+
+        advisory = create(:advisory, cvss_score: nil, packages: [
+          { "ecosystem" => "npm", "package_name" => "test-package", "versions" => [] }
+        ])
+
+        assert_equal 1, advisory.calculate_blast_radius
+      end
+    end
+
     should "update blast_radius when cvss_score changes" do
       Sidekiq::Testing.fake! do
         create(:registry, name: "npmjs.org", ecosystem: "npm")

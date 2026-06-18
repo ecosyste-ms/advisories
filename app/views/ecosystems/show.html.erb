@@ -1,3 +1,8 @@
+<% content_for :head do %>
+  <%= auto_discovery_link_tag(:rss, url_for(request.query_parameters.merge(format: :rss)), title: "Ecosystem Advisories RSS") %>
+  <%= auto_discovery_link_tag(:atom, url_for(request.query_parameters.merge(format: :atom)), title: "Ecosystem Advisories Atom") %>
+<% end %>
+
 <% @meta_title = "#{@ecosystem.humanize} Security Advisories" %>
 <% @meta_description = "Browse and search security advisories for #{@ecosystem} packages. View CVE details, severity ratings, and affected versions." %>
 

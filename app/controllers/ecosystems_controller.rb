@@ -76,6 +76,12 @@ class EcosystemsController < ApplicationController
     end
 
     @pagy, @advisories = pagy(scope.includes(:source))
+
+    respond_to do |format|
+      format.html
+      format.rss
+      format.atom
+    end
   end
 
   def packages
@@ -152,6 +158,12 @@ class EcosystemsController < ApplicationController
 
     if @package
       @related_packages_by_advisory = @package.related_packages.index_by(&:advisory_id)
+    end
+
+    respond_to do |format|
+      format.html
+      format.rss
+      format.atom
     end
   end
 end

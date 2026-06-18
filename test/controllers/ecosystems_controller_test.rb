@@ -19,6 +19,30 @@ class EcosystemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
+
+  test "ecosystem show provides RSS and Atom auto discovery links" do
+    get ecosystem_url("pypi")
+    assert_response :success
+    assert_select 'link[rel="alternate"][type="application/rss+xml"]'
+    assert_select 'link[rel="alternate"][type="application/atom+xml"]'
+  end
+
+  test "ecosystem show renders RSS feed" do
+    get ecosystem_url("pypi", format: :rss)
+    assert_response :success
+    assert_equal 'application/rss+xml', response.media_type
+    assert_includes response.body, '<rss'
+    assert_includes response.body, @advisory.uuid
+  end
+
+  test "package advisories renders Atom feed" do
+    get ecosystem_package_url("pypi", "tensorflow", format: :atom)
+    assert_response :success
+    assert_equal 'application/atom+xml', response.media_type
+    assert_includes response.body, '<feed'
+    assert_includes response.body, @advisory.uuid
+  end
+
   test "should get ecosystem show page" do
     get ecosystem_url("pypi")
     assert_response :success

@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby '4.0.5'
+ruby '4.0.6'
 
 gem "activemodel", "~> 8.1.1"
 gem "activerecord", "~> 8.1.1"

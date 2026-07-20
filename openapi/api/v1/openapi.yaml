@@ -158,7 +158,7 @@ paths:
                     example: "purl or repository_url parameter is required"
   /advisories/{advisoryUUID}:
     get:
-      summary: get a advisories by uuid
+      summary: get an advisory by uuid
       operationId: getAdvisory
       tags:
         - advisories

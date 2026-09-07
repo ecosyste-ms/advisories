@@ -30,7 +30,7 @@ gem 'rswag-api'
 gem 'rswag-ui'
 gem 'spdx', '2.0.12'
 gem "semantic"
-gem "vers"
+gem "vers", "~> 1.3.1"
 gem "cvss-suite"
 gem "chartkick"
 gem "groupdate"

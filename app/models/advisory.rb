@@ -253,7 +253,7 @@ class Advisory < ApplicationRecord
       next if ecosystem.blank? || name.blank?
       next if existing_pairs.include?([ecosystem, name.downcase.sub(%r{/v\d+\z}, '')])
       api_pkg
-    end
+    end.uniq { |p| [p['ecosystem'].downcase, p['name']] }
 
     return related_packages.delete_all if filtered_api_packages.empty?
 

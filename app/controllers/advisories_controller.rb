@@ -89,7 +89,7 @@ class AdvisoriesController < ApplicationController
   end
 
   def show
-    @advisory = Advisory.find_by!(uuid: params[:id])
+    @advisory = Advisory.find_by_identifier!(params[:id])
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end

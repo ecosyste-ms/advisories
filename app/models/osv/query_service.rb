@@ -93,14 +93,7 @@ module Osv
     end
 
     def self.find_by_id(id)
-      # Try finding by uuid first
-      advisory = Advisory.find_by(uuid: id)
-      return advisory if advisory
-
-      # Try finding by CVE identifier
-      if id.start_with?('CVE-')
-        Advisory.where("? = ANY(identifiers)", id).first
-      end
+      Advisory.find_by_identifier(id)
     end
   end
 end

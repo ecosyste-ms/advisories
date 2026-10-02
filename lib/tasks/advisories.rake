@@ -1,4 +1,9 @@
 namespace :advisories do
+  desc 'Create source records for existing GitHub and OSV advisories'
+  task :backfill_records => :environment do
+    AdvisoryRecord.backfill
+  end
+
   desc 'Update advisories from all sources'
   task :sync => :environment do
     Source.all.each(&:sync_advisories)

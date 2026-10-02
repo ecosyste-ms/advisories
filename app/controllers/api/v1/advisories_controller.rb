@@ -26,7 +26,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   end
 
   def show
-    @advisory = Advisory.find_by_uuid!(params[:id])
+    @advisory = Advisory.find_by_identifier!(params[:id])
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end
@@ -41,7 +41,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   end
 
   def related_packages
-    @advisory = Advisory.find_by_uuid!(params[:id])
+    @advisory = Advisory.find_by_identifier!(params[:id])
     @related_packages = @advisory.related_packages.includes(:package)
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
   end

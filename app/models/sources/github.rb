@@ -15,88 +15,27 @@ module Sources
 
     def sync_advisories
       cursor = 'null'
+      token = SecureRandom.uuid
       total_synced = 0
-      packages_to_sync = Set.new
-      changed_advisory_uuids = Set.new
-
       loop do
         res = fetch_advisories_page(cursor)
-        page_advisories = res[:data][:securityVulnerabilities][:edges]
-        mapped_advisories = map_advisories(page_advisories)
-
-        # Get existing advisories to compare
-        uuids = mapped_advisories.map { |a| a[:uuid] }
-        existing_advisories = source.advisories.where(uuid: uuids).index_by(&:uuid)
-
-        # Prepare records for upsert
-        records_to_upsert = []
-        mapped_advisories.each do |advisory|
-          existing = existing_advisories[advisory[:uuid]]
-
-          # Check if advisory is new or changed
-          if existing.nil? || advisory_changed?(existing, advisory)
-            # Collect packages that need syncing
-            advisory[:packages].each do |pkg|
-              packages_to_sync.add([pkg[:ecosystem], pkg[:package_name]])
-            end
-
-            changed_advisory_uuids << advisory[:uuid]
-
-            # Prepare record for upsert
-            records_to_upsert << advisory.merge(
-              source_id: source.id,
-              created_at: existing&.created_at || Time.current,
-              updated_at: Time.current
-            )
-          end
-        end
-
-        # Bulk insert/update - this skips callbacks but is much faster
-        if records_to_upsert.any?
-          # Split into new and existing
-          new_records = records_to_upsert.select { |r| existing_advisories[r[:uuid]].nil? }
-          existing_records = records_to_upsert.reject { |r| existing_advisories[r[:uuid]].nil? }
-
-          # Bulk insert new advisories
-          if new_records.any?
-            Advisory.insert_all(new_records)
-          end
-
-          # Update existing advisories
-          existing_records.each do |record|
-            existing = existing_advisories[record[:uuid]]
-            existing.update_columns(record.except(:source_id, :created_at, :uuid))
-          end
-        end
-
-        total_synced += mapped_advisories.count
-        Rails.logger.info "Synced #{mapped_advisories.count} advisories (#{total_synced} total, #{records_to_upsert.count} changed)"
-
+        edges = res[:data][:securityVulnerabilities][:edges]
+        raw_by_id = edges.group_by { |edge| edge.dig(:node, :advisory, :id) }
+        mapped = map_advisories(edges)
+        AdvisoryRecord.stage(source, mapped.map { |attributes| [attributes, raw_by_id.fetch(attributes[:uuid])] }, token)
+        total_synced += mapped.size
         break unless res[:data][:securityVulnerabilities][:pageInfo][:hasNextPage]
         cursor = "\"#{res[:data][:securityVulnerabilities][:pageInfo][:endCursor]}\""
       end
 
-      # Enqueue package sync jobs for all affected packages
-      Rails.logger.info "Enqueueing sync jobs for #{packages_to_sync.size} unique packages"
-      packages_to_sync.each do |ecosystem, package_name|
-        PackageSyncWorker.perform_async(ecosystem, package_name)
+      packages_to_sync = Set.new
+      AdvisoryRecord.publish(source, token) do |result|
+        packages_to_sync.merge(result[:packages])
+        enqueue_related_sync(result[:advisory_ids])
       end
-
-      # Cache affected versions and related advisories for changed advisories
-      if changed_advisory_uuids.any?
-        Advisory.where(uuid: changed_advisory_uuids.to_a).find_each do |advisory|
-          advisory.cache_affected_versions!
-          advisory.cache_related_advisories!
-        end
+      packages_to_sync.each do |ecosystem, name|
+        PackageSyncWorker.perform_async(ecosystem, name)
       end
-
-      # Enqueue related packages sync for changed advisories
-      if changed_advisory_uuids.any?
-        Advisory.where(uuid: changed_advisory_uuids.to_a).where.not(repository_url: [nil, '']).pluck(:id).each do |advisory_id|
-          RelatedPackagesSyncWorker.perform_async(advisory_id)
-        end
-      end
-
       total_synced
     end
 

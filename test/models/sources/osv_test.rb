@@ -33,7 +33,7 @@ class OsvSourceTest < ActiveSupport::TestCase
       .to_return(status: 200, body: "PyPI\nDebian\n")
     zip_content = create_test_zip([
       { name: "OSV-test-1.json", content: sample_osv_advisory("OSV-test-1").to_json },
-      { name: "OSV-test-2.json", content: sample_osv_advisory("OSV-test-2").to_json }
+      { name: "OSV-test-2.json", content: sample_osv_advisory("OSV-test-2").merge(aliases: []).to_json }
     ])
     stub_request(:get, "https://storage.googleapis.com/osv-vulnerabilities/PyPI/all.zip")
       .to_return(status: 200, body: zip_content)

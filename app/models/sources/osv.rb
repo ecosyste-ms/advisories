@@ -138,45 +138,18 @@ module Sources
     end
 
     def sync_ecosystem(ecosystem, packages_to_sync)
-      advisories = fetch_ecosystem_advisories(ecosystem)
-      return 0 if advisories.empty?
-
-      mapped_advisories = map_advisories(advisories)
-      return 0 if mapped_advisories.empty?
-
-      uuids = mapped_advisories.map { |a| a[:uuid] }
-      existing_advisories = source.advisories.where(uuid: uuids).index_by(&:uuid)
-
-      records_to_upsert = []
-      mapped_advisories.each do |advisory|
-        existing = existing_advisories[advisory[:uuid]]
-
-        if existing.nil? || advisory_changed?(existing, advisory)
-          advisory[:packages].each do |pkg|
-            packages_to_sync.add([pkg[:ecosystem], pkg[:package_name]])
-          end
-
-          records_to_upsert << advisory.merge(
-            source_id: source.id,
-            created_at: existing&.created_at || Time.current,
-            updated_at: Time.current
-          )
+      count = 0
+      fetch_ecosystem_advisories(ecosystem).each_slice(100) do |advisories|
+        entries = advisories.filter_map do |raw|
+          attributes = map_osv_advisory(raw)
+          [attributes, raw] if attributes
         end
+        result = AdvisoryRecord.import(source, entries)
+        packages_to_sync.merge(result[:packages])
+        enqueue_related_sync(result[:advisory_ids])
+        count += entries.size
       end
-
-      if records_to_upsert.any?
-        new_records = records_to_upsert.select { |r| existing_advisories[r[:uuid]].nil? }
-        existing_records = records_to_upsert.reject { |r| existing_advisories[r[:uuid]].nil? }
-
-        Advisory.insert_all(new_records) if new_records.any?
-
-        existing_records.each do |record|
-          existing = existing_advisories[record[:uuid]]
-          existing.update_columns(record.except(:source_id, :created_at, :uuid))
-        end
-      end
-
-      mapped_advisories.count
+      count
     end
 
     def advisory_changed?(existing, new_attrs)

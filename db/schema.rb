@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_04_093340) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_02_150001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -41,12 +41,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_093340) do
     t.string "uuid"
     t.datetime "withdrawn_at"
     t.index ["created_at"], name: "index_advisories_on_created_at"
+    t.index ["identifiers"], name: "index_advisories_on_identifiers", using: :gin
     t.index ["packages"], name: "index_advisories_on_packages", using: :gin
     t.index ["published_at"], name: "index_advisories_on_published_at"
     t.index ["repository_url", "published_at"], name: "index_advisories_on_repository_url_and_published_at"
     t.index ["severity", "published_at"], name: "index_advisories_on_severity_and_published_at"
     t.index ["source_id"], name: "index_advisories_on_source_id"
     t.index ["updated_at"], name: "index_advisories_on_updated_at"
+    t.index ["uuid"], name: "index_advisories_on_uuid"
+  end
+
+  create_table "advisory_records", force: :cascade do |t|
+    t.bigint "source_id", null: false
+    t.bigint "advisory_id"
+    t.string "external_id", null: false
+    t.text "identifiers", default: [], null: false, array: true
+    t.jsonb "payload", default: {}, null: false
+    t.jsonb "raw"
+    t.jsonb "pending_payload"
+    t.jsonb "pending_raw"
+    t.string "pending_sync_token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "source_id, lower((external_id)::text)", name: "index_advisory_records_on_source_and_external_id", unique: true
+    t.index ["advisory_id"], name: "index_advisory_records_on_advisory_id"
+    t.index ["identifiers"], name: "index_advisory_records_on_identifiers", using: :gin
+    t.index ["pending_sync_token"], name: "index_advisory_records_on_pending_sync_token", where: "(pending_sync_token IS NOT NULL)"
+    t.index ["source_id"], name: "index_advisory_records_on_source_id"
   end
 
   create_table "exports", force: :cascade do |t|
@@ -122,6 +143,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_093340) do
   end
 
   add_foreign_key "advisories", "sources"
+  add_foreign_key "advisory_records", "advisories"
+  add_foreign_key "advisory_records", "sources"
   add_foreign_key "related_packages", "advisories"
   add_foreign_key "related_packages", "packages"
 end

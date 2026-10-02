@@ -2,6 +2,9 @@ class Advisory < ApplicationRecord
   include VersionNormalization
 
   belongs_to :source
+  has_many :advisory_records, dependent: :nullify
+
+  attr_accessor :importing
 
   has_many :related_packages, dependent: :delete_all
   has_many :related_package_records, through: :related_packages, source: :package
@@ -222,12 +225,15 @@ class Advisory < ApplicationRecord
   # TODO store affected_dependent_packages_count and affected_dependent_versions_count in the database and sync on a regular basis
 
   def enqueue_package_sync
+    return if importing
+    return if Rails.env.development?
     packages.each do |package|
       PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
     end
   end
 
   def enqueue_related_packages_sync
+    return if importing
     RelatedPackagesSyncWorker.perform_async(id) if repository_url.present?
   end
 
@@ -366,6 +372,15 @@ class Advisory < ApplicationRecord
 
   def cve
     identifiers.find{|id| id.start_with?('CVE-') }
+  end
+
+  def self.find_by_identifier(id)
+    find_by(uuid: id) || AdvisoryRecord.where('identifiers @> ARRAY[?]::text[]', id.downcase).where.not(advisory_id: nil).first&.advisory ||
+      where('identifiers @> ARRAY[?]::varchar[]', id).first
+  end
+
+  def self.find_by_identifier!(id)
+    find_by_identifier(id) || raise(ActiveRecord::RecordNotFound)
   end
 
   MATCH_KIND_ORDER = %w[repo_fork likely_fork repackage].freeze

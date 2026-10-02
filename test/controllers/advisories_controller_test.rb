@@ -103,6 +103,36 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should filter OSV advisories by classification" do
+    source = create(:source, kind: "osv", name: "OSV.dev")
+    malware = create(:advisory, source: source, source_kind: "osv", classification: "MALWARE", severity: nil)
+    unclassified = create(:advisory, source: source, source_kind: "osv", classification: nil)
+
+    get advisories_url, params: { source: "osv", classification: "MALWARE" }
+
+    assert_response :success
+    assert_select "a[href='#{advisory_path(malware)}']"
+    assert_select "a[href='#{advisory_path(unclassified)}']", count: 0
+    assert_select "a[href='#{advisory_path(@advisory)}']", count: 0
+    assert_select "a.active", text: /Malware/
+    assert_not assigns(:severities).any? { |severity, _| severity.nil? }
+  end
+
+  test "should render OSV and CPANSA source icons" do
+    %w[osv cpansa].each do |kind|
+      source = create(:source, kind: kind)
+      advisory = create(:advisory, source: source, source_kind: kind, packages: [], references: [], severity: nil)
+
+      get advisories_url, params: { source: kind }
+
+      assert_response :success
+      assert_select "svg"
+      assert_select "a[href='#{advisory_path(advisory)}']"
+      assert_select "span", text: source.name
+      assert_select 'svg.flex-shrink-0.me-2[width="18"][height="18"]'
+    end
+  end
+
   test "should display advisory with no packages and no repository_url" do
     erlef_source = FactoryBot.create(:source, kind: "erlef", name: "Erlef", url: "https://cna.erlef.org")
     FactoryBot.create(:advisory, source: erlef_source, packages: [], repository_url: nil)

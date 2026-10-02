@@ -28,6 +28,9 @@ class AdvisoriesController < ApplicationController
     @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
+    @classifications = scope.where.not(classification: nil).group(:classification).count.to_a.sort_by { |_, count| -count }
+    scope = scope.where(classification: params[:classification]) if params[:classification].present?
+
     cache_key = "advisories_ecosystem_counts_#{scope.to_sql.hash}"
     @ecosystems = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
       scope.ecosystem_counts
@@ -86,7 +89,7 @@ class AdvisoriesController < ApplicationController
   end
 
   def show
-    @advisory = Advisory.find_by!(uuid: params[:id])
+    @advisory = Advisory.find_by_identifier!(params[:id])
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end

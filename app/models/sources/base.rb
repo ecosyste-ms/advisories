@@ -44,6 +44,12 @@ module Sources
       map_advisories(fetch_advisories)
     end
 
+    def enqueue_related_sync(ids)
+      Advisory.where(id: ids.to_a).where.not(repository_url: [nil, '']).pluck(:id).each do |id|
+        RelatedPackagesSyncWorker.perform_async(id)
+      end
+    end
+
     def sync_advisories
       list_advisories.each do |advisory|
         a = source.advisories.find_or_initialize_by(uuid: advisory[:uuid])

@@ -50,6 +50,7 @@ gem 'sidekiq'
 gem 'sidekiq-unique-jobs'
 gem 'appsignal'
 gem 'dalli'
+gem 'rubyzip'
 
 group :development, :test do
   gem 'dotenv-rails'

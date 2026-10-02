@@ -2,7 +2,8 @@ module ApplicationHelper
   include Pagy::Frontend
 
   def severity_class(severity)
-    case severity&.downcase
+    return 'text-bg-secondary' if severity.nil?
+    case severity.downcase
     when 'low'
       'bg-success'
     when 'moderate'
@@ -17,6 +18,7 @@ module ApplicationHelper
   end
 
   def render_markdown(str)
+    return '' if str.nil?
     Commonmarker.to_html(str)
   end
 
@@ -40,5 +42,11 @@ module ApplicationHelper
     return "" if symbol.nil?
     icon = BootstrapIcons::BootstrapIcon.new(symbol, options)
     content_tag(:svg, icon.path.html_safe, icon.options)
+  end
+
+  def source_icon(source, options = {})
+    icon_name = source.is_a?(Source) ? source.icon : Source::ICONS[source]
+    icon_name ||= 'shield-exclamation'
+    bootstrap_icon(icon_name, { width: 18, height: 18, class: 'me-2' }.merge(options))
   end
 end

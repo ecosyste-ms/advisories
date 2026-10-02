@@ -20,6 +20,9 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get api_v1_advisories_url, as: :json
     assert_response :success
+    assert_match /max-age=3600/, response.headers["Cache-Control"]
+    assert_match /public/, response.headers["Cache-Control"]
+    assert_match /stale-while-revalidate=3600/, response.headers["Cache-Control"]
   end
 
   test "should filter by ecosystem case-insensitively" do
@@ -62,6 +65,55 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
   test "should get show" do
     get api_v1_advisory_url(@advisory), as: :json
     assert_response :success
+    assert_match /max-age=3600/, response.headers["Cache-Control"]
+    assert_match /public/, response.headers["Cache-Control"]
+    assert response.headers["ETag"].present?
+  end
+
+  test "should include api_url and html_url in response" do
+    get api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert json_response.key?("api_url")
+    assert json_response.key?("html_url")
+    assert_match %r{/api/v1/advisories/#{@advisory.uuid}}, json_response["api_url"]
+    assert_match %r{/advisories/#{@advisory.uuid}}, json_response["html_url"]
+  end
+
+  test "should include related_packages_url in show response" do
+    get api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert json_response.key?("related_packages_url")
+    assert_match %r{/api/v1/advisories/#{@advisory.uuid}/related_packages}, json_response["related_packages_url"]
+  end
+
+  test "should get related_packages endpoint with confidence fields" do
+    pkg = create(:package, ecosystem: "conda", name: "lodash-conda")
+    create(:related_package, advisory: @advisory, package: pkg, name_match: true, repo_fork: true, match_kind: "repo_fork", repo_package_count: 5)
+
+    get related_packages_api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 1, json_response.length
+    entry = json_response.first
+    assert_equal "conda", entry["ecosystem"]
+    assert_equal "lodash-conda", entry["name"]
+    assert_equal true, entry["name_match"]
+    assert_equal true, entry["repo_fork"]
+    assert_equal "repo_fork", entry["match_kind"]
+    assert_equal 5, entry["repo_package_count"]
+  end
+
+  test "should return empty array from related_packages when none exist" do
+    get related_packages_api_v1_advisory_url(@advisory), as: :json
+    assert_response :success
+
+    json_response = JSON.parse(response.body)
+    assert_equal 0, json_response.length
   end
 
   test "should filter by source" do
@@ -91,6 +143,8 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
   test "should get packages" do
     get packages_api_v1_advisories_url, as: :json
     assert_response :success
+    assert_match /max-age=3600/, response.headers["Cache-Control"]
+    assert_match /public/, response.headers["Cache-Control"]
   end
 
   context "lookup endpoint" do
@@ -127,22 +181,67 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
       assert_equal 0, json_response.length
     end
 
-    should "return bad request for missing purl parameter" do
+    should "return bad request for missing parameters" do
       get lookup_api_v1_advisories_url, as: :json
-      
+
       assert_response :bad_request
       json_response = JSON.parse(response.body)
-      
-      assert_equal "PURL parameter is required", json_response["error"]
+
+      assert_equal "purl or repository_url parameter is required", json_response["error"]
     end
 
     should "return bad request for blank purl parameter" do
       get lookup_api_v1_advisories_url, params: { purl: "" }, as: :json
-      
+
       assert_response :bad_request
       json_response = JSON.parse(response.body)
-      
-      assert_equal "PURL parameter is required", json_response["error"]
+
+      assert_equal "purl or repository_url parameter is required", json_response["error"]
+    end
+
+    should "return advisories for repository_url" do
+      create(:advisory,
+        source: @source,
+        references: ["https://github.com/rails/rails/issues/1"],
+        packages: [{"ecosystem" => "rubygems", "package_name" => "rails", "versions" => []}]
+      )
+
+      get lookup_api_v1_advisories_url, params: { repository_url: "https://github.com/rails/rails" }, as: :json
+
+      assert_response :success
+      json_response = JSON.parse(response.body)
+
+      assert_equal 1, json_response.length
+      assert_equal "https://github.com/rails/rails", json_response.first["repository_url"]
+    end
+
+    should "return empty advisories for repository_url with no advisories" do
+      get lookup_api_v1_advisories_url, params: { repository_url: "https://github.com/foo/bar" }, as: :json
+
+      assert_response :success
+      json_response = JSON.parse(response.body)
+
+      assert_equal 0, json_response.length
+    end
+
+    should "deduplicate advisories with same CVE for repository_url" do
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      create(:advisory, source: @source,
+        references: ["https://github.com/rails/rails/issues/1"],
+        packages: [{"ecosystem" => "rubygems", "package_name" => "rails", "versions" => []}],
+        identifiers: ["CVE-2025-9999", "GHSA-test-9999"])
+
+      create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-9999",
+        references: ["https://github.com/rails/rails/issues/1"],
+        packages: [{"ecosystem" => "rubygems", "package_name" => "rails", "versions" => []}],
+        identifiers: ["CVE-2025-9999", "EEF-CVE-2025-9999"])
+
+      get lookup_api_v1_advisories_url, params: { repository_url: "https://github.com/rails/rails" }, as: :json
+      assert_response :success
+
+      json_response = JSON.parse(response.body)
+      assert_equal 1, json_response.length
     end
 
     should "return bad request for invalid purl format" do
@@ -227,13 +326,16 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     should "include related_advisories in response" do
       erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
 
-      create(:advisory, source: @source,
+      a1 = create(:advisory, source: @source,
         packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
         identifiers: ["CVE-2025-1234", "GHSA-test-1234"])
 
-      create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-1234",
+      a2 = create(:advisory, source: erlef_source, uuid: "EEF-CVE-2025-1234",
         packages: [{"ecosystem" => "npm", "package_name" => "test-pkg", "versions" => []}],
         identifiers: ["CVE-2025-1234", "EEF-CVE-2025-1234"])
+
+      a1.cache_related_advisories!
+      a2.cache_related_advisories!
 
       get lookup_api_v1_advisories_url, params: { purl: "pkg:npm/test-pkg" }, as: :json
       assert_response :success

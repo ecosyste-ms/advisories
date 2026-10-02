@@ -17,6 +17,7 @@ module Sources
       cursor = 'null'
       total_synced = 0
       packages_to_sync = Set.new
+      changed_advisory_uuids = Set.new
 
       loop do
         res = fetch_advisories_page(cursor)
@@ -38,6 +39,8 @@ module Sources
             advisory[:packages].each do |pkg|
               packages_to_sync.add([pkg[:ecosystem], pkg[:package_name]])
             end
+
+            changed_advisory_uuids << advisory[:uuid]
 
             # Prepare record for upsert
             records_to_upsert << advisory.merge(
@@ -79,6 +82,21 @@ module Sources
         PackageSyncWorker.perform_async(ecosystem, package_name)
       end
 
+      # Cache affected versions and related advisories for changed advisories
+      if changed_advisory_uuids.any?
+        Advisory.where(uuid: changed_advisory_uuids.to_a).find_each do |advisory|
+          advisory.cache_affected_versions!
+          advisory.cache_related_advisories!
+        end
+      end
+
+      # Enqueue related packages sync for changed advisories
+      if changed_advisory_uuids.any?
+        Advisory.where(uuid: changed_advisory_uuids.to_a).where.not(repository_url: [nil, '']).pluck(:id).each do |advisory_id|
+          RelatedPackagesSyncWorker.perform_async(advisory_id)
+        end
+      end
+
       total_synced
     end
 
@@ -111,8 +129,8 @@ module Sources
           updated_at: advisory[:node][:advisory][:updatedAt],
           withdrawn_at: advisory[:node][:advisory][:withdrawnAt],
           classification: advisory[:node][:advisory][:classification],
-          cvss_score: advisory[:node][:advisory][:cvssSeverities][:cvssV4][:score],
-          cvss_vector: advisory[:node][:advisory][:cvssSeverities][:cvssV4][:vectorString],
+          cvss_score: cvss_score_from_severities(advisory[:node][:advisory][:cvssSeverities]),
+          cvss_vector: cvss_vector_from_severities(advisory[:node][:advisory][:cvssSeverities]),
           references: advisory[:node][:advisory][:references].map { |r| r[:url] },
           source_kind: 'github',
           identifiers: advisory[:node][:advisory][:identifiers].map { |i|i[:value] },
@@ -145,6 +163,17 @@ module Sources
         advisory[:packages] = packages
         advisory
       end
+    end
+
+    def cvss_score_from_severities(severities)
+      v4_score = severities.dig(:cvssV4, :score)
+      v3_score = severities.dig(:cvssV3, :score)
+      v4_score.to_f > 0 ? v4_score : v3_score
+    end
+
+    def cvss_vector_from_severities(severities)
+      v4_score = severities.dig(:cvssV4, :score)
+      v4_score.to_f > 0 ? severities.dig(:cvssV4, :vectorString) : severities.dig(:cvssV3, :vectorString)
     end
 
     def correct_ecosystem(ecosystem)
@@ -188,6 +217,10 @@ module Sources
                   withdrawnAt
                   cvssSeverities{
                     cvssV4 {
+                      score
+                      vectorString
+                    }
+                    cvssV3 {
                       score
                       vectorString
                     }

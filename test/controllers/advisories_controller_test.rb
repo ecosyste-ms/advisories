@@ -9,6 +9,7 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
   test "should get index" do
     get advisories_url
     assert_response :success
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 
   test "should handle valid sort parameters" do
@@ -45,6 +46,16 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
   test "should get recent advisories data" do
     get recent_advisories_data_url
     assert_response :success
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
+  end
+
+  test "should set cache headers on show" do
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_match /max-age=3600/, response.headers["Cache-Control"]
+    assert_match /public/, response.headers["Cache-Control"]
+    assert_match /stale-while-revalidate=3600/, response.headers["Cache-Control"]
+    assert response.headers["ETag"].present?
   end
 
   test "should redirect ecosystem filter to ecosystem path" do
@@ -92,6 +103,35 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "should filter OSV advisories by classification" do
+    source = create(:source, kind: "osv", name: "OSV.dev")
+    malware = create(:advisory, source: source, source_kind: "osv", classification: "MALWARE", severity: nil)
+    unclassified = create(:advisory, source: source, source_kind: "osv", classification: nil)
+
+    get advisories_url, params: { source: "osv", classification: "MALWARE" }
+
+    assert_response :success
+    assert_select "a[href='#{advisory_path(malware)}']"
+    assert_select "a[href='#{advisory_path(unclassified)}']", count: 0
+    assert_select "a[href='#{advisory_path(@advisory)}']", count: 0
+    assert_select "a.active", text: /Malware/
+    assert_not assigns(:severities).any? { |severity, _| severity.nil? }
+  end
+
+  test "should render OSV and CPANSA source icons" do
+    %w[osv cpansa].each do |kind|
+      source = create(:source, kind: kind)
+      advisory = create(:advisory, source: source, source_kind: kind, packages: [], references: [], severity: nil)
+
+      get advisories_url, params: { source: kind }
+
+      assert_response :success
+      assert_select "svg"
+      assert_select "a[href='#{advisory_path(advisory)}']"
+      assert_select "span", text: source.name
+    end
+  end
+
   test "should display advisory with no packages and no repository_url" do
     erlef_source = FactoryBot.create(:source, kind: "erlef", name: "Erlef", url: "https://cna.erlef.org")
     FactoryBot.create(:advisory, source: erlef_source, packages: [], repository_url: nil)
@@ -113,6 +153,73 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     )
 
     get advisories_url, params: { source: "erlef" }
+    assert_response :success
+  end
+
+  test "should show classified related packages with badges" do
+    fork_pkg = FactoryBot.create(:package, ecosystem: "conda", name: "requests-fork")
+    likely_pkg = FactoryBot.create(:package, ecosystem: "npm", name: "requests-alt", latest_release_number: "3.2.1")
+    repackage_pkg = FactoryBot.create(:package, ecosystem: "homebrew", name: "requests")
+
+    FactoryBot.create(:related_package, advisory: @advisory, package: fork_pkg, match_kind: "repo_fork")
+    FactoryBot.create(:related_package, advisory: @advisory, package: likely_pkg, match_kind: "likely_fork")
+    FactoryBot.create(:related_package, advisory: @advisory, package: repackage_pkg, match_kind: "repackage")
+
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "h3", text: "Potentially Affected Packages"
+    assert_select "span.badge.bg-danger", text: "Fork"
+    assert_select "span.badge.bg-warning", text: "Likely Fork"
+    assert_select "span.badge.bg-info", text: "Repackage"
+    assert_select "th", text: "Latest Version"
+    assert_select "td", text: "3.2.1"
+  end
+
+  test "should not show unknown related packages in main table" do
+    unknown_pkg = FactoryBot.create(:package, ecosystem: "npm", name: "some-monorepo-pkg")
+    FactoryBot.create(:related_package, advisory: @advisory, package: unknown_pkg, match_kind: "unknown")
+
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "h3", text: "Potentially Affected Packages"
+    assert_select "span.badge", text: "Fork", count: 0
+    assert_select "span.badge", text: "Likely Fork", count: 0
+    assert_select "span.badge", text: "Repackage", count: 0
+    assert_select "a[href='#unclassifiedPackages']", text: "1 other package shares this repository"
+  end
+
+  test "should show count of unclassified packages when both types exist" do
+    fork_pkg = FactoryBot.create(:package, ecosystem: "conda", name: "requests-fork")
+    unknown_pkg1 = FactoryBot.create(:package, ecosystem: "npm", name: "monorepo-a")
+    unknown_pkg2 = FactoryBot.create(:package, ecosystem: "npm", name: "monorepo-b")
+
+    FactoryBot.create(:related_package, advisory: @advisory, package: fork_pkg, match_kind: "repo_fork")
+    FactoryBot.create(:related_package, advisory: @advisory, package: unknown_pkg1, match_kind: "unknown")
+    FactoryBot.create(:related_package, advisory: @advisory, package: unknown_pkg2, match_kind: nil)
+
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "span.badge.bg-danger", text: "Fork"
+    assert_select "a[href='#unclassifiedPackages']", text: "2 other packages share this repository"
+  end
+
+  test "should not show potentially affected packages section when empty" do
+    get advisory_url(@advisory)
+    assert_response :success
+    assert_select "h3", text: "Potentially Affected Packages", count: 0
+  end
+
+  test "should render advisory without published_at or severity on index" do
+    FactoryBot.create(:advisory, source: @source, published_at: nil, severity: nil)
+
+    get advisories_url
+    assert_response :success
+  end
+
+  test "should render advisory without published_at or severity on show" do
+    advisory = FactoryBot.create(:advisory, source: @source, published_at: nil, severity: nil)
+
+    get advisory_url(advisory)
     assert_response :success
   end
 

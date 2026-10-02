@@ -4,10 +4,9 @@ require "rails/test_help"
 
 require 'webmock/minitest'
 require 'mocha/minitest'
-require 'sidekiq/testing'
 
 # Disable unique jobs in tests to avoid lock conflicts
-Sidekiq::Testing.inline!
+Sidekiq.testing!(:inline)
 SidekiqUniqueJobs.configure do |config|
   config.enabled = false
 end
@@ -19,5 +18,12 @@ class ActiveSupport::TestCase
       with.test_framework :minitest
       with.library :rails
     end
+  end
+
+  setup do
+    stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+      .to_return(status: 200, body: [].to_json, headers: { 'Content-Type' => 'application/json' })
+    stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/registries/})
+      .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 end

@@ -1,6 +1,9 @@
 class Package < ApplicationRecord
   include VersionNormalization
 
+  has_many :related_packages, dependent: :delete_all
+  has_many :related_advisories, through: :related_packages, source: :advisory
+
   validates :ecosystem, presence: true
   validates :name, presence: true, uniqueness: { scope: :ecosystem }
 
@@ -23,6 +26,10 @@ class Package < ApplicationRecord
     "#{packages_api_url}/ping"
   end
 
+  def sync_async
+    PackageSyncWorker.perform_async(ecosystem, name)
+  end
+
   def ping_for_resync
     return if registry.nil?
     conn = EcosystemsFaradayClient.build
@@ -32,7 +39,10 @@ class Package < ApplicationRecord
   end
 
   def sync
-    return if registry.nil?
+    if registry.nil?
+      Rails.logger.warn "[PackageSync] No registry for #{ecosystem}/#{name}"
+      return
+    end
 
     # Fetch package data with conditional request using ETag
     package_response = EcosystemsFaradayClient.conditional_get(
@@ -55,12 +65,15 @@ class Package < ApplicationRecord
       self.registry_url = json['registry_url']
       self.versions_count = json['versions_count']
       self.critical = json['critical'] || false
+      self.repo_metadata = json['repo_metadata']
       self.owner = extract_owner
       self.package_etag = package_response[:etag]
       save
     elsif package_response[:not_modified]
       # Data hasn't changed, just update last_synced_at
       update_column(:last_synced_at, Time.now)
+    else
+      Rails.logger.warn "[PackageSync] Failed to fetch #{ecosystem}/#{name}: HTTP #{package_response[:status]}"
     end
 
     return nil unless package_response[:success]
@@ -86,33 +99,24 @@ class Package < ApplicationRecord
   end
 
   def affected_versions(range)
-    # Map original versions to cleaned versions
     version_map = build_version_map(version_numbers)
-    platform = ecosystem.humanize
 
-    # Filter using cleaned versions, return originals
     original_affected = version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, ecosystem)
     end.keys
 
-    # Sort the results
     sort_versions_with_originals(original_affected)
   end
 
   def fixed_versions(range)
-    # Map original versions to cleaned versions
     version_map = build_version_map(version_numbers)
-    platform = ecosystem.humanize
 
-    # Get affected originals
     affected_originals = version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, ecosystem)
     end.keys
 
-    # Get fixed versions (all versions minus affected)
     original_fixed = version_map.keys - affected_originals
 
-    # ignore prerelease versions for now and sort
     sort_versions_with_originals original_fixed.reject {|v| v.include?('-') }
   end
 
@@ -149,17 +153,13 @@ class Package < ApplicationRecord
   end
 
   def sort_versions_with_originals(versions)
-    # Create mapping of cleaned version to original
     version_map = {}
     versions.each do |v|
-      cleaned = SemanticRange.clean(v, loose: true)
+      cleaned = Vers.clean(v)
       version_map[cleaned] = v if cleaned
     end
 
-    # Sort cleaned versions
     sorted_cleaned = sort_versions(version_map.keys)
-
-    # Map back to originals
     sorted_cleaned.map {|v| version_map[v] }
   end
 

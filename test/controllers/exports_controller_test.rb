@@ -9,5 +9,6 @@ class ExportsControllerTest < ActionDispatch::IntegrationTest
     get exports_path
     assert_response :success
     assert_template 'exports/index'
+    assert_equal "max-age=3600, public, stale-while-revalidate=3600", response.headers["Cache-Control"]
   end
 end

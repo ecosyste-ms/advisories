@@ -33,4 +33,14 @@ namespace :advisories do
       puts "OSV source not found. Run `rails db:seed` to create it."
     end
   end
+
+  desc 'Update advisories from CPAN Security Advisory Database'
+  task :sync_cpansa => :environment do
+    source = Source.find_by(kind: 'cpansa')
+    if source
+      source.sync_advisories
+    else
+      puts "CPANSA source not found. Run `rails db:seed` to create it."
+    end
+  end
 end

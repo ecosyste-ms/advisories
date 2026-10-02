@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_11_13_123801) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_04_093340) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -18,6 +18,7 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_13_123801) do
 
   create_table "advisories", force: :cascade do |t|
     t.float "blast_radius", default: 0.0
+    t.jsonb "cached_related_advisories", default: []
     t.string "classification"
     t.datetime "created_at", null: false
     t.float "cvss_score"
@@ -43,9 +44,7 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_13_123801) do
     t.index ["packages"], name: "index_advisories_on_packages", using: :gin
     t.index ["published_at"], name: "index_advisories_on_published_at"
     t.index ["repository_url", "published_at"], name: "index_advisories_on_repository_url_and_published_at"
-    t.index ["repository_url"], name: "index_advisories_on_repository_url"
     t.index ["severity", "published_at"], name: "index_advisories_on_severity_and_published_at"
-    t.index ["severity"], name: "index_advisories_on_severity"
     t.index ["source_id"], name: "index_advisories_on_source_id"
     t.index ["updated_at"], name: "index_advisories_on_updated_at"
   end
@@ -74,6 +73,7 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_13_123801) do
     t.string "owner"
     t.string "package_etag"
     t.string "registry_url"
+    t.jsonb "repo_metadata"
     t.string "repository_url"
     t.datetime "updated_at", null: false
     t.string "version_numbers", default: [], array: true
@@ -98,6 +98,19 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_13_123801) do
     t.string "url"
   end
 
+  create_table "related_packages", force: :cascade do |t|
+    t.bigint "advisory_id", null: false
+    t.datetime "created_at", null: false
+    t.string "match_kind"
+    t.boolean "name_match", default: false
+    t.bigint "package_id", null: false
+    t.boolean "repo_fork"
+    t.integer "repo_package_count"
+    t.datetime "updated_at", null: false
+    t.index ["advisory_id", "package_id"], name: "index_related_packages_on_advisory_id_and_package_id", unique: true
+    t.index ["package_id"], name: "index_related_packages_on_package_id"
+  end
+
   create_table "sources", force: :cascade do |t|
     t.integer "advisories_count", default: 0
     t.datetime "created_at", null: false
@@ -109,4 +122,6 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_13_123801) do
   end
 
   add_foreign_key "advisories", "sources"
+  add_foreign_key "related_packages", "advisories"
+  add_foreign_key "related_packages", "packages"
 end

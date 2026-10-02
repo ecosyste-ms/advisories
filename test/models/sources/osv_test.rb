@@ -23,6 +23,37 @@ class OsvSourceTest < ActiveSupport::TestCase
     assert_equal ["PyPI", "npm", "Go"], ecosystems
   end
 
+  test "sync task imports an ecosystem archive and queues each package once" do
+    require "rake"
+    load Rails.root.join("lib/tasks/advisories.rake") unless Rake::Task.task_defined?("advisories:sync_osv")
+    Rake::Task.define_task(:environment) unless Rake::Task.task_defined?(:environment)
+    task = Rake::Task["advisories:sync_osv"]
+    task.reenable
+    stub_request(:get, "https://storage.googleapis.com/osv-vulnerabilities/ecosystems.txt")
+      .to_return(status: 200, body: "PyPI\nDebian\n")
+    zip_content = create_test_zip([
+      { name: "OSV-test-1.json", content: sample_osv_advisory("OSV-test-1").to_json },
+      { name: "OSV-test-2.json", content: sample_osv_advisory("OSV-test-2").to_json }
+    ])
+    stub_request(:get, "https://storage.googleapis.com/osv-vulnerabilities/PyPI/all.zip")
+      .to_return(status: 200, body: zip_content)
+
+    Sidekiq::Testing.fake! do
+      assert_difference "@source.advisories.count", 2 do
+        assert_difference "PackageSyncWorker.jobs.size", 1 do
+          task.invoke
+        end
+      end
+      assert_equal ["pypi", "test-package"], PackageSyncWorker.jobs.last["args"]
+    end
+
+    advisory = @source.advisories.find_by!(uuid: "OSV-test-1")
+    assert_equal "Test vulnerability summary", advisory.title
+    assert_equal "osv", advisory.source_kind
+    assert_equal "pypi", advisory.packages.first["ecosystem"]
+    assert_equal "< 1.0.0", advisory.packages.first["versions"].first["vulnerable_version_range"]
+  end
+
   test "ecosystem_zip_url encodes ecosystem names with spaces" do
     assert_equal "https://storage.googleapis.com/osv-vulnerabilities/PyPI/all.zip",
                  @osv.ecosystem_zip_url("PyPI")

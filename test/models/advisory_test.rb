@@ -1,6 +1,62 @@
 require "test_helper"
 
 class AdvisoryTest < ActiveSupport::TestCase
+  context ".packages" do
+    should "return unique packages without versions via SQL" do
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [{"vulnerable_version_range" => "< 1.0"}] },
+        { "ecosystem" => "rubygems", "package_name" => "rails", "versions" => [] }
+      ])
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [{"vulnerable_version_range" => "< 2.0"}] }
+      ])
+
+      result = Advisory.packages
+
+      assert_equal 2, result.length
+      assert_includes result, { "ecosystem" => "npm", "package_name" => "lodash" }
+      assert_includes result, { "ecosystem" => "rubygems", "package_name" => "rails" }
+      result.each { |p| assert_nil p["versions"] }
+    end
+
+    should "respect scope filters" do
+      create(:advisory, packages: [{ "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] }])
+      create(:advisory, withdrawn_at: Time.current, packages: [{ "ecosystem" => "pypi", "package_name" => "django", "versions" => [] }])
+
+      result = Advisory.not_withdrawn.packages
+
+      assert_equal 1, result.length
+      assert_equal "npm", result.first["ecosystem"]
+    end
+  end
+
+  context ".ecosystems" do
+    should "return unique ecosystem names via SQL" do
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] },
+        { "ecosystem" => "rubygems", "package_name" => "rails", "versions" => [] }
+      ])
+      create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "express", "versions" => [] }
+      ])
+
+      result = Advisory.ecosystems
+
+      assert_equal 2, result.length
+      assert_includes result, "npm"
+      assert_includes result, "rubygems"
+    end
+
+    should "respect scope filters" do
+      create(:advisory, packages: [{ "ecosystem" => "npm", "package_name" => "lodash", "versions" => [] }])
+      create(:advisory, withdrawn_at: Time.current, packages: [{ "ecosystem" => "pypi", "package_name" => "django", "versions" => [] }])
+
+      result = Advisory.not_withdrawn.ecosystems
+
+      assert_equal ["npm"], result
+    end
+  end
+
   context ".ecosystem_counts" do
     should "return ecosystem counts sorted by count descending" do
       # Create advisories with different ecosystems
@@ -250,6 +306,47 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "#cache_related_advisories!" do
+    should "cache related advisory summaries" do
+      github_source = create(:source, kind: "github", url: "https://github.com/advisories")
+      erlef_source = create(:source, kind: "erlef", url: "https://cna.erlef.org")
+
+      github_advisory = create(:advisory, source: github_source, uuid: "GHSA-1111",
+        url: "https://github.com/advisories/GHSA-1111", source_kind: "github",
+        identifiers: ["CVE-2025-1111", "GHSA-1111"])
+      erlef_advisory = create(:advisory, source: erlef_source, uuid: "EEF-1111",
+        url: "https://cna.erlef.org/EEF-1111", source_kind: "erlef",
+        identifiers: ["CVE-2025-1111", "EEF-1111"])
+
+      github_advisory.cache_related_advisories!
+      github_advisory.reload
+
+      assert_equal 1, github_advisory.cached_related_advisories.length
+      related = github_advisory.cached_related_advisories.first
+      assert_equal "EEF-1111", related['uuid']
+      assert_equal "erlef", related['source_kind']
+      assert_equal "https://cna.erlef.org/EEF-1111", related['url']
+    end
+
+    should "set empty array when no CVE" do
+      advisory = create(:advisory, identifiers: ["GHSA-no-cve"])
+
+      advisory.cache_related_advisories!
+      advisory.reload
+
+      assert_equal [], advisory.cached_related_advisories
+    end
+
+    should "set empty array when no related advisories exist" do
+      advisory = create(:advisory, identifiers: ["CVE-2025-9999"])
+
+      advisory.cache_related_advisories!
+      advisory.reload
+
+      assert_equal [], advisory.cached_related_advisories
+    end
+  end
+
   context ".source_kind scope" do
     should "filter advisories by source kind" do
       github_source = create(:source, kind: "github", url: "https://github.com/advisories")
@@ -358,6 +455,19 @@ class AdvisoryTest < ActiveSupport::TestCase
       end
     end
 
+    should "fall back to 1 per ecosystem when cvss_score is nil" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        create(:package, ecosystem: "npm", name: "test-package", dependent_repos_count: 100)
+
+        advisory = create(:advisory, cvss_score: nil, packages: [
+          { "ecosystem" => "npm", "package_name" => "test-package", "versions" => [] }
+        ])
+
+        assert_equal 1, advisory.calculate_blast_radius
+      end
+    end
+
     should "update blast_radius when cvss_score changes" do
       Sidekiq::Testing.fake! do
         create(:registry, name: "npmjs.org", ecosystem: "npm")
@@ -374,6 +484,399 @@ class AdvisoryTest < ActiveSupport::TestCase
         # blast_radius should have changed
         advisory.reload
         refute_equal initial_radius, advisory.blast_radius
+      end
+    end
+  end
+
+  context "#sync_related_packages" do
+    should "create related package records from API response" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/psf/requests/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "requests", "versions" => [] }]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "requests" },
+            { "ecosystem" => "conda", "name" => "requests" },
+            { "ecosystem" => "homebrew", "name" => "python-requests" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 2, advisory.related_package_records.count
+        ecosystems = advisory.related_package_records.pluck(:ecosystem).sort
+        assert_equal ["conda", "homebrew"], ecosystems
+      end
+    end
+
+    should "set name_match, repo_fork, match_kind, and repo_package_count on related packages" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/crewjam/saml/issues/1"],
+          packages: [{ "ecosystem" => "go", "package_name" => "github.com/crewjam/saml", "versions" => [] }]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "go", "name" => "github.com/crewjam/saml" },
+            { "ecosystem" => "go", "name" => "github.com/jelmund/saml", "repo_metadata" => { "fork" => true, "source_name" => "crewjam/saml" } },
+            { "ecosystem" => "conda", "name" => "saml" },
+            { "ecosystem" => "alpine", "name" => "unrelated-thing" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        related = advisory.related_packages.includes(:package)
+        fork_rel = related.find { |r| r.package.name == "github.com/jelmund/saml" }
+        conda_rel = related.find { |r| r.package.ecosystem == "conda" }
+        alpine_rel = related.find { |r| r.package.ecosystem == "alpine" }
+
+        # Go fork: name matches, repo_fork true, same ecosystem = "likely_fork"
+        assert fork_rel.name_match
+        assert fork_rel.repo_fork
+        assert_equal "likely_fork", fork_rel.match_kind
+
+        # conda "saml" matches advisory name, different ecosystem = "repackage"
+        assert conda_rel.name_match
+        refute conda_rel.repo_fork
+        assert_equal "repackage", conda_rel.match_kind
+
+        # alpine "unrelated-thing" does not match = "unknown"
+        refute alpine_rel.name_match
+        refute alpine_rel.repo_fork
+        assert_equal "unknown", alpine_rel.match_kind
+
+        # All should have repo_package_count = 4 (total API response size)
+        assert_equal 4, fork_rel.repo_package_count
+        assert_equal 4, alpine_rel.repo_package_count
+      end
+    end
+
+    should "filter out packages already in the advisory" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/pallets/flask/issues/1"],
+          packages: [
+            { "ecosystem" => "pypi", "package_name" => "flask", "versions" => [] },
+            { "ecosystem" => "conda", "package_name" => "flask", "versions" => [] }
+          ]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "flask" },
+            { "ecosystem" => "conda", "name" => "flask" },
+            { "ecosystem" => "homebrew", "name" => "python-flask" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 1, advisory.related_package_records.count
+        assert_equal "homebrew", advisory.related_package_records.first.ecosystem
+      end
+    end
+
+    should "filter out Go module version variants as duplicates" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/go-viper/mapstructure/issues/1"],
+          packages: [
+            { "ecosystem" => "Go", "package_name" => "github.com/go-viper/mapstructure/v2", "versions" => [] }
+          ]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "go", "name" => "github.com/go-viper/mapstructure/v2" },
+            { "ecosystem" => "go", "name" => "github.com/go-viper/mapstructure" },
+            { "ecosystem" => "go", "name" => "github.com/go-vipeR/mapstructure" },
+            { "ecosystem" => "debian", "name" => "golang-github-go-viper-mapstructure" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        related = advisory.related_packages.includes(:package)
+        ecosystems = related.map { |r| r.package.ecosystem }
+        names = related.map { |r| r.package.name }
+
+        # v2 is the advisory package itself, v1 and case variant are version variants — all filtered
+        refute_includes names, "github.com/go-viper/mapstructure/v2"
+        refute_includes names, "github.com/go-viper/mapstructure"
+        refute_includes names, "github.com/go-vipeR/mapstructure"
+
+        # debian repackage should remain
+        assert_includes names, "golang-github-go-viper-mapstructure"
+      end
+    end
+
+    should "return early when repository_url is blank" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, repository_url: nil)
+
+        advisory.sync_related_packages
+
+        assert_equal 0, advisory.related_package_records.count
+      end
+    end
+
+    should "handle API failure gracefully" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, references: ["https://github.com/owner/repo/issues/1"])
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 500, body: "Internal Server Error")
+
+        assert_nothing_raised do
+          advisory.sync_related_packages
+        end
+        assert_equal 0, advisory.related_package_records.count
+      end
+    end
+
+    should "reuse existing package records instead of creating duplicates" do
+      Sidekiq::Testing.fake! do
+        existing_pkg = create(:package, ecosystem: "conda", name: "requests")
+
+        advisory = create(:advisory,
+          references: ["https://github.com/psf/requests/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "requests", "versions" => [] }]
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "requests" },
+            { "ecosystem" => "conda", "name" => "requests" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 1, advisory.related_package_records.count
+        assert_equal existing_pkg.id, advisory.related_packages.first.package_id
+      end
+    end
+
+    should "update existing related packages on re-sync" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/repo/issues/1"],
+          packages: [{ "ecosystem" => "npm", "package_name" => "mypkg", "versions" => [] }]
+        )
+
+        conda_pkg = create(:package, ecosystem: "conda", name: "mypkg")
+        existing_related = create(:related_package,
+          advisory: advisory, package: conda_pkg,
+          name_match: false, match_kind: "unknown", repo_package_count: 5
+        )
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "npm", "name" => "mypkg" },
+            { "ecosystem" => "conda", "name" => "mypkg" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        existing_related.reload
+        assert existing_related.name_match
+        assert_equal "repackage", existing_related.match_kind
+        assert_equal 2, existing_related.repo_package_count
+      end
+    end
+
+    should "handle large API responses with many packages" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/monorepo/issues/1"],
+          packages: [{ "ecosystem" => "npm", "package_name" => "core", "versions" => [] }]
+        )
+
+        api_response = 50.times.map do |i|
+          { "ecosystem" => "npm", "name" => "pkg-#{i}" }
+        end
+        api_response << { "ecosystem" => "npm", "name" => "core" } # already in advisory
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: api_response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 50, advisory.related_packages.count
+        assert_equal 50, Package.where("name LIKE 'pkg-%'").count
+      end
+    end
+
+    should "clean up all related packages when API returns only advisory packages" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/repo/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "mypkg", "versions" => [] }]
+        )
+
+        stale_pkg = create(:package, ecosystem: "conda", name: "mypkg")
+        create(:related_package, advisory: advisory, package: stale_pkg)
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "mypkg" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 0, advisory.related_packages.count
+      end
+    end
+
+    should "remove stale related packages no longer in API response" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory,
+          references: ["https://github.com/owner/repo/issues/1"],
+          packages: [{ "ecosystem" => "pypi", "package_name" => "mypkg", "versions" => [] }]
+        )
+
+        stale_pkg = create(:package, ecosystem: "alpine", name: "mypkg")
+        create(:related_package, advisory: advisory, package: stale_pkg)
+
+        WebMock.reset!
+        stub_request(:get, %r{https://packages\.ecosyste\.ms/api/v1/packages/lookup})
+          .to_return(status: 200, body: [
+            { "ecosystem" => "pypi", "name" => "mypkg" },
+            { "ecosystem" => "conda", "name" => "mypkg" }
+          ].to_json, headers: { 'Content-Type' => 'application/json' })
+
+        advisory.sync_related_packages
+
+        assert_equal 1, advisory.related_package_records.count
+        assert_equal "conda", advisory.related_package_records.first.ecosystem
+      end
+    end
+  end
+
+  context "#cache_affected_versions!" do
+    should "store affected and unaffected versions in packages JSONB" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        pkg = create(:package, ecosystem: "npm", name: "lodash",
+          version_numbers: ["4.17.0", "4.17.1", "4.17.21"],
+          last_synced_at: Time.current)
+
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "lodash",
+            "versions" => [{ "vulnerable_version_range" => "< 4.17.21" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        package_data = advisory.packages.first
+        assert_includes package_data['affected_versions'], "4.17.0"
+        assert_includes package_data['affected_versions'], "4.17.1"
+        refute_includes package_data['affected_versions'], "4.17.21"
+        assert_includes package_data['unaffected_versions'], "4.17.21"
+      end
+    end
+
+    should "set empty arrays when package record has no version_numbers" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "nonexistent-package",
+            "versions" => [{ "vulnerable_version_range" => "< 1.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        package_data = advisory.packages.first
+        assert_equal [], package_data['affected_versions']
+        assert_equal [], package_data['unaffected_versions']
+      end
+    end
+
+    should "preserve existing package fields" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        create(:package, ecosystem: "npm", name: "lodash",
+          version_numbers: ["1.0.0"],
+          last_synced_at: Time.current)
+
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "lodash",
+            "versions" => [{ "vulnerable_version_range" => "< 2.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        package_data = advisory.packages.first
+        assert_equal "npm", package_data['ecosystem']
+        assert_equal "lodash", package_data['package_name']
+        assert_equal [{ "vulnerable_version_range" => "< 2.0.0" }], package_data['versions']
+      end
+    end
+
+    should "cache package statistics" do
+      Sidekiq::Testing.fake! do
+        create(:registry, name: "npmjs.org", ecosystem: "npm")
+        create(:package, ecosystem: "npm", name: "lodash",
+          version_numbers: ["1.0.0"],
+          last_synced_at: Time.current,
+          dependent_packages_count: 5000,
+          dependent_repos_count: 100000,
+          downloads: 50000000,
+          downloads_period: "last-month")
+
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "lodash",
+            "versions" => [{ "vulnerable_version_range" => "< 2.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        stats = advisory.packages.first['statistics']
+        assert_equal 5000, stats['dependent_packages_count']
+        assert_equal 100000, stats['dependent_repos_count']
+        assert_equal 50000000, stats['downloads']
+        assert_equal "last-month", stats['downloads_period']
+      end
+    end
+
+    should "not include statistics when package has not been synced" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, packages: [
+          {
+            "ecosystem" => "npm",
+            "package_name" => "nonexistent",
+            "versions" => [{ "vulnerable_version_range" => "< 1.0.0" }]
+          }
+        ])
+
+        advisory.cache_affected_versions!
+        advisory.reload
+
+        assert_nil advisory.packages.first['statistics']
       end
     end
   end

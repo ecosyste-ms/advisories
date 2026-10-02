@@ -3,6 +3,9 @@ class Advisory < ApplicationRecord
 
   belongs_to :source
 
+  has_many :related_packages, dependent: :delete_all
+  has_many :related_package_records, through: :related_packages, source: :package
+
   validates :uuid, presence: true, uniqueness: true
 
   counter_culture :source
@@ -25,6 +28,7 @@ class Advisory < ApplicationRecord
   before_save :set_repository_url
   before_save :set_blast_radius
   after_commit :enqueue_package_sync
+  after_commit :enqueue_related_packages_sync
 
   def to_s
     uuid
@@ -39,11 +43,28 @@ class Advisory < ApplicationRecord
   end
 
   def self.packages
-    all.select(:packages).map{|a| a.packages.map{|p| p.except("versions") } }.flatten.uniq
+    connection.select_all(<<~SQL).rows.map { |row| JSON.parse(row[0]) }
+      SELECT DISTINCT jsonb_build_object(
+        'ecosystem', package_element->>'ecosystem',
+        'package_name', package_element->>'package_name'
+      )::text as package
+      FROM (
+        SELECT jsonb_array_elements(packages) as package_element
+        FROM (#{all.to_sql}) as scoped_advisories
+      ) as package_elements
+      ORDER BY package
+    SQL
   end
 
   def self.ecosystems
-    all.select(:packages).map{|a| a.packages.map{|p| p['ecosystem'] } }.flatten.uniq
+    connection.select_values(<<~SQL)
+      SELECT DISTINCT package_element->>'ecosystem' as ecosystem
+      FROM (
+        SELECT jsonb_array_elements(packages) as package_element
+        FROM (#{all.to_sql}) as scoped_advisories
+      ) as package_elements
+      ORDER BY ecosystem
+    SQL
   end
 
   def self.ecosystem_counts
@@ -113,11 +134,9 @@ class Advisory < ApplicationRecord
   def affected_versions(package, range)
     originals = version_numbers(package)
     version_map = build_version_map(originals)
-    platform = package['ecosystem'].humanize
 
-    # Filter using cleaned versions, return originals
     version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, package['ecosystem'])
     end.keys
   end
 
@@ -137,14 +156,11 @@ class Advisory < ApplicationRecord
 
   def latest_resolved_version(package, version_numbers, range)
     version_map = build_version_map(version_numbers)
-    platform = package['ecosystem'].humanize
 
-    # Filter using cleaned versions
     matching_versions = version_map.select do |original, cleaned|
-      version_satisfies_range?(cleaned, range, platform)
+      version_satisfies_range?(cleaned, range, package['ecosystem'])
     end
 
-    # Return the max cleaned version (not original) for comparison purposes
     matching_versions.values.max
   end
 
@@ -160,7 +176,8 @@ class Advisory < ApplicationRecord
     return [] unless resp.success?
     json = resp.body
     json.select do |dep|
-      SemanticRange.satisfies?(latest_resolved_version(package, version_numbers, dep['requirements']), affected_range_for(package), platform: package['ecosystem'].humanize, loose: true)
+      resolved = latest_resolved_version(package, version_numbers, dep['requirements'])
+      resolved && version_satisfies_range?(resolved, affected_range_for(package), package['ecosystem'])
     end
   end
 
@@ -211,6 +228,97 @@ class Advisory < ApplicationRecord
     end
   end
 
+  def enqueue_related_packages_sync
+    RelatedPackagesSyncWorker.perform_async(id) if repository_url.present?
+  end
+
+  def sync_related_packages
+    return if repository_url.blank?
+
+    conn = EcosystemsFaradayClient.build
+    resp = conn.get("/api/v1/packages/lookup", { repository_url: repository_url })
+    return unless resp.success?
+
+    api_packages = resp.body
+    return unless api_packages.is_a?(Array)
+
+    existing_pairs = packages.map { |p| [p['ecosystem'].downcase, p['package_name'].downcase.sub(%r{/v\d+\z}, '')] }.to_set
+    advisory_package_names = packages.map { |p| p['package_name'] }
+    advisory_ecosystems = packages.map { |p| p['ecosystem'] }
+    repo_package_count = api_packages.size
+
+    # Filter to only new/related packages (not already in advisory)
+    filtered_api_packages = api_packages.filter_map do |api_pkg|
+      ecosystem = api_pkg['ecosystem']&.downcase
+      name = api_pkg['name']
+      next if ecosystem.blank? || name.blank?
+      next if existing_pairs.include?([ecosystem, name.downcase.sub(%r{/v\d+\z}, '')])
+      api_pkg
+    end.uniq { |p| [p['ecosystem'].downcase, p['name']] }
+
+    return related_packages.delete_all if filtered_api_packages.empty?
+
+    # Batch find or create all packages in 2 queries instead of N
+    package_keys = filtered_api_packages.map { |p| [p['ecosystem'].downcase, p['name']] }
+    existing_packages = Package.where(
+      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+      *package_keys.flatten
+    ).index_by { |p| [p.ecosystem, p.name] }
+
+    missing_packages = package_keys.reject { |key| existing_packages.key?(key) }
+    if missing_packages.any?
+      now = Time.current
+      Package.insert_all(
+        missing_packages.map { |eco, name| { ecosystem: eco, name: name, created_at: now, updated_at: now } }
+      )
+      # Reload to get IDs for newly inserted packages
+      existing_packages = Package.where(
+        package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+        *package_keys.flatten
+      ).index_by { |p| [p.ecosystem, p.name] }
+    end
+
+    # Build related package records in bulk
+    now = Time.current
+    related_records = filtered_api_packages.filter_map do |api_pkg|
+      ecosystem = api_pkg['ecosystem'].downcase
+      name = api_pkg['name']
+      pkg = existing_packages[[ecosystem, name]]
+      next unless pkg
+
+      name_match = RelatedPackage.compute_name_match(name, advisory_package_names, package_ecosystem: ecosystem)
+      is_fork = api_pkg.dig('repo_metadata', 'fork') == true
+      match_kind = RelatedPackage.compute_match_kind(
+        name_match: name_match, repo_fork: is_fork,
+        package_ecosystem: ecosystem, advisory_ecosystems: advisory_ecosystems
+      )
+
+      {
+        advisory_id: id,
+        package_id: pkg.id,
+        name_match: name_match,
+        repo_fork: is_fork,
+        match_kind: match_kind,
+        repo_package_count: repo_package_count,
+        created_at: now,
+        updated_at: now
+      }
+    end
+
+    # Upsert all related packages in one query
+    if related_records.any?
+      RelatedPackage.upsert_all(
+        related_records,
+        unique_by: [:advisory_id, :package_id],
+        update_only: [:name_match, :repo_fork, :match_kind, :repo_package_count]
+      )
+    end
+
+    # Remove stale related packages
+    current_package_ids = related_records.map { |r| r[:package_id] }
+    related_packages.where.not(package_id: current_package_ids).delete_all
+  end
+
   def sync_packages
     packages.each do |package|
       PackageSyncWorker.perform_async(package['ecosystem'], package['package_name'])
@@ -240,7 +348,7 @@ class Advisory < ApplicationRecord
     ecosystems.map do |ecosystem|
       packages = package_records.select{|p| p.ecosystem == ecosystem }
       package = packages.max_by{|p| p.dependent_repos_count || 0}
-      if package && package.dependent_repos_count && package.dependent_repos_count > 0
+      if package && package.dependent_repos_count && package.dependent_repos_count > 0 && cvss_score
         Math.log10(package.dependent_repos_count) * cvss_score
       else
         1
@@ -261,9 +369,28 @@ class Advisory < ApplicationRecord
     identifiers.find{|id| id.start_with?('CVE-') }
   end
 
+  MATCH_KIND_ORDER = %w[repo_fork likely_fork repackage].freeze
+
+  def classified_related_packages
+    related_packages.where(match_kind: MATCH_KIND_ORDER).includes(:package).order(
+      Arel.sql("CASE match_kind WHEN 'repo_fork' THEN 0 WHEN 'likely_fork' THEN 1 WHEN 'repackage' THEN 2 END")
+    )
+  end
+
+  def unclassified_related_packages
+    related_packages.where(match_kind: [nil, "unknown"]).includes(:package)
+  end
+
   def related_advisories
     return Advisory.none unless cve
     Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
+  end
+
+  def cache_related_advisories!
+    summaries = related_advisories.map do |r|
+      { 'uuid' => r.uuid, 'source_kind' => r.source_kind, 'url' => r.url }
+    end
+    update_column(:cached_related_advisories, summaries)
   end
 
   def ecosystems_repo_url
@@ -304,21 +431,53 @@ class Advisory < ApplicationRecord
   end
 
   def packages_with_records
-    # Collect all unique ecosystem/name pairs
     package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
 
-    # Batch load all package records in a single query
-    package_records = Package.where(
-      package_keys.map { |ecosystem, name|
-        "(ecosystem = ? AND name = ?)"
-      }.join(" OR "),
+    pkg_records = Package.where(
+      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
       *package_keys.flatten
     ).index_by { |p| [p.ecosystem, p.name] }
 
-    # Map packages with their records
     packages.map do |package|
-      package_record = package_records[[package['ecosystem'], package['package_name']]]
+      package_record = pkg_records[[package['ecosystem'], package['package_name']]]
       [package, package_record]
     end
+  end
+
+  def cache_affected_versions!
+    return if packages.blank?
+
+    package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
+    package_records = Package.where(
+      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
+      *package_keys.flatten
+    ).index_by { |p| [p.ecosystem, p.name] }
+
+    updated_packages = packages.map do |package|
+      pkg = package_records[[package['ecosystem'], package['package_name']]]
+      cached = {}
+
+      if pkg&.version_numbers.present?
+        vulnerable_range = (package['versions'] || []).map { |v| v['vulnerable_version_range'] }.compact.join(' || ')
+        cached['affected_versions'] = pkg.affected_versions(vulnerable_range)
+        cached['unaffected_versions'] = pkg.fixed_versions(vulnerable_range)
+      else
+        cached['affected_versions'] = []
+        cached['unaffected_versions'] = []
+      end
+
+      if pkg&.last_synced_at
+        cached['statistics'] = {
+          'dependent_packages_count' => pkg.dependent_packages_count,
+          'dependent_repos_count' => pkg.dependent_repos_count,
+          'downloads' => pkg.downloads,
+          'downloads_period' => pkg.downloads_period
+        }
+      end
+
+      package.merge(cached)
+    end
+
+    update_column(:packages, updated_packages)
   end
 end

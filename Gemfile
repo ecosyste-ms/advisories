@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 git_source(:github) { |repo| "https://github.com/#{repo}.git" }
 
-ruby '4.0.0'
+ruby '4.0.7'
 
 gem "activemodel", "~> 8.1.1"
 gem "activerecord", "~> 8.1.1"
@@ -12,7 +12,8 @@ gem "railties", "~> 8.1.1"
 gem "secure_headers"
 gem "sprockets-rails"
 gem "pg"
-gem "puma", "~> 7.0"
+gem "puma", "~> 8.0"
+gem "puma_worker_killer"
 gem "jbuilder"
 gem "bootsnap", require: false
 gem "sassc-rails"
@@ -28,7 +29,7 @@ gem 'rswag-api'
 gem 'rswag-ui'
 gem 'spdx', '2.0.12'
 gem "semantic"
-gem "semantic_range"
+gem "vers", "~> 1.3.1"
 gem "cvss-suite"
 gem "chartkick"
 gem "groupdate"

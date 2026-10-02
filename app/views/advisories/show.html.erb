@@ -135,6 +135,89 @@
     </table>
   </div>
 
+  <% classified = @advisory.classified_related_packages %>
+  <% unclassified = @advisory.unclassified_related_packages %>
+  <% if classified.any? || unclassified.any? %>
+  <h3 class="h4 mt-4">Potentially Affected Packages</h3>
+  <p class="text-muted small">These packages share the same source repository and may be affected by this vulnerability, but are not listed in the advisory.</p>
+  <% if classified.any? %>
+  <div class="table-wrapper table-responsive-lg">
+    <table class="table table-bordered ecosystems-table mb-5">
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Ecosystem</th>
+          <th>Latest Version</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% classified.each do |related| %>
+          <% pkg = related.package %>
+          <tr>
+            <td>
+              <% if pkg.registry %>
+                <%= link_to pkg.name, pkg.packages_url, target: :_blank %>
+              <% else %>
+                <%= pkg.name %>
+              <% end %>
+            </td>
+            <td><%= pkg.ecosystem %></td>
+            <td><%= pkg.latest_release_number %></td>
+            <td>
+              <% case related.match_kind %>
+              <% when "repo_fork" %>
+                <span class="badge bg-danger">Fork</span>
+              <% when "likely_fork" %>
+                <span class="badge bg-warning text-dark">Likely Fork</span>
+              <% when "repackage" %>
+                <span class="badge bg-info text-dark">Repackage</span>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <% end %>
+  <% if unclassified.any? %>
+    <p class="text-muted small">
+      <a data-bs-toggle="collapse" href="#unclassifiedPackages" role="button" aria-expanded="false" aria-controls="unclassifiedPackages">
+        <%= pluralize(unclassified.count, 'other package') %> <%= unclassified.count == 1 ? 'shares' : 'share' %> this repository
+      </a>
+    </p>
+    <div class="collapse" id="unclassifiedPackages">
+      <div class="table-wrapper table-responsive-lg">
+        <table class="table table-bordered ecosystems-table mb-5">
+          <thead>
+            <tr>
+              <th>Package</th>
+              <th>Ecosystem</th>
+              <th>Latest Version</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% unclassified.each do |related| %>
+              <% pkg = related.package %>
+              <tr>
+                <td>
+                  <% if pkg.registry %>
+                    <%= link_to pkg.name, pkg.packages_url, target: :_blank %>
+                  <% else %>
+                    <%= pkg.name %>
+                  <% end %>
+                </td>
+                <td><%= pkg.ecosystem %></td>
+                <td><%= pkg.latest_release_number %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+  <% end %>
+
 	<div class="row">
 		<div class="col-lg-8">
 			<div class="page-content mt-4 pe-lg-3">
@@ -201,8 +284,10 @@
         </p>
         <% end %>
         <h2>Date and time</h2>
+        <% if @advisory.published_at %>
         <h3>Published</h3>
         <p><span title="<%= @advisory.published_at %>"><%= time_ago_in_words @advisory.published_at %> ago</span></p>
+        <% end %>
         <h3>Updated</h3>
         <p><span title="<%= @advisory.updated_at %>"><%= time_ago_in_words @advisory.updated_at %> ago</span></p>
         <% if @advisory.withdrawn_at %>

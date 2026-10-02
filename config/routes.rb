@@ -1,6 +1,8 @@
 require 'sidekiq/web'
 require 'sidekiq_unique_jobs/web'
 
+Sidekiq::Web.use ActionDispatch::Cookies
+Sidekiq::Web.use ActionDispatch::Session::CookieStore, key: '_advisories_sidekiq_session', path: '/sidekiq', secure: Rails.env.production?
 Sidekiq::Web.use Rack::Auth::Basic do |username, password|
   ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(username), ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_USERNAME"])) &
     ActiveSupport::SecurityUtils.secure_compare(::Digest::SHA256.hexdigest(password), ::Digest::SHA256.hexdigest(ENV["SIDEKIQ_PASSWORD"]))
@@ -26,6 +28,9 @@ Rails.application.routes.draw do
           get :packages
           get :lookup
         end
+        member do
+          get :related_packages
+        end
       end
       resources :sources, only: [:index, :show]
     end
@@ -35,6 +40,7 @@ Rails.application.routes.draw do
 
   get 'ecosystems', to: 'ecosystems#index', as: 'ecosystems'
   get 'ecosystems/:ecosystem_id', to: 'ecosystems#show', as: 'ecosystem'
+  get 'ecosystems/:ecosystem_id/packages', to: 'ecosystems#packages', as: 'ecosystem_packages'
   get 'ecosystems/:ecosystem_id/*package_name', to: 'ecosystems#package', as: 'ecosystem_package', format: false
 
   get :recent_advisories_data, to: 'advisories#recent_advisories_data'

@@ -30,14 +30,32 @@ pidfile ENV.fetch("PIDFILE") { "tmp/pids/server.pid" }
 # Workers do not work on JRuby or Windows (both of which do not support
 # processes).
 #
-# workers ENV.fetch("WEB_CONCURRENCY") { 2 }
+workers ENV.fetch("WEB_CONCURRENCY") { 2 }
 
 # Use the `preload_app!` method when specifying a `workers` number.
 # This directive tells Puma to first boot the application and load code
 # before forking the application. This takes advantage of Copy On Write
 # process behavior so workers use less memory.
 #
-# preload_app!
+preload_app!
 
 # Allow puma to be restarted by `bin/rails restart` command.
 plugin :tmp_restart
+
+# Kill workers that exceed memory limits. This prevents any single worker
+# from growing unbounded (e.g. from a request that builds large objects).
+# Checks every 30 seconds, restarts workers exceeding 512MB, with a rolling
+# restart to avoid downtime.
+before_fork do
+  require 'puma_worker_killer'
+
+  PumaWorkerKiller.config do |config|
+    config.ram           = ENV.fetch("PWK_RAM_MB") { 1024 }.to_i # total RAM budget in MB
+    config.frequency     = 30    # check every 30 seconds
+    config.percent_usage = 0.90  # restart if workers use >90% of budget
+    config.rolling_restart_frequency = 12 * 3600 # rolling restart every 12h
+    config.reaper_status_logs = false
+  end
+
+  PumaWorkerKiller.start
+end

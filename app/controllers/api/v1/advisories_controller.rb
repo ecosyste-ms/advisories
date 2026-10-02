@@ -1,5 +1,7 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   def index
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     scope = Advisory.all
     
     scope = scope.severity(params[:severity]) if params[:severity].present?
@@ -25,45 +27,71 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
   def show
     @advisory = Advisory.find_by_uuid!(params[:id])
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end
 
   def packages
-    render json: Advisory.packages
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
+    result = Rails.cache.fetch("api_advisory_packages", expires_in: 1.hour) do
+      Advisory.packages
+    end
+    render json: result
+  end
+
+  def related_packages
+    @advisory = Advisory.find_by_uuid!(params[:id])
+    @related_packages = @advisory.related_packages.includes(:package)
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
   end
 
   def lookup
     purl = params[:purl]
-    
-    if purl.blank?
-      render json: { error: 'PURL parameter is required' }, status: :bad_request
+    repository_url = params[:repository_url]
+
+    if purl.blank? && repository_url.blank?
+      render json: { error: 'purl or repository_url parameter is required' }, status: :bad_request
       return
     end
 
-    parsed_purl = PurlParser.parse(purl)
-    
-    if parsed_purl.nil?
-      render json: { error: 'Invalid PURL format' }, status: :bad_request
-      return
+    if purl.present?
+      parsed_purl = PurlParser.parse(purl)
+
+      if parsed_purl.nil?
+        render json: { error: 'Invalid PURL format' }, status: :bad_request
+        return
+      end
+
+      scope = Advisory.ecosystem(parsed_purl[:ecosystem])
+                      .package_name(parsed_purl[:package_name])
+      @purl = purl
+    else
+      scope = Advisory.repository_url(repository_url)
     end
 
-    advisories = Advisory.ecosystem(parsed_purl[:ecosystem])
-                        .package_name(parsed_purl[:package_name])
-                        .includes(:source)
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
-    @purl = purl
-    @advisories = deduplicate_by_cve(advisories)
+    @advisories = deduplicate_by_cve(scope)
   end
 
-  def deduplicate_by_cve(advisories)
-    grouped = advisories.group_by(&:cve)
+  def deduplicate_by_cve(scope)
+    no_cve_condition = "NOT EXISTS (SELECT 1 FROM unnest(identifiers) AS ident WHERE ident LIKE 'CVE-%')"
+    has_cve_condition = "EXISTS (SELECT 1 FROM unnest(identifiers) AS ident WHERE ident LIKE 'CVE-%')"
 
-    no_cve = grouped.delete(nil) || []
+    no_cve_ids = scope.where(no_cve_condition).pluck(:id)
 
-    deduped = grouped.map do |_cve, dupes|
-      dupes.max_by { |a| [a.packages.size, a.id] }
-    end
+    with_cve_sql = scope.where(has_cve_condition).to_sql
 
-    no_cve + deduped
+    deduped_ids = Advisory.connection.select_values(<<~SQL)
+      SELECT DISTINCT ON (cve) id
+      FROM (
+        SELECT a.id, a.packages, (SELECT ident FROM unnest(a.identifiers) AS ident WHERE ident LIKE 'CVE-%' LIMIT 1) AS cve
+        FROM (#{with_cve_sql}) AS a
+      ) AS with_cves
+      ORDER BY cve, jsonb_array_length(packages) DESC, id DESC
+    SQL
+
+    Advisory.where(id: no_cve_ids + deduped_ids).includes(:source)
   end
 end

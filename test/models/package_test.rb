@@ -269,6 +269,23 @@ class PackageTest < ActiveSupport::TestCase
       refute_includes affected, "abcdef"
     end
 
+    should "not match versions outside rubygems prerelease range" do
+      registry = create(:registry, name: "rubygems.org", ecosystem: "rubygems")
+      package = Package.create!(
+        ecosystem: "rubygems",
+        name: "rack",
+        version_numbers: ["2.2.22", "3.0.0.beta1", "3.0.0", "3.1.0", "3.1.20"]
+      )
+
+      affected = package.affected_versions(">= 3.0.0.beta1, < 3.1.20")
+
+      assert_includes affected, "3.0.0.beta1"
+      assert_includes affected, "3.0.0"
+      assert_includes affected, "3.1.0"
+      refute_includes affected, "2.2.22"
+      refute_includes affected, "3.1.20"
+    end
+
     should "handle multiple alpha versions that normalize to same version" do
       registry = create(:registry, name: "nuget.org", ecosystem: "nuget")
       package = Package.create!(

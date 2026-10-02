@@ -1,28 +1,51 @@
 class EcosystemsController < ApplicationController
   def index
-    ecosystem_counts = Advisory.not_withdrawn.ecosystem_counts
-    @ecosystems = ecosystem_counts.map do |ecosystem, count|
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
+    advisory_counts = Rails.cache.fetch("ecosystems_advisory_counts", expires_in: 1.hour) do
+      Advisory.not_withdrawn.ecosystem_counts.to_h
+    end
+    package_counts = Rails.cache.fetch("ecosystems_package_counts", expires_in: 1.hour) do
+      Package.group(:ecosystem).count
+    end
+    related_advisory_counts = Rails.cache.fetch("ecosystems_related_advisory_counts", expires_in: 1.hour) do
+      RelatedPackage.joins(:package).group("packages.ecosystem").count("DISTINCT advisory_id")
+    end
+
+    ecosystems = (advisory_counts.keys + package_counts.keys + related_advisory_counts.keys).uniq
+
+    @ecosystems = ecosystems.map do |ecosystem|
       registry = Registry.find_by_ecosystem(ecosystem)
       {
         name: ecosystem,
-        count: count,
+        advisory_count: advisory_counts[ecosystem] || 0,
+        related_advisory_count: related_advisory_counts[ecosystem] || 0,
+        package_count: package_counts[ecosystem] || 0,
         registry: registry
       }
-    end
+    end.sort_by { |e| -e[:package_count] }
   end
 
   def show
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @ecosystem = params[:ecosystem_id]
     @registry = Registry.find_by_ecosystem(@ecosystem)
     scope = Advisory.not_withdrawn.ecosystem(@ecosystem)
 
-    @severities = scope.group(:severity).count.reject { |k, _| k.nil? }.to_a.sort_by{|a| a[1]}.reverse
+    @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
-    @packages = scope.package_counts
+    cache_key = "ecosystem_#{@ecosystem}_package_counts_#{scope.to_sql.hash}"
+    @packages = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.package_counts
+    end
     scope = scope.package_name(params[:package_name]) if params[:package_name].present?
 
-    @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    cache_key = "ecosystem_#{@ecosystem}_repository_urls_#{scope.to_sql.hash}"
+    @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    end
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
@@ -55,17 +78,47 @@ class EcosystemsController < ApplicationController
     @pagy, @advisories = pagy(scope.includes(:source))
   end
 
+  def packages
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
+    @ecosystem = params[:ecosystem_id]
+    @registry = Registry.find_by_ecosystem(@ecosystem)
+    scope = Package.ecosystem(@ecosystem)
+
+    if params[:related].present?
+      scope = scope.joins(:related_packages).distinct
+    end
+
+    scope = scope.order(advisories_count: :desc)
+    @pagy, @packages = pagy(scope)
+  end
+
   def package
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @ecosystem = params[:ecosystem_id]
     @package_name = params[:package_name]
     @registry = Registry.find_by_ecosystem(@ecosystem)
     @package = Package.find_by(ecosystem: @ecosystem, name: @package_name)
-    scope = Advisory.not_withdrawn.ecosystem(@ecosystem).package_name(@package_name)
 
-    @severities = scope.group(:severity).count.reject { |k, _| k.nil? }.to_a.sort_by{|a| a[1]}.reverse
+    direct_scope = Advisory.not_withdrawn.ecosystem(@ecosystem).package_name(@package_name)
+
+    if @package
+      related_ids = @package.related_packages.pluck(:advisory_id)
+      @direct_advisory_ids = direct_scope.pluck(:id).to_set
+      scope = Advisory.not_withdrawn.where(id: @direct_advisory_ids + related_ids)
+    else
+      @direct_advisory_ids = Set.new
+      scope = direct_scope
+    end
+
+    @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
-    @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    cache_key = "ecosystem_#{@ecosystem}_package_#{@package_name}_repository_urls_#{scope.to_sql.hash}"
+    @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    end
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
@@ -96,5 +149,9 @@ class EcosystemsController < ApplicationController
     end
 
     @pagy, @advisories = pagy(scope.includes(:source))
+
+    if @package
+      @related_packages_by_advisory = @package.related_packages.index_by(&:advisory_id)
+    end
   end
 end

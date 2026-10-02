@@ -20,20 +20,31 @@ class AdvisoriesController < ApplicationController
 
     scope = Advisory.not_withdrawn
 
-    @sources = Source.joins(:advisories).group(:id).order(:name).count.to_a.map { |id, count| [Source.find(id), count] }
+    @sources = Rails.cache.fetch("advisories_sources", expires_in: 1.hour) do
+      Source.joins(:advisories).group(:id).order(:name).count.to_a.map { |id, count| [Source.find(id), count] }
+    end
     scope = scope.source_kind(params[:source]) if params[:source].present?
 
-    @severities = scope.group(:severity).count.reject { |k, _| k.nil? }.to_a.sort_by{|a| a[1]}.reverse
+    @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
-    @classifications = scope.group(:classification).count.reject { |k, _| k.nil? }.to_a.sort_by{|a| a[1]}.reverse
+    @classifications = scope.where.not(classification: nil).group(:classification).count.to_a.sort_by { |_, count| -count }
     scope = scope.where(classification: params[:classification]) if params[:classification].present?
 
-    @ecosystems = scope.ecosystem_counts
+    cache_key = "advisories_ecosystem_counts_#{scope.to_sql.hash}"
+    @ecosystems = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.ecosystem_counts
+    end
 
-    @packages = scope.package_counts
+    cache_key = "advisories_package_counts_#{scope.to_sql.hash}"
+    @packages = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.package_counts
+    end
 
-    @repository_urls = scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    cache_key = "advisories_repository_urls_#{scope.to_sql.hash}"
+    @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      scope.group(:repository_url).count.to_a.sort_by{|a| a[1]}.reverse
+    end
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
@@ -63,10 +74,14 @@ class AdvisoriesController < ApplicationController
       scope = scope.order(Advisory.arel_table[:published_at].desc)
     end
 
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @pagy, @advisories = pagy(scope.includes(:source))
   end
 
   def recent_advisories_data
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+
     @recent_advisories = Rails.cache.fetch("all_recent_advisories_data", expires_in: 1.hour) do
       Advisory.where('published_at > ?', 3.months.ago.beginning_of_day).group_by_day(:published_at).count
     end
@@ -75,6 +90,7 @@ class AdvisoriesController < ApplicationController
 
   def show
     @advisory = Advisory.find_by!(uuid: params[:id])
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when @advisory
   end
 end

@@ -1,7 +1,5 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
   def index
-    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
-
     scope = Advisory.all
     
     scope = scope.severity(params[:severity]) if params[:severity].present?
@@ -13,15 +11,26 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
     scope = scope.updated_after(params[:updated_after]) if params[:updated_after].present?
 
-    if params[:sort].present? || params[:order].present?
-      sort = params[:sort] || 'published_at'
-      order = params[:order] || 'desc'
-      sort_options = sort.split(',').zip(order.split(',')).to_h
-      scope = scope.order(sort_options)
-    else
-      scope = scope.order(published_at: :desc)
+    sort = params[:sort].presence || 'published_at'
+    order = params[:order].presence || 'desc'
+    unless sort.is_a?(String) && order.is_a?(String)
+      render json: { error: 'sort and order must be comma-separated strings' }, status: :bad_request
+      return
     end
 
+    columns = sort.split(',', -1).map(&:strip)
+    directions = order.split(',', -1).map { |direction| direction.strip.downcase }
+    unless columns.all? { |column| Advisory.column_names.include?(column) }
+      render json: { error: 'sort must contain valid advisory column names' }, status: :bad_request
+      return
+    end
+    unless directions.all? { |direction| %w[asc desc].include?(direction) } && directions.size <= columns.size
+      render json: { error: 'order must contain asc or desc, with at most one direction per sort field' }, status: :bad_request
+      return
+    end
+    scope = scope.order(columns.each_with_index.to_h { |column, index| [column, directions[index] || 'desc'] })
+
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     @pagy, @advisories = pagy(scope.includes(:source))
   end
 

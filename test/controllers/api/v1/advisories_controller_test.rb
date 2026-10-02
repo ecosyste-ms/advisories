@@ -25,6 +25,64 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_match /stale-while-revalidate=3600/, response.headers["Cache-Control"]
   end
 
+  test "should reject an unknown sort column with package filters" do
+    get api_v1_advisories_url, params: { ecosystem: 'npm', package_name: 'lodash', sort: 'ghsa_id' }, as: :json
+
+    assert_response :bad_request
+    assert_equal 'sort must contain valid advisory column names', response.parsed_body['error']
+    refute_match /max-age=3600/, response.headers['Cache-Control']
+  end
+
+  test "should reject invalid sort directions" do
+    get api_v1_advisories_url, params: { sort: 'published_at', order: 'sideways' }, as: :json
+
+    assert_response :bad_request
+    assert_equal 'order must contain asc or desc, with at most one direction per sort field', response.parsed_body['error']
+  end
+
+  test "should reject structured sort parameters" do
+    [{ sort: ['published_at'] }, { sort: { name: 'published_at' } }, { order: ['asc'] }, { order: { direction: 'asc' } }].each do |params|
+      get api_v1_advisories_url, params: params, as: :json
+      assert_response :bad_request
+      assert_equal 'sort and order must be comma-separated strings', response.parsed_body['error']
+    end
+  end
+
+  test "should reject invalid fields in multi-column sorting" do
+    [{ sort: 'published_at,ghsa_id' }, { sort: 'published_at,' },
+     { sort: 'published_at', order: 'asc,desc' }, { order: 'asc,' }].each do |params|
+      get api_v1_advisories_url, params: params, as: :json
+      assert_response :bad_request
+    end
+  end
+
+  test "should preserve ascending and descending sort order" do
+    @advisory.update!(published_at: Time.utc(2026, 1, 1))
+    newer = create(:advisory, source: @source, published_at: Time.utc(2026, 1, 2))
+
+    get api_v1_advisories_url, params: { sort: 'published_at', order: 'asc' }, as: :json
+    assert_response :success
+    assert_equal [@advisory.uuid, newer.uuid], response.parsed_body.map { |advisory| advisory['uuid'] }
+
+    get api_v1_advisories_url, params: { sort: '', order: '' }, as: :json
+    assert_response :success
+    assert_equal [newer.uuid, @advisory.uuid], response.parsed_body.map { |advisory| advisory['uuid'] }
+  end
+
+  test "should sort by multiple columns with normalized directions" do
+    @advisory.update!(severity: 'HIGH', published_at: Time.utc(2026, 1, 1))
+    newer = create(:advisory, source: @source, severity: 'HIGH', published_at: Time.utc(2026, 1, 2))
+    lower = create(:advisory, source: @source, severity: 'LOW', published_at: Time.utc(2026, 1, 3))
+
+    get api_v1_advisories_url, params: { sort: 'severity, published_at', order: ' ASC , DESC ' }, as: :json
+    assert_response :success
+    assert_equal [newer.uuid, @advisory.uuid, lower.uuid], response.parsed_body.map { |advisory| advisory['uuid'] }
+
+    get api_v1_advisories_url, params: { sort: 'severity,published_at', order: 'asc' }, as: :json
+    assert_response :success
+    assert_equal [newer.uuid, @advisory.uuid, lower.uuid], response.parsed_body.map { |advisory| advisory['uuid'] }
+  end
+
   test "should filter by ecosystem case-insensitively" do
     create(:advisory, source: @source, packages: [{"ecosystem" => "pypi", "package_name" => "test-pypi", "versions" => []}])
     

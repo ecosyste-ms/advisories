@@ -81,13 +81,13 @@ paths:
             format: date-time
         - name: sort
           in: query
-          description: field to order results by
+          description: Comma-separated advisory column names to sort by. Defaults to published_at. Unknown columns return 400.
           required: false
           schema:
             type: string
         - name: order
           in: query
-          description: direction to order results by
+          description: Comma-separated asc or desc directions corresponding to sort fields, case-insensitive. Missing directions default to desc. Invalid or extra directions return 400.
           required: false
           schema:
             type: string
@@ -100,6 +100,15 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Advisory'
+        400:
+          description: Invalid sort column or order direction
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
   /advisories/packages:
     get:
       summary: "list packages that have advisories"

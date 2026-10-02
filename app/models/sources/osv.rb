@@ -68,7 +68,7 @@ module Sources
       response = Faraday.get("#{BASE_URL}/ecosystems.txt")
       return [] unless response.success?
 
-      response.body.split("\n").map(&:strip).reject(&:empty?).reject { |e| EXCLUDED_ECOSYSTEMS.include?(e) }
+      response.body.split("\n").map(&:strip).reject(&:empty?).select { |ecosystem| correct_ecosystem(ecosystem) }
     end
 
     def fetch_advisories
@@ -85,29 +85,31 @@ module Sources
     end
 
     def fetch_ecosystem_advisories(ecosystem)
-      url = ecosystem_zip_url(ecosystem)
-      response = Faraday.get(url)
-      return [] unless response.success?
+      each_ecosystem_advisory(ecosystem).to_a
+    end
 
-      advisories = []
+    def each_ecosystem_advisory(ecosystem)
+      return enum_for(__method__, ecosystem) unless block_given?
+
       Tempfile.create(['osv', '.zip']) do |tempfile|
         tempfile.binmode
-        tempfile.write(response.body)
-        tempfile.rewind
+        response = Faraday.get(ecosystem_zip_url(ecosystem)) do |request|
+          request.options.on_data = proc { |chunk, _bytes| tempfile.write(chunk) }
+        end
+        return unless response.success?
+        tempfile.flush
 
         Zip::File.open(tempfile.path) do |zip|
           zip.each do |entry|
             next unless entry.name.end_with?('.json')
             content = entry.get_input_stream.read
             osv = JSON.parse(content, symbolize_names: true)
-            advisories << osv
+            yield osv
           end
         end
       end
-      advisories
-    rescue => e
+    rescue Faraday::Error, Zip::Error, JSON::ParserError => e
       Rails.logger.error "Failed to fetch OSV advisories for #{ecosystem}: #{e.message}"
-      []
     end
 
     def ecosystem_zip_url(ecosystem)
@@ -139,7 +141,7 @@ module Sources
 
     def sync_ecosystem(ecosystem, packages_to_sync)
       count = 0
-      fetch_ecosystem_advisories(ecosystem).each_slice(100) do |advisories|
+      each_ecosystem_advisory(ecosystem).each_slice(100) do |advisories|
         entries = advisories.filter_map do |raw|
           attributes = map_osv_advisory(raw)
           [attributes, raw] if attributes
@@ -216,47 +218,59 @@ module Sources
         package_name = entry.dig(:package, :name)
         next unless ecosystem && package_name
 
-        versions = extract_version_ranges(entry[:ranges] || [])
+        versions = extract_version_ranges(entry[:ranges] || [], ecosystem: ecosystem)
+        versions += (entry[:versions] || []).map do |version|
+          { vulnerable_version_range: "= #{version}", first_patched_version: nil }
+        end
         next if versions.empty?
 
         {
           ecosystem: ecosystem,
           package_name: package_name,
-          versions: versions
+          versions: versions.uniq
         }
       end
     end
 
-    def extract_version_ranges(ranges)
-      ranges.filter_map do |range|
-        next unless range[:type] == 'SEMVER' || range[:type] == 'ECOSYSTEM'
+    def extract_version_ranges(ranges, ecosystem: nil)
+      ranges.flat_map do |range|
+        next [] unless %w[SEMVER ECOSYSTEM].include?(range[:type])
 
-        events = range[:events] || []
-        introduced = events.find { |e| e[:introduced] }&.dig(:introduced)
-        fixed = events.find { |e| e[:fixed] }&.dig(:fixed)
-
-        vulnerable_range = build_version_range(introduced, fixed)
-        next unless vulnerable_range
-
-        {
-          vulnerable_version_range: vulnerable_range,
-          first_patched_version: fixed
-        }
+        scheme = range[:type] == 'SEMVER' ? 'semver' : PurlParser.reverse_map_ecosystem(ecosystem)
+        events = (range[:events] || []).select { |event| event[:introduced] || event[:fixed] || event[:last_affected] }
+        events = events.sort do |left, right|
+          if left[:introduced] == '0'
+            -1
+          elsif right[:introduced] == '0'
+            1
+          else
+            VersionNormalization::RANGE_MUTEX.synchronize { Vers.compare_with_scheme(left.values.first, right.values.first, scheme) }
+          end
+        end
+        introduced = nil
+        versions = []
+        events.each do |event|
+          if event[:introduced]
+            introduced = event[:introduced]
+          elsif introduced && (event[:fixed] || event[:last_affected])
+            versions << {
+              vulnerable_version_range: build_version_range(introduced, event[:fixed], last_affected: event[:last_affected]),
+              first_patched_version: event[:fixed]
+            }
+            introduced = nil
+          end
+        end
+        versions << { vulnerable_version_range: build_version_range(introduced, nil), first_patched_version: nil } if introduced
+        versions
       end
     end
 
-    def build_version_range(introduced, fixed)
+    def build_version_range(introduced, fixed, last_affected: nil)
       return nil unless introduced
 
-      if introduced == '0' && fixed
-        "< #{fixed}"
-      elsif introduced != '0' && fixed
-        ">= #{introduced}, < #{fixed}"
-      elsif introduced != '0' && fixed.nil?
-        ">= #{introduced}"
-      elsif introduced == '0' && fixed.nil?
-        ">= 0"
-      end
+      lower = ">= #{introduced}" unless introduced == '0' && (fixed || last_affected)
+      upper = fixed ? "< #{fixed}" : "<= #{last_affected}" if fixed || last_affected
+      [lower, upper].compact.join(', ')
     end
 
     def extract_references(references)

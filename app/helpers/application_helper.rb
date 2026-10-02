@@ -47,6 +47,6 @@ module ApplicationHelper
   def source_icon(source, options = {})
     icon_name = source.is_a?(Source) ? source.icon : Source::ICONS[source]
     icon_name ||= 'shield-exclamation'
-    bootstrap_icon(icon_name, options.merge(width: 18, height: 18, class: 'me-2'))
+    bootstrap_icon(icon_name, { width: 18, height: 18, class: 'me-2' }.merge(options))
   end
 end

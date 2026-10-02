@@ -129,6 +129,7 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
       assert_select "svg"
       assert_select "a[href='#{advisory_path(advisory)}']"
       assert_select "span", text: source.name
+      assert_select 'svg.flex-shrink-0.me-2[width="18"][height="18"]'
     end
   end
 

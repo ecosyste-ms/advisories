@@ -438,7 +438,7 @@ class OsvSourceTest < ActiveSupport::TestCase
     result = @osv.extract_version_ranges(ranges)
 
     assert_equal 1, result.length
-    assert_equal ">= 1.0.0", result.first[:vulnerable_version_range]
+    assert_equal ">= 1.0.0, <= 1.5.0", result.first[:vulnerable_version_range]
     assert_nil result.first[:first_patched_version]
   end
 

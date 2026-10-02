@@ -72,6 +72,29 @@ class AdvisoryImportTest < ActionDispatch::IntegrationTest
     assert_equal '< 2.0.0', advisory.packages.first['versions'].sole['vulnerable_version_range']
   end
 
+  test 'upstream timestamps remain in source records without backdating local changes' do
+    travel_to Time.utc(2026, 2, 1) do
+      Sidekiq::Testing.fake! do
+        @github.sync_advisories
+        @osv.sync_advisories
+        advisory = Advisory.sole
+        assert_equal Time.current, advisory.updated_at
+        assert_equal '2026-01-02T00:00:00Z', @github.advisory_records.sole.raw.sole.dig('node', 'advisory', 'updatedAt')
+        assert_equal ['2026-01-02T00:00:00Z'], @osv.advisory_records.pluck(:raw).map { |raw| raw['modified'] }.uniq
+        @edge['node']['advisory']['updatedAt'] = '2026-01-03T00:00:00Z'
+        stub_github([@edge])
+        travel 1.day
+        @github.sync_advisories
+        assert_equal Time.utc(2026, 2, 1), advisory.reload.updated_at
+        assert_equal '2026-01-03T00:00:00Z', @github.advisory_records.sole.raw.sole.dig('node', 'advisory', 'updatedAt')
+        @edge['node']['advisory']['summary'] = 'Corrected summary'
+        stub_github([@edge])
+        @github.sync_advisories
+        assert_equal Time.current, advisory.reload.updated_at
+      end
+    end
+  end
+
   test 'aliases merge transitively across batches and corrected aliases split again' do
     records = [osv_record('OSV-TEST-A', aliases: ['OSV-TEST-X']),
                osv_record('OSV-TEST-C', aliases: ['OSV-TEST-Y'])]

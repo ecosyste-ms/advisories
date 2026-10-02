@@ -75,10 +75,89 @@ class OsvImportRangesTest < ActionDispatch::IntegrationTest
   test 'source sync excludes version-qualified distro archives before downloading' do
     stub_osv([osv_record('OSV-TEST-NON-DISTRO')])
     stub_request(:get, "#{Sources::Osv::BASE_URL}/ecosystems.txt")
-      .to_return(status: 200, body: "PyPI\nDebian:12\nalpine:v3.17\nUbuntu:24.04\n")
+      .to_return(status: 200, body: "PyPI\nDebian:12\nalpine:v3.17\nUbuntu:24.04\nRocky Linux:9\nred hat\nBellSoft Hardened Containers\n")
     Sidekiq::Testing.fake! { @source.sync_advisories }
     assert_equal ['OSV-TEST-NON-DISTRO'], @source.advisories.pluck(:uuid)
-    assert_not_requested :get, %r{#{Regexp.escape(Sources::Osv::BASE_URL)}/(?:Debian|alpine|Ubuntu)}
+    assert_not_requested :get, %r{#{Regexp.escape(Sources::Osv::BASE_URL)}/(?:Debian|alpine|Ubuntu|Rocky|red|BellSoft)}
+  end
+
+  test 'source sync merges repeated OSV packages and ranges across aliases' do
+    record = osv_record('OSV-TEST-REPEATED', aliases: ['OSV-TEST-SECONDARY'])
+    second_package = record['affected'].first.deep_dup
+    second_package['ranges'].first['events'] = [{ 'introduced' => '2.0.0' }, { 'fixed' => '3.0.0' }]
+    record['affected'] << second_package
+    secondary = osv_record('OSV-TEST-SECONDARY')
+    secondary['affected'].first['versions'] = ['4.0.0']
+    create(:package, ecosystem: 'pypi', name: 'sample', version_numbers: %w[0.5.0 1.0.0 2.0.0 3.0.0 4.0.0])
+    stub_osv([record, secondary])
+
+    Sidekiq::Testing.fake! { @source.sync_advisories }
+
+    advisory = @source.advisories.sole
+    package = advisory.packages.sole
+    assert_equal %w[0.5.0 2.0.0 4.0.0], package['affected_versions']
+    assert_equal %w[1.0.0 3.0.0], package['unaffected_versions']
+    assert_equal 3, package['versions'].size
+    get '/v1/vulns/OSV-TEST-SECONDARY', as: :json
+    assert_response :success
+    affected = response.parsed_body['affected'].sole
+    assert_equal [
+      [{ 'introduced' => '0' }, { 'fixed' => '1.0.0' }],
+      [{ 'introduced' => '2.0.0' }, { 'fixed' => '3.0.0' }]
+    ], affected['ranges'].map { |range| range['events'] }
+    assert_equal ['4.0.0'], affected['versions']
+  end
+
+  test 'source sync imports records without descriptions and applies their withdrawals' do
+    record = osv_record('OSV-TEST-NO-DESCRIPTION').except('summary')
+    stub_osv([record])
+    Sidekiq::Testing.fake! { @source.sync_advisories }
+    advisory = @source.advisories.sole
+    assert_equal 'sample', advisory.packages.sole['package_name']
+    assert_nil advisory.withdrawn_at
+
+    withdrawn = record.slice('id').merge('modified' => '2026-02-01T00:00:00Z', 'withdrawn' => '2026-02-01T00:00:00Z')
+    stub_osv([withdrawn])
+    Sidekiq::Testing.fake! { @source.sync_advisories }
+
+    assert_equal Time.utc(2026, 2, 1), advisory.reload.withdrawn_at
+    assert_empty advisory.packages
+    get "/v1/vulns/#{advisory.uuid}", as: :json
+    assert_response :success
+    assert_equal '2026-02-01T00:00:00Z', response.parsed_body['withdrawn']
+  end
+
+  test 'source sync sorts ecosystem ranges outside the purl mapping' do
+    record = osv_record('OSV-TEST-CRAN')
+    record['affected'].first['package']['ecosystem'] = 'CRAN'
+    record['affected'].first['ranges'].first['events'] = [{ 'fixed' => '2.0.0' }, { 'introduced' => '1.0.0' }]
+    stub_osv([record])
+    Sidekiq::Testing.fake! { @source.sync_advisories }
+
+    package = @source.advisories.sole.packages.sole
+    assert_equal 'cran', package['ecosystem']
+    assert_equal '>= 1.0.0, < 2.0.0', package['versions'].sole['vulnerable_version_range']
+  end
+
+  test 'source sync logs malformed JSON and imports subsequent archive entries' do
+    before = osv_record('OSV-TEST-BEFORE')
+    after = osv_record('OSV-TEST-AFTER')
+    stub_osv([])
+    zip = Zip::OutputStream.write_buffer do |stream|
+      { 'before.json' => before.to_json, 'broken.json' => '{', 'after.json' => after.to_json }.each do |name, content|
+        stream.put_next_entry(name)
+        stream.write(content)
+      end
+    end
+    stub_request(:get, "#{Sources::Osv::BASE_URL}/PyPI/all.zip").to_return(status: 200, body: zip.string)
+    Rails.logger.expects(:error).with(regexp_matches(/Failed to parse OSV advisory broken.json for PyPI:/))
+
+    count = Sidekiq::Testing.fake! { @source.sync_advisories }
+
+    assert_equal 2, count
+    assert_equal %w[OSV-TEST-AFTER OSV-TEST-BEFORE], @source.advisories.order(:uuid).pluck(:uuid)
+    get '/v1/vulns/OSV-TEST-AFTER', as: :json
+    assert_response :success
   end
 
   test 'source sync imports complete batches before parsing the rest of an archive' do

@@ -478,21 +478,6 @@ class OsvSourceTest < ActiveSupport::TestCase
     end
   end
 
-  test "advisory_changed? detects changes" do
-    existing = Advisory.create!(
-      uuid: "TEST-001",
-      title: "Old title",
-      source: @source,
-      packages: []
-    )
-
-    new_attrs = { title: "New title", packages: [] }
-    assert @osv.advisory_changed?(existing, new_attrs)
-
-    same_attrs = { title: "Old title", packages: [] }
-    refute @osv.advisory_changed?(existing, same_attrs)
-  end
-
   def sample_osv_advisory(id)
     {
       id: id,

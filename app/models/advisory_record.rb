@@ -137,7 +137,8 @@ class AdvisoryRecord < ApplicationRecord
       attributes['references'] = ranked.flat_map { |record| record.payload.fetch('references', []) }.uniq
       github, others = ranked.partition { |record| sources.fetch(record.source_id).kind.downcase == 'github' }
       github_packages = merge_package_ranges([], github.flat_map { |record| record.payload.fetch('packages', []) })
-      attributes['packages'] = (github_packages + others.flat_map { |record| record.payload.fetch('packages', []) })
+      other_packages = merge_package_ranges([], others.flat_map { |record| record.payload.fetch('packages', []) })
+      attributes['packages'] = (github_packages + other_packages)
         .uniq { |package| [package['ecosystem'].downcase, package['package_name'].downcase] }
 
       candidates = ranked.filter_map { |record| existing[record.advisory_id] }.uniq.reject { |record| kept.include?(record.id) }

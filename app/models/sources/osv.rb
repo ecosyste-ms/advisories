@@ -103,12 +103,17 @@ module Sources
           zip.each do |entry|
             next unless entry.name.end_with?('.json')
             content = entry.get_input_stream.read
-            osv = JSON.parse(content, symbolize_names: true)
+            begin
+              osv = JSON.parse(content, symbolize_names: true)
+            rescue JSON::ParserError => e
+              Rails.logger.error "Failed to parse OSV advisory #{entry.name} for #{ecosystem}: #{e.message}"
+              next
+            end
             yield osv
           end
         end
       end
-    rescue Faraday::Error, Zip::Error, JSON::ParserError => e
+    rescue Faraday::Error, Zip::Error => e
       Rails.logger.error "Failed to fetch OSV advisories for #{ecosystem}: #{e.message}"
     end
 
@@ -154,20 +159,11 @@ module Sources
       count
     end
 
-    def advisory_changed?(existing, new_attrs)
-      existing.assign_attributes(new_attrs.except(:source_id, :created_at, :uuid))
-      changed = existing.changed? && (existing.changed - ['updated_at']).any?
-      existing.restore_attributes
-      changed
-    end
-
     def map_advisories(advisories)
       advisories.filter_map { |osv| map_osv_advisory(osv) }
     end
 
     def map_osv_advisory(osv)
-      return nil unless osv[:summary].present? || osv[:details].present?
-
       packages = extract_packages(osv[:affected] || [])
 
       cvss_vector = extract_cvss_vector(osv[:severity])
@@ -236,7 +232,7 @@ module Sources
       ranges.flat_map do |range|
         next [] unless %w[SEMVER ECOSYSTEM].include?(range[:type])
 
-        scheme = range[:type] == 'SEMVER' ? 'semver' : PurlParser.reverse_map_ecosystem(ecosystem)
+        scheme = range[:type] == 'SEMVER' ? 'semver' : (PurlParser.reverse_map_ecosystem(ecosystem) || ecosystem&.downcase)
         events = (range[:events] || []).select { |event| event[:introduced] || event[:fixed] || event[:last_affected] }
         events = events.sort do |left, right|
           if left[:introduced] == '0'
@@ -291,7 +287,7 @@ module Sources
       base_ecosystem = ecosystem.split(':').first
 
       # Check if this is an excluded ecosystem
-      return nil if EXCLUDED_ECOSYSTEMS.any? { |e| base_ecosystem.casecmp?(e.gsub('\\', '')) }
+      return nil if EXCLUDED_ECOSYSTEMS.any? { |e| base_ecosystem.casecmp?(e) }
 
       ECOSYSTEM_MAPPING[base_ecosystem] || base_ecosystem.downcase.gsub(/\s+/, '-')
     end

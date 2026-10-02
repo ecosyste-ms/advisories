@@ -39,22 +39,6 @@ module Sources
       total_synced
     end
 
-    def advisory_changed?(existing, new_attrs)
-      # Assign new attributes temporarily to leverage ActiveRecord's dirty tracking
-      # This avoids manually listing every field and handles type conversions properly
-      existing.assign_attributes(new_attrs.except(:source_id, :created_at, :uuid))
-
-      # Check if any attributes changed, excluding updated_at (timestamp that always changes)
-      # Note: repository_url and blast_radius are now set conditionally in their callbacks,
-      # so they won't show as changed unless they actually differ
-      changed = existing.changed? && (existing.changed - ['updated_at']).any?
-
-      # Restore original state without saving
-      existing.restore_attributes
-
-      changed
-    end
-
     def map_advisories(advisories)
       vulns = advisories.map do |advisory|
         {

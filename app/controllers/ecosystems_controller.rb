@@ -97,7 +97,8 @@ class EcosystemsController < ApplicationController
     @ecosystem = params[:ecosystem_id]
     @package_name = params[:package_name]
     @registry = Registry.find_by_ecosystem(@ecosystem)
-    @package = Package.find_by(ecosystem: @ecosystem, name: @package_name)
+    @package = Package.find_by_identity(@ecosystem, @package_name)
+    package_matches = Package.for_identities([[@ecosystem, @package_name]])
 
     direct_scope = Advisory.not_withdrawn.ecosystem(@ecosystem).package_name(@package_name)
 
@@ -105,7 +106,7 @@ class EcosystemsController < ApplicationController
       scope = direct_scope.affecting_version(@ecosystem, @package_name, params[:version])
       @direct_advisory_ids = scope.pluck(:id).to_set
     elsif @package
-      related_ids = @package.related_packages.pluck(:advisory_id)
+      related_ids = RelatedPackage.where(package_id: package_matches.select(:id)).pluck(:advisory_id)
       @direct_advisory_ids = direct_scope.pluck(:id).to_set
       scope = Advisory.not_withdrawn.where(id: @direct_advisory_ids + related_ids)
     else
@@ -152,7 +153,7 @@ class EcosystemsController < ApplicationController
     @pagy, @advisories = pagy(scope.includes(:source))
 
     if @package
-      @related_packages_by_advisory = @package.related_packages.index_by(&:advisory_id)
+      @related_packages_by_advisory = RelatedPackage.where(package_id: package_matches.select(:id)).order(:id).index_by(&:advisory_id)
     end
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
   rescue Advisory::InvalidVersionFilter => error

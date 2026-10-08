@@ -140,7 +140,7 @@ class Advisory < ApplicationRecord
 
   def version_numbers(package)
     # Try to find cached package record
-    pkg = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
+    pkg = Package.find_by_identity(package['ecosystem'], package['package_name'])
 
     # If we have cached version numbers, use them
     if pkg && pkg.version_numbers.present?
@@ -197,7 +197,7 @@ class Advisory < ApplicationRecord
     version_numbers = version_numbers(package)
 
     # Check if we have a cached package record to potentially avoid API calls
-    pkg = Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
+    pkg = Package.find_by_identity(package['ecosystem'], package['package_name'])
 
     conn = EcosystemsFaradayClient.build
     resp = conn.get(dependent_packages_api_url(package)) # TODO pagination if headers next link is present
@@ -281,36 +281,19 @@ class Advisory < ApplicationRecord
       next if ecosystem.blank? || name.blank?
       next if existing_pairs.include?([ecosystem, name.downcase.sub(%r{/v\d+\z}, '')])
       api_pkg
-    end.uniq { |p| [p['ecosystem'].downcase, p['name']] }
+    end.uniq { |p| Package.identity_key(p['ecosystem'], p['name']) }
 
     return related_packages.delete_all if filtered_api_packages.empty?
 
-    # Batch find or create all packages in 2 queries instead of N
     package_keys = filtered_api_packages.map { |p| [p['ecosystem'].downcase, p['name']] }
-    existing_packages = Package.where(
-      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
-      *package_keys.flatten
-    ).index_by { |p| [p.ecosystem, p.name] }
-
-    missing_packages = package_keys.reject { |key| existing_packages.key?(key) }
-    if missing_packages.any?
-      now = Time.current
-      Package.insert_all(
-        missing_packages.map { |eco, name| { ecosystem: eco, name: name, created_at: now, updated_at: now } }
-      )
-      # Reload to get IDs for newly inserted packages
-      existing_packages = Package.where(
-        package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
-        *package_keys.flatten
-      ).index_by { |p| [p.ecosystem, p.name] }
-    end
+    existing_packages = Package.find_or_create_all_by_identity(package_keys)
 
     # Build related package records in bulk
     now = Time.current
     related_records = filtered_api_packages.filter_map do |api_pkg|
       ecosystem = api_pkg['ecosystem'].downcase
       name = api_pkg['name']
-      pkg = existing_packages[[ecosystem, name]]
+      pkg = existing_packages[Package.identity_key(ecosystem, name)]
       next unless pkg
 
       name_match = RelatedPackage.compute_name_match(name, advisory_package_names, package_ecosystem: ecosystem)
@@ -353,9 +336,7 @@ class Advisory < ApplicationRecord
   end
 
   def package_records
-    packages.map do |package|
-      Package.find_by(ecosystem: package['ecosystem'], name: package['package_name'])
-    end.compact
+    packages_with_records.filter_map(&:last)
   end
 
   def total_dependent_packages_count
@@ -460,13 +441,10 @@ class Advisory < ApplicationRecord
   def packages_with_records
     package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
 
-    pkg_records = Package.where(
-      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
-      *package_keys.flatten
-    ).index_by { |p| [p.ecosystem, p.name] }
+    pkg_records = Package.indexed_by_identity(package_keys)
 
     packages.map do |package|
-      package_record = pkg_records[[package['ecosystem'], package['package_name']]]
+      package_record = pkg_records[Package.identity_key(package['ecosystem'], package['package_name'])]
       [package, package_record]
     end
   end
@@ -474,14 +452,7 @@ class Advisory < ApplicationRecord
   def cache_affected_versions!
     return if packages.blank?
 
-    package_keys = packages.map { |p| [p['ecosystem'], p['package_name']] }
-    package_records = Package.where(
-      package_keys.map { "(ecosystem = ? AND name = ?)" }.join(" OR "),
-      *package_keys.flatten
-    ).index_by { |p| [p.ecosystem, p.name] }
-
-    updated_packages = packages.map do |package|
-      pkg = package_records[[package['ecosystem'], package['package_name']]]
+    updated_packages = packages_with_records.map do |package, pkg|
       cached = {}
 
       if pkg&.version_numbers.present?

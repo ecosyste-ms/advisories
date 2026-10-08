@@ -1,14 +1,82 @@
 class Package < ApplicationRecord
   include VersionNormalization
 
+  CASE_INSENSITIVE_ECOSYSTEMS = %w[npm nuget pypi packagist].freeze
+
   has_many :related_packages, dependent: :delete_all
   has_many :related_advisories, through: :related_packages, source: :advisory
 
   validates :ecosystem, presence: true
-  validates :name, presence: true, uniqueness: { scope: :ecosystem }
+  validates :name, presence: true
+  before_validation :normalize_identity, if: :identity_changed?
+  validate :unique_identity, if: :identity_changed?
 
   scope :ecosystem, ->(ecosystem) { where(ecosystem: ecosystem) }
   scope :critical, -> { where(critical: true) }
+
+  def self.identity_key(ecosystem, name)
+    ecosystem = ecosystem.downcase
+    [ecosystem, CASE_INSENSITIVE_ECOSYSTEMS.include?(ecosystem) ? name.downcase : name]
+  end
+
+  def self.for_identities(keys)
+    keys.map { |ecosystem, name| identity_key(ecosystem, name) }.uniq.group_by(&:first).reduce(none) do |scope, (ecosystem, pairs)|
+      names = pairs.map(&:last)
+      matches = where(ecosystem: ecosystem)
+      matches = if CASE_INSENSITIVE_ECOSYSTEMS.include?(ecosystem)
+        matches.where('LOWER(name) IN (?)', names)
+      else
+        matches.where(name: names)
+      end
+      scope.or(matches)
+    end
+  end
+
+  def self.indexed_by_identity(keys)
+    for_identities(keys).order(:id).each_with_object({}) do |package, result|
+      result[identity_key(package.ecosystem, package.name)] ||= package
+    end
+  end
+
+  def self.find_by_identity(ecosystem, name)
+    indexed_by_identity([[ecosystem, name]]).values.first
+  end
+
+  def self.named(name)
+    where(name: name).or(where(ecosystem: CASE_INSENSITIVE_ECOSYSTEMS).where('LOWER(name) = ?', name.downcase))
+  end
+
+  def self.find_or_create_all_by_identity(keys)
+    if keys.any? { |ecosystem, name| ecosystem.blank? || name.blank? }
+      raise ArgumentError, 'ecosystem and name must be present'
+    end
+    keys = keys.map { |ecosystem, name| identity_key(ecosystem, name) }.uniq
+    existing = indexed_by_identity(keys)
+    missing = keys - existing.keys
+    return existing if missing.empty?
+
+    now = Time.current
+    insert_all(missing.map { |ecosystem, name| { ecosystem: ecosystem, name: name, created_at: now, updated_at: now } })
+    indexed_by_identity(keys)
+  end
+
+  def self.find_or_create_by_identity(ecosystem, name)
+    find_or_create_all_by_identity([[ecosystem, name]]).fetch(identity_key(ecosystem, name))
+  end
+
+  def identity_changed?
+    new_record? || will_save_change_to_ecosystem? || will_save_change_to_name?
+  end
+
+  def normalize_identity
+    return if ecosystem.blank? || name.blank?
+    self.ecosystem, self.name = self.class.identity_key(ecosystem, name)
+  end
+
+  def unique_identity
+    return if ecosystem.blank? || name.blank?
+    errors.add(:name, :taken) if self.class.for_identities([[ecosystem, name]]).where.not(id: id).exists?
+  end
 
   def registry
     @registry = Registry.find_by_ecosystem(ecosystem)

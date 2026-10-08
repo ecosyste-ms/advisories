@@ -3,7 +3,7 @@ class PackageSyncWorker
   sidekiq_options queue: :packages, retry: 3, lock: :until_executed, lock_expiration: 2.hours.to_i
 
   def perform(ecosystem, package_name)
-    pkg = Package.find_or_create_by(ecosystem: ecosystem, name: package_name)
+    pkg = Package.find_or_create_by_identity(ecosystem, package_name)
 
     # Sync package data if needed
     version_numbers_before = pkg.version_numbers

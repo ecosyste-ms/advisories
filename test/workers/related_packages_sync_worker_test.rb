@@ -2,6 +2,36 @@ require "test_helper"
 
 class RelatedPackagesSyncWorkerTest < ActiveSupport::TestCase
   context "#perform" do
+    should "deduplicate case variants in bulk imports and reuse mixed-case legacy rows" do
+      Sidekiq::Testing.fake! do
+        advisory = create(:advisory, references: ['https://github.com/example/project/issues/1'])
+        legacy = create(:package, ecosystem: 'nuget', name: 'widget.core')
+        legacy.update_columns(name: 'Widget.Core')
+        response = [
+          { ecosystem: 'NuGet', name: 'Widget.Core' },
+          { ecosystem: 'nuget', name: 'widget.core' },
+          { ecosystem: 'npm', name: 'NewWidget' },
+          { ecosystem: 'npm', name: 'newwidget' }
+        ]
+        stub_request(:get, 'https://packages.ecosyste.ms/api/v1/packages/lookup')
+          .with(query: { repository_url: advisory.repository_url })
+          .to_return(status: 200, body: response.to_json, headers: { 'Content-Type' => 'application/json' })
+
+        assert_difference 'Package.count', 1 do
+          RelatedPackagesSyncWorker.new.perform(advisory.id)
+        end
+        assert_equal 2, advisory.related_packages.count
+        assert_includes advisory.related_package_records.pluck(:id), legacy.id
+        assert_equal 'newwidget', advisory.related_package_records.find_by!(ecosystem: 'npm').name
+
+        assert_no_difference ['Package.count', 'RelatedPackage.count'] do
+          RelatedPackagesSyncWorker.new.perform(advisory.id)
+          PackageSyncWorker.new.perform('nuget', 'WIDGET.CORE')
+          PackageSyncWorker.new.perform('npm', 'NEWWIDGET')
+        end
+      end
+    end
+
     should "call sync_related_packages on the advisory" do
       advisory = create(:advisory, repository_url: "https://github.com/owner/repo")
       advisory.expects(:sync_related_packages).once

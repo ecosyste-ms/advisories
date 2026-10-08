@@ -23,11 +23,11 @@ class BatscopeController < ApplicationController
     older_advisories = older_advisories.ecosystem(@ecosystem) if @ecosystem.present?
     
     recent_packages = advisories.flat_map(&:packages).map do |pkg|
-      [pkg['ecosystem'], pkg['package_name']]
+      Package.identity_key(pkg['ecosystem'], pkg['package_name'])
     end
     
     older_packages = older_advisories.flat_map(&:packages).map do |pkg|
-      [pkg['ecosystem'], pkg['package_name']]
+      Package.identity_key(pkg['ecosystem'], pkg['package_name'])
     end.to_set
     
     new_packages = recent_packages.reject { |pkg| older_packages.include?(pkg) }
@@ -36,11 +36,7 @@ class BatscopeController < ApplicationController
     @packages = Package.none
     
     if new_packages.any?
-      conditions = new_packages.map do |ecosystem, name|
-        "(ecosystem = #{Package.connection.quote(ecosystem)} AND name = #{Package.connection.quote(name)})"
-      end.join(' OR ')
-      
-      @packages = Package.where(conditions)
+      @packages = Package.for_identities(new_packages)
       @packages = @packages.where(critical: true) if @critical_only
       
       @packages = case @sort
@@ -96,19 +92,13 @@ class BatscopeController < ApplicationController
     # Load all packages for recent advisories
     recent_packages = []
     if recent_package_info.any?
-      conditions = recent_package_info.uniq.map do |ecosystem, name|
-        "(ecosystem = #{Package.connection.quote(ecosystem)} AND name = #{Package.connection.quote(name)})"
-      end.join(' OR ')
-      recent_packages = Package.where(conditions).where.not(owner: [nil, ''])
+      recent_packages = Package.for_identities(recent_package_info).where.not(owner: [nil, ''])
     end
     
     # Load all packages for older advisories to get their owners
     older_owners = Set.new
     if older_package_info.any?
-      conditions = older_package_info.uniq.map do |ecosystem, name|
-        "(ecosystem = #{Package.connection.quote(ecosystem)} AND name = #{Package.connection.quote(name)})"
-      end.join(' OR ')
-      older_owners = Package.where(conditions).where.not(owner: [nil, '']).pluck(:owner).to_set
+      older_owners = Package.for_identities(older_package_info).where.not(owner: [nil, '']).pluck(:owner).to_set
     end
     
     # Group recent packages by owner

@@ -1,6 +1,31 @@
 require "test_helper"
 
 class PackageTest < ActiveSupport::TestCase
+  test "normalizes new identities only for case-insensitive ecosystems" do
+    %w[npm nuget pypi packagist].each do |ecosystem|
+      package = create(:package, ecosystem: ecosystem.upcase, name: 'Widget')
+      assert_equal ecosystem, package.ecosystem
+      assert_equal 'widget', package.name
+      assert_equal package, Package.find_by_identity(ecosystem, 'WIDGET')
+    end
+    package = create(:package, ecosystem: 'maven', name: 'org.example:Widget')
+    assert_equal 'org.example:Widget', package.name
+    assert_nil Package.find_by_identity('maven', 'org.example:widget')
+  end
+
+  test "rejects new case variants of legacy names and permits metadata updates before cleanup" do
+    package = create(:package, ecosystem: 'nuget', name: 'widget')
+    package.update_columns(name: 'Widget')
+    duplicate = build(:package, ecosystem: 'NuGet', name: 'WIDGET')
+    refute duplicate.valid?
+    assert_includes duplicate.errors[:name], 'has already been taken'
+
+    legacy = create(:package, ecosystem: 'nuget', name: 'other-widget')
+    legacy.update_columns(name: 'WIDGET')
+    assert package.update(dependent_packages_count: 12)
+    assert_equal 'Widget', package.reload.name
+  end
+
   context "#packages_url" do
     setup do
       @registry = create(:registry, name: "github actions", ecosystem: "github-actions")

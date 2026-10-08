@@ -1,6 +1,77 @@
 require "test_helper"
 
 class PackageSyncWorkerTest < ActiveSupport::TestCase
+  test "sync jobs do not insert packages with blank identities" do
+    assert_no_difference 'Package.count' do
+      [['npm', ''], [nil, 'widget']].each do |ecosystem, name|
+        assert_raises(ArgumentError) { PackageSyncWorker.new.perform(ecosystem, name) }
+      end
+    end
+  end
+
+  test "reuses a legacy mixed-case package and refreshes advisory version caches" do
+    Sidekiq::Testing.fake! do
+      create(:registry, name: 'nuget.org', ecosystem: 'nuget')
+      package = create(:package, ecosystem: 'nuget', name: 'microsoft.chakracore', version_numbers: [])
+      package.update_columns(name: 'Microsoft.ChakraCore')
+      advisory = create(:advisory, packages: [{
+        'ecosystem' => 'nuget', 'package_name' => 'MICROSOFT.CHAKRACORE',
+        'versions' => [{ 'vulnerable_version_range' => '< 2.0.0' }]
+      }])
+      stub_request(:get, package.packages_api_url)
+        .to_return(status: 200, body: { versions_count: 2, dependent_packages_count: 10 }.to_json,
+          headers: { 'Content-Type' => 'application/json' })
+      stub_request(:get, "#{package.packages_api_url}/version_numbers")
+        .to_return(status: 200, body: ['1.0.0', '2.0.0'].to_json,
+          headers: { 'Content-Type' => 'application/json' })
+
+      assert_no_difference 'Package.count' do
+        PackageSyncWorker.new.perform('NuGet', 'microsoft.chakracore')
+      end
+
+      assert_equal 'Microsoft.ChakraCore', package.reload.name
+      assert_equal 1, package.advisories_count
+      assert_equal ['1.0.0'], advisory.reload.packages.first['affected_versions']
+      assert_equal 10, advisory.packages.first.dig('statistics', 'dependent_packages_count')
+    end
+  end
+
+  test "case variants in sync jobs create one package" do
+    Sidekiq::Testing.fake! do
+      assert_difference 'Package.count', 1 do
+        %w[OpenClaw openclaw Openclaw].each do |name|
+          PackageSyncWorker.new.perform('npm', name)
+        end
+      end
+      assert_equal ['openclaw'], Package.named('OpenClaw').pluck(:name)
+    end
+  end
+
+  test "sync jobs preserve distinct names in other ecosystems" do
+    Sidekiq::Testing.fake! do
+      assert_difference 'Package.count', 2 do
+        %w[github.com/Owner/Widget github.com/owner/widget].each do |name|
+          PackageSyncWorker.new.perform('go', name)
+        end
+      end
+    end
+  end
+
+  test "syncing existing duplicates consistently reuses the oldest row without renaming them" do
+    Sidekiq::Testing.fake! do
+      keeper = create(:package, ecosystem: 'npm', name: 'openclaw', last_synced_at: Time.current)
+      duplicate = create(:package, ecosystem: 'npm', name: 'legacy-openclaw', last_synced_at: Time.current)
+      duplicate.update_columns(name: 'OpenClaw', advisories_count: 123)
+
+      assert_no_difference 'Package.count' do
+        PackageSyncWorker.new.perform('npm', 'OpenClaw')
+      end
+      assert_equal 0, keeper.reload.advisories_count
+      assert_equal 123, duplicate.reload.advisories_count
+      assert_equal 'OpenClaw', duplicate.name
+    end
+  end
+
   test "caches affected versions while another range check evicts parser entries" do
     Sidekiq::Testing.fake! do
       create(:registry, name: "npmjs.org", ecosystem: "npm")

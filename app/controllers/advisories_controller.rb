@@ -11,9 +11,10 @@ class AdvisoriesController < ApplicationController
       return
     elsif package_name.present?
       # Look up package by name only
-      packages = Package.where(name: package_name).limit(2).to_a
+      packages = Package.named(package_name).select('DISTINCT ecosystem').limit(2).to_a
       if packages.length == 1
-        redirect_to ecosystem_package_path(packages.first.ecosystem, packages.first.name, version: params[:version]), status: :moved_permanently
+        package = Package.find_by_identity(packages.first.ecosystem, package_name)
+        redirect_to ecosystem_package_path(package.ecosystem, package.name, version: params[:version]), status: :moved_permanently
         return
       end
     end

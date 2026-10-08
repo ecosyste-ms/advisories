@@ -51,7 +51,7 @@
       </thead>
       <tbody>
       <% @advisory.packages.each_with_index do |package, index| %>
-        <% package_record = Package.ecosystem(package['ecosystem']).where(name: package['package_name']).first %>
+        <% package_record = Package.find_by_identity(package['ecosystem'], package['package_name']) %>
 
         <tr>
           <td>

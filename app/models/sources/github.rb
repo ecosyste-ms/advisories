@@ -18,6 +18,7 @@ module Sources
       total_synced = 0
       packages_to_sync = Set.new
       changed_advisory_uuids = Set.new
+      seen_advisory_uuids = Set.new
 
       loop do
         res = fetch_advisories_page(cursor)
@@ -32,6 +33,10 @@ module Sources
         records_to_upsert = []
         mapped_advisories.each do |advisory|
           existing = existing_advisories[advisory[:uuid]]
+          if existing && seen_advisory_uuids.include?(advisory[:uuid])
+            advisory[:packages] = merge_packages(existing.packages, advisory[:packages])
+          end
+          seen_advisory_uuids << advisory[:uuid]
 
           # Check if advisory is new or changed
           if existing.nil? || advisory_changed?(existing, advisory)
@@ -98,6 +103,17 @@ module Sources
       end
 
       total_synced
+    end
+
+    def merge_packages(*package_lists)
+      packages = package_lists.flatten.map(&:deep_symbolize_keys)
+      packages.group_by { |package| [package[:ecosystem], package[:package_name]] }.map do |(ecosystem, name), entries|
+        {
+          ecosystem: ecosystem,
+          package_name: name,
+          versions: entries.flat_map { |package| package[:versions] }.uniq
+        }
+      end
     end
 
     def advisory_changed?(existing, new_attrs)

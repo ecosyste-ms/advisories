@@ -1,4 +1,8 @@
 class Api::V1::AdvisoriesController < Api::V1::ApplicationController
+  rescue_from Advisory::InvalidVersionFilter do |error|
+    render json: { error: error.message }, status: :bad_request
+  end
+
   def index
     scope = Advisory.all
     
@@ -10,6 +14,10 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
     scope = scope.created_after(params[:created_after]) if params[:created_after].present?
     scope = scope.updated_after(params[:updated_after]) if params[:updated_after].present?
+
+    if params[:version].present?
+      scope = scope.affecting_version(params[:ecosystem], params[:package_name], params[:version])
+    end
 
     sort = params[:sort].presence || 'published_at'
     order = params[:order].presence || 'desc'
@@ -74,6 +82,9 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
 
       scope = Advisory.ecosystem(parsed_purl[:ecosystem])
                       .package_name(parsed_purl[:package_name])
+      if parsed_purl[:version].present?
+        scope = scope.affecting_version(parsed_purl[:ecosystem], parsed_purl[:package_name], parsed_purl[:version])
+      end
       @purl = purl
     else
       scope = Advisory.repository_url(repository_url)

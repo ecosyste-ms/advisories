@@ -41,6 +41,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: version
+          in: query
+          description: "Return advisories whose affected ranges match this version. Requires ecosystem and package_name. Advisories without a matching range are excluded."
+          required: false
+          schema:
+            type: string
         - name: repository_url
           in: query
           description: "Repository URL to filter by"
@@ -101,7 +107,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/Advisory'
         400:
-          description: Invalid sort column or order direction
+          description: Invalid version filter, sort column or order direction
           content:
             application/json:
               schema:
@@ -134,7 +140,7 @@ paths:
       parameters:
         - name: purl
           in: query
-          description: "Package URL (PURL) to lookup advisories for. Format: pkg:type/namespace/name@version"
+          description: "Package URL (PURL) to lookup advisories for. Format: pkg:type/namespace/name@version. When a version is provided, only advisories with a matching affected range are returned."
           required: false
           schema:
             type: string

@@ -1,6 +1,8 @@
 class Advisory < ApplicationRecord
   include VersionNormalization
 
+  class InvalidVersionFilter < ArgumentError; end
+
   belongs_to :source
 
   has_many :related_packages, dependent: :delete_all
@@ -108,6 +110,32 @@ class Advisory < ApplicationRecord
 
   def package_names
     packages.map{|p| p['package_name'] }.uniq
+  end
+
+  def self.affecting_version(ecosystem, package_name, version)
+    unless ecosystem.is_a?(String) && ecosystem.present? && package_name.is_a?(String) && package_name.present?
+      raise InvalidVersionFilter, 'ecosystem and package_name are required when filtering by version'
+    end
+    unless version.is_a?(String) && version.length <= Vers::Version::MAX_LENGTH && version.match?(/\Av?\d[0-9A-Za-z.+_!-]*\z/)
+      raise InvalidVersionFilter, 'version must be a single version number'
+    end
+
+    matching_ids = []
+    ecosystem(ecosystem).package_name(package_name).select(:id, :packages).find_each do |advisory|
+      matching_ids << advisory.id if advisory.affects_version?(ecosystem, package_name, version)
+    end
+    where(id: matching_ids)
+  end
+
+  def affects_version?(ecosystem, package_name, version)
+    packages.any? do |package|
+      next false unless package['ecosystem'].to_s.casecmp?(ecosystem) && package['package_name'].to_s.casecmp?(package_name)
+
+      Array(package['versions']).any? do |entry|
+        range = entry['vulnerable_version_range']
+        range.present? && version_satisfies_range?(version.sub(/\Av/, ''), range, ecosystem)
+      end
+    end
   end
 
   def version_numbers(package)

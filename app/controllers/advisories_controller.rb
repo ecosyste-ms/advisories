@@ -4,7 +4,7 @@ class AdvisoriesController < ApplicationController
     package_name = params[:package_name] || params[:name]
 
     if params[:ecosystem].present? && package_name.present?
-      redirect_to ecosystem_package_path(params[:ecosystem], package_name), status: :moved_permanently
+      redirect_to ecosystem_package_path(params[:ecosystem], package_name, version: params[:version]), status: :moved_permanently
       return
     elsif params[:ecosystem].present?
       redirect_to ecosystem_path(params[:ecosystem]), status: :moved_permanently
@@ -13,7 +13,7 @@ class AdvisoriesController < ApplicationController
       # Look up package by name only
       packages = Package.where(name: package_name).limit(2).to_a
       if packages.length == 1
-        redirect_to ecosystem_package_path(packages.first.ecosystem, packages.first.name), status: :moved_permanently
+        redirect_to ecosystem_package_path(packages.first.ecosystem, packages.first.name, version: params[:version]), status: :moved_permanently
         return
       end
     end

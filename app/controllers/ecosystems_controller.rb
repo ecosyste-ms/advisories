@@ -94,8 +94,6 @@ class EcosystemsController < ApplicationController
   end
 
   def package
-    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
-
     @ecosystem = params[:ecosystem_id]
     @package_name = params[:package_name]
     @registry = Registry.find_by_ecosystem(@ecosystem)
@@ -103,7 +101,10 @@ class EcosystemsController < ApplicationController
 
     direct_scope = Advisory.not_withdrawn.ecosystem(@ecosystem).package_name(@package_name)
 
-    if @package
+    if params[:version].present?
+      scope = direct_scope.affecting_version(@ecosystem, @package_name, params[:version])
+      @direct_advisory_ids = scope.pluck(:id).to_set
+    elsif @package
       related_ids = @package.related_packages.pluck(:advisory_id)
       @direct_advisory_ids = direct_scope.pluck(:id).to_set
       scope = Advisory.not_withdrawn.where(id: @direct_advisory_ids + related_ids)
@@ -153,5 +154,8 @@ class EcosystemsController < ApplicationController
     if @package
       @related_packages_by_advisory = @package.related_packages.index_by(&:advisory_id)
     end
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+  rescue Advisory::InvalidVersionFilter => error
+    render plain: error.message, status: :bad_request
   end
 end

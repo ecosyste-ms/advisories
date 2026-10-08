@@ -18,7 +18,7 @@ class PurlParserTest < ActiveSupport::TestCase
       result = PurlParser.parse(purl)
       
       assert_equal "npm", result[:ecosystem]
-      assert_equal "core", result[:package_name]
+      assert_equal "@angular/core", result[:package_name]
       assert_equal "@angular", result[:namespace]
       assert_equal "12.0.0", result[:version]
       assert_equal purl, result[:original_purl]
@@ -47,7 +47,7 @@ class PurlParserTest < ActiveSupport::TestCase
       result = PurlParser.parse(purl)
       
       assert_equal "go", result[:ecosystem]
-      assert_equal "gin", result[:package_name]
+      assert_equal "github.com/gin-gonic/gin", result[:package_name]
       assert_equal "v1.7.0", result[:version]
     end
 
@@ -56,7 +56,7 @@ class PurlParserTest < ActiveSupport::TestCase
       result = PurlParser.parse(purl)
       
       assert_equal "maven", result[:ecosystem]
-      assert_equal "spring-core", result[:package_name]
+      assert_equal "org.springframework:spring-core", result[:package_name]
       assert_equal "org.springframework", result[:namespace]
       assert_equal "5.3.0", result[:version]
     end

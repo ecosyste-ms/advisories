@@ -19,10 +19,12 @@ class PurlParser
       parsed = Purl.parse(purl_string)
       ecosystem = map_ecosystem(parsed.type)
       return nil if ecosystem.nil?
+      separator = ecosystem == 'maven' ? ':' : '/'
+      package_name = [parsed.namespace.presence, parsed.name].compact.join(separator)
 
       {
         ecosystem: ecosystem,
-        package_name: parsed.name,
+        package_name: package_name,
         namespace: parsed.namespace,
         version: parsed.version,
         original_purl: purl_string

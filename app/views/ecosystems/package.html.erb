@@ -48,11 +48,14 @@
           <% end %>
           Security Advisories
           for <strong><%= @package_name %></strong>
+          <% if params[:version].present? %>
+            version <strong><%= params[:version] %></strong>
+          <% end %>
           <% if params[:repository_url].present? %>
             for <strong><%= params[:repository_url] %></strong>
           <% end %>
           in <strong><%= @ecosystem %></strong>
-          <% if params.slice(:repository_url, :severity).values.any?(&:present?) %>
+          <% if params.slice(:repository_url, :severity, :version).values.any?(&:present?) %>
             <%= link_to 'Clear Filters', ecosystem_package_path(@ecosystem, @package_name), class: 'btn btn-link btn-clear p-0' %>
           <% end %>
         </p>
@@ -63,6 +66,9 @@
           </div>
         </div>
       </div>
+      <% if params[:version].present? && @pagy.count.zero? %>
+        <p>No advisories with a matching affected version range were found.</p>
+      <% end %>
       <% @advisories.each do |advisory| %>
         <% related = @related_packages_by_advisory&.dig(advisory.id) %>
         <% is_potential = related && !@direct_advisory_ids.include?(advisory.id) %>
@@ -83,6 +89,15 @@
       <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
     </div>
     <div class="col-lg-4 listing-filters">
+      <%= form_with url: ecosystem_package_path(@ecosystem, @package_name), method: :get, local: true, class: 'mx-3 mb-4' do |form| %>
+        <% params.slice(:severity, :repository_url, :created_after, :updated_after, :sort, :order, :per_page).each do |key, value| %>
+          <%= hidden_field_tag key, value if value.present? %>
+        <% end %>
+        <%= form.label :version, 'Filter by Version', class: 'h4' %>
+        <%= form.text_field :version, value: params[:version], class: 'form-control mb-2', 'aria-describedby': 'version-filter-help' %>
+        <p id="version-filter-help" class="form-text">Match affected ranges for this package. Potential advisories inferred from related packages are excluded.</p>
+        <%= form.submit 'Filter', class: 'btn btn-primary' %>
+      <% end %>
       <h3 class="h4 mx-3">Filter by Severity</h3>
       <div class="list-group list-group-flush">
         <% @severities.each do |severity,count| %>

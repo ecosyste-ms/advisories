@@ -163,7 +163,7 @@ class Package < ApplicationRecord
   end
 
   def advisories
-    Advisory.ecosystem(ecosystem).package_name(name)
+    Advisory.for_package(ecosystem, name)
   end
 
   def affected_versions(range)

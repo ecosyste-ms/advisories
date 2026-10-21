@@ -37,8 +37,7 @@ module Osv
         raise ArgumentError, "version cannot be specified in both purl and package parameters"
       end
 
-      Advisory.ecosystem(parsed[:ecosystem])
-              .package_name(parsed[:package_name])
+      Advisory.for_package(parsed[:ecosystem], parsed[:package_name])
               .order(updated_at: :desc)
     end
 
@@ -47,6 +46,10 @@ module Osv
       name = package_params[:name]
 
       return scope if ecosystem.blank? && name.blank?
+
+      if ecosystem.present? && name.present?
+        return scope.for_package(normalize_ecosystem(ecosystem), name)
+      end
 
       if ecosystem.present?
         internal_ecosystem = normalize_ecosystem(ecosystem)

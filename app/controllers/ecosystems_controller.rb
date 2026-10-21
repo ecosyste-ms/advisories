@@ -40,7 +40,7 @@ class EcosystemsController < ApplicationController
     @packages = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
       scope.package_counts
     end
-    scope = scope.package_name(params[:package_name]) if params[:package_name].present?
+    scope = scope.for_package(@ecosystem, params[:package_name]) if params[:package_name].present?
 
     cache_key = "ecosystem_#{@ecosystem}_repository_urls_#{scope.to_sql.hash}"
     @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
@@ -100,7 +100,7 @@ class EcosystemsController < ApplicationController
     @package = Package.find_by_identity(@ecosystem, @package_name)
     package_matches = Package.for_identities([[@ecosystem, @package_name]])
 
-    direct_scope = Advisory.not_withdrawn.ecosystem(@ecosystem).package_name(@package_name)
+    direct_scope = Advisory.not_withdrawn.for_package(@ecosystem, @package_name)
 
     if params[:version].present?
       scope = direct_scope.affecting_version(@ecosystem, @package_name, params[:version])

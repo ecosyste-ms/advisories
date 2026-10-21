@@ -7,8 +7,13 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
     scope = Advisory.all
     
     scope = scope.severity(params[:severity]) if params[:severity].present?
-    scope = scope.ecosystem(params[:ecosystem]) if params[:ecosystem].present?
-    scope = scope.package_name(params[:package_name]) if params[:package_name].present?
+    if params[:ecosystem].present? && params[:package_name].present?
+      scope = scope.for_package(params[:ecosystem], params[:package_name])
+    elsif params[:ecosystem].present?
+      scope = scope.ecosystem(params[:ecosystem])
+    elsif params[:package_name].present?
+      scope = scope.package_name(params[:package_name])
+    end
     scope = scope.repository_url(params[:repository_url]) if params[:repository_url].present?
     scope = scope.source_kind(params[:source]) if params[:source].present?
 
@@ -80,8 +85,7 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
         return
       end
 
-      scope = Advisory.ecosystem(parsed_purl[:ecosystem])
-                      .package_name(parsed_purl[:package_name])
+      scope = Advisory.for_package(parsed_purl[:ecosystem], parsed_purl[:package_name])
       if parsed_purl[:version].present?
         scope = scope.affecting_version(parsed_purl[:ecosystem], parsed_purl[:package_name], parsed_purl[:version])
       end

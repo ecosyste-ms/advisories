@@ -11,7 +11,7 @@ class PackageSyncWorker
 
     # Recompute cached affected versions if version_numbers changed
     if pkg.version_numbers != version_numbers_before
-      Advisory.ecosystem(ecosystem).package_name(package_name).find_each do |advisory|
+      Advisory.for_package(ecosystem, package_name).find_each do |advisory|
         advisory.cache_affected_versions!
       end
     end

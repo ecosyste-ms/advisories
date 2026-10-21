@@ -18,6 +18,13 @@ class Advisory < ApplicationRecord
       .or(where("packages @> ?::jsonb", [{package_name: package_name.downcase}].to_json))
       .or(where("EXISTS (SELECT 1 FROM jsonb_array_elements(packages) AS p WHERE LOWER(p->>'package_name') = LOWER(?))", package_name))
   }
+  scope :for_package, ->(ecosystem, package_name) {
+    ecosystem(ecosystem).where(
+      "EXISTS (SELECT 1 FROM jsonb_array_elements(packages) AS p " \
+      "WHERE p->>'ecosystem' = ? AND LOWER(p->>'package_name') = LOWER(?))",
+      ecosystem.downcase, package_name
+    )
+  }
   scope :severity, ->(severity) { where(severity: severity) }
   scope :repository_url, ->(repository_url) { where(repository_url: repository_url) }
   scope :source_kind, ->(source_kind) { joins(:source).where(sources: { kind: source_kind }) }
@@ -121,7 +128,7 @@ class Advisory < ApplicationRecord
     end
 
     matching_ids = []
-    ecosystem(ecosystem).package_name(package_name).select(:id, :packages).find_each do |advisory|
+    for_package(ecosystem, package_name).select(:id, :packages).find_each do |advisory|
       matching_ids << advisory.id if advisory.affects_version?(ecosystem, package_name, version)
     end
     where(id: matching_ids)

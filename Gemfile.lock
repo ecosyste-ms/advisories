@@ -52,7 +52,7 @@ GEM
       nokogiri (~> 1)
     builder (3.3.0)
     cgi (0.5.2)
-    chartkick (5.2.1)
+    chartkick (5.3.0)
     commonmarker (2.10.1-aarch64-linux-musl)
     commonmarker (2.10.1-arm-linux-gnu)
     commonmarker (2.10.1-arm-linux-musl)
@@ -396,7 +396,7 @@ CHECKSUMS
   builder (3.3.0) sha256=497918d2f9dca528fdca4b88d84e4ef4387256d984b8154e9d5d3fe5a9c8835f
   bundler (4.0.23) sha256=407ba8a1d928f412847f819aa5f8b6aef7c59fb51feb517112af8a165487287b
   cgi (0.5.2) sha256=61ca30298171190fd4fa0d8018e57ada456eae9b7a2b78526debf7f0a0e6f8bb
-  chartkick (5.2.1) sha256=2848d7de87189f30f28d077eb0bbdebc8a1f0f6f81de1ded95008fe564369949
+  chartkick (5.3.0) sha256=19a2bba39decf54c4939d3f31460535f8814c85045672ba2ed616c6897325b00
   commonmarker (2.10.1-aarch64-linux-musl) sha256=98e6d1a03ba708438d804702e3c25f3423bff21a1e9975280eb265d889677dfc
   commonmarker (2.10.1-arm-linux-gnu) sha256=dc1ce6cfe5547d2814351ef306d5d1dd05f9c08ad405c76baa94748326c83b7f
   commonmarker (2.10.1-arm-linux-musl) sha256=97d40662414df1e6babcd78d7fbeb0bc7a2ee6fc0d0d592f12539ef535c00c90

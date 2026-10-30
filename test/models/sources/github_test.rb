@@ -61,6 +61,33 @@ class SourcesGithubTest < ActiveSupport::TestCase
     end
   end
 
+  [
+    ['NPM', 'npm', '>=1.0.0,<2.0.0', %w[1.0.0-alpha.1 1.0.0 1.7.0-alpha.2 2.0.0-alpha.1 2.0.0], %w[1.0.0 1.7.0-alpha.2 2.0.0-alpha.1], %w[2.0.0]],
+    ['NPM', 'npm', '>= 1.0.0, < 2.0.0 || >= 3.0.0, < 4.0.0', %w[1.5.0 2.5.0 3.5.0 4.0.0], %w[1.5.0 3.5.0], %w[2.5.0 4.0.0]],
+    ['NPM', 'npm', '>= 1.0.0, < 2.0.0', %w[0.9.0 1.0.0 1.5.0 2.0.0], %w[1.0.0 1.5.0], %w[0.9.0 2.0.0]],
+    ['RUST', 'cargo', '>= 2.1.0, < 2.41.0', %w[2.0.0 2.1.0 2.40.0 2.41.0], %w[2.1.0 2.40.0], %w[2.0.0 2.41.0]],
+    ['NPM', 'npm', '< 3.0.0', %w[1.7.0-alpha.2 1.7.0 3.0.0 3.1.0-alpha.1], %w[1.7.0-alpha.2 1.7.0], %w[3.0.0]],
+    ['RUST', 'cargo', '< 3.0.0', %w[1.7.0-alpha.2 1.7.0 3.0.0 3.1.0-alpha.1], %w[1.7.0-alpha.2 1.7.0], %w[3.0.0]]
+  ].each_with_index do |(github_ecosystem, ecosystem, range, numbers, affected, unaffected), index|
+    test "sync caches affected and unaffected versions for #{ecosystem} range #{index}" do
+      name = 'range-test-package'
+      Sidekiq::Testing.fake! do
+        create(:package, name: name, ecosystem: ecosystem, version_numbers: numbers)
+        stub_pages([vulnerability(name, github_ecosystem, range, unaffected.last)])
+
+        @source.sync_advisories
+      end
+
+      advisory = @source.advisories.find_by!(uuid: @uuid).reload
+      package = advisory.packages.sole
+      assert_equal ecosystem, package.fetch('ecosystem')
+      assert_equal [range], package.fetch('versions').pluck('vulnerable_version_range')
+      assert_equal affected.sort, package.fetch('affected_versions').sort
+      assert_equal unaffected.sort, package.fetch('unaffected_versions').sort
+      assert_requested :post, 'https://api.github.com/graphql'
+    end
+  end
+
   def vulnerability(name, ecosystem, range, patched_version)
     {
       node: {

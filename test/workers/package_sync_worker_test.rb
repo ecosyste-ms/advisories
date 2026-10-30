@@ -1,4 +1,5 @@
 require "test_helper"
+require "timeout"
 
 class PackageSyncWorkerTest < ActiveSupport::TestCase
   test "sync jobs do not insert packages with blank identities" do
@@ -72,7 +73,7 @@ class PackageSyncWorkerTest < ActiveSupport::TestCase
     end
   end
 
-  test "caches affected versions while another range check evicts parser entries" do
+  test "caches affected versions while another range check evicts constraint entries" do
     Sidekiq::Testing.fake! do
       create(:registry, name: "npmjs.org", ecosystem: "npm")
       package = create(:package, ecosystem: "npm", name: "@clerk/vue", version_numbers: [])
@@ -89,33 +90,35 @@ class PackageSyncWorkerTest < ActiveSupport::TestCase
         .to_return(status: 200, body: versions.to_json,
           headers: { "Content-Type" => "application/json" })
 
-      cache = Vers::Parser.class_variable_get(:@@parser_cache)
+      cache = Vers::Constraint.class_variable_get(:@@constraint_cache)
       saved_cache = cache.dup
       cache.clear
       package.version_satisfies_range?("1.5.0", ">= 1.0.0, < 2.0.0", "npm")
-      limit = Vers::Parser.class_variable_get(:@@cache_size_limit)
+      limit = Vers::Constraint.class_variable_get(:@@cache_size_limit)
       (limit - cache.size).times do |i|
         package.version_satisfies_range?("1.5.0", "= #{i + 10}.0.0", "npm")
       end
 
       start = Queue.new
-      running = Queue.new
+      done = Queue.new
       competitor = Thread.new do
         start.pop
-        running << true
-        advisory.version_satisfies_range?("1.5.0", "= 9999.0.0", "npm")
+        begin
+          advisory.version_satisfies_range?("1.5.0", "= 9999.0.0", "npm")
+        ensure
+          done << true
+        end
       end
 
-      interrupted = false
+      evicted = false
       trace = TracePoint.new(:c_return) do |event|
-        next unless event.method_id == :key? && event.self.equal?(cache) && event.return_value
+        next unless event.method_id == :[] && event.self.equal?(cache) && event.return_value
 
         trace.disable
-        interrupted = true
         start << true
-        running.pop
-        # Resume once the competing lookup finishes or blocks on the shared lock.
-        Thread.pass while competitor.status == "run"
+        Timeout.timeout(5) { done.pop }
+        competitor.value
+        evicted = !cache.key?(">=1.0.0")
       end
 
       trace.enable(target_thread: Thread.current) do
@@ -123,7 +126,7 @@ class PackageSyncWorkerTest < ActiveSupport::TestCase
       end
       competitor.value
 
-      assert interrupted, "Expected to interrupt a parser cache hit"
+      assert evicted, "Expected the competing lookup to evict the cached lower bound"
       cached = advisory.reload.packages.first
       assert_equal ["1.0.0", "1.5.0"], cached["affected_versions"]
       assert_equal ["0.9.0", "2.0.0"], cached["unaffected_versions"]

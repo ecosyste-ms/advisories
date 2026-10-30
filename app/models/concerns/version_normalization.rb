@@ -1,9 +1,6 @@
 module VersionNormalization
   extend ActiveSupport::Concern
 
-  # Vers cache lookups can race with eviction in another thread.
-  RANGE_MUTEX = Mutex.new
-
   def build_version_map(versions)
     versions.filter_map do |original|
       cleaned = Vers.clean(original)
@@ -14,7 +11,8 @@ module VersionNormalization
   def version_satisfies_range?(version, range, ecosystem)
     scheme = PurlParser.reverse_map_ecosystem(ecosystem) || ecosystem&.downcase
     return false unless scheme
-    RANGE_MUTEX.synchronize { Vers.satisfies?(version, range, scheme) }
+    range = range.tr(',', ' ') if scheme == 'npm'
+    Vers.satisfies?(version, range, scheme, include_prerelease: true)
   rescue ArgumentError
     false
   end

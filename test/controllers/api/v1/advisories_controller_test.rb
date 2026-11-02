@@ -198,6 +198,28 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "npm", json_response.first["packages"].first["ecosystem"]
   end
 
+  %w[created updated].each do |timestamp|
+    test "should filter by #{timestamp}_after with source and package filters" do
+      column = "#{timestamp}_at"
+      cutoff = Time.utc(2026, 1, 1)
+      @advisory.update!(column => cutoff + 1.second)
+      [cutoff - 1.second, cutoff].each do |time|
+        create(:advisory, source: @source, packages: @advisory.packages, column => time)
+      end
+      other_source = create(:source, kind: "erlef")
+      create(:advisory, source: other_source, packages: @advisory.packages, column => cutoff + 1.second)
+      @source.update_columns(created_at: cutoff - 1.day, updated_at: cutoff - 1.day)
+
+      get api_v1_advisories_url, params: {
+        source: "github", ecosystem: "npm", package_name: "lodash",
+        "#{timestamp}_after" => cutoff.iso8601
+      }, as: :json
+
+      assert_response :success
+      assert_equal [@advisory.uuid], response.parsed_body.map { |advisory| advisory["uuid"] }
+    end
+  end
+
   test "should get packages" do
     get packages_api_v1_advisories_url, as: :json
     assert_response :success

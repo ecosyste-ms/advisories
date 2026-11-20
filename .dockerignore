@@ -1,10 +1,11 @@
 .git
+.claude
 .github
 .gitignore
 README.md
 
 log
-tmp/cache
+tmp/
 test
 vendor
 coverage/

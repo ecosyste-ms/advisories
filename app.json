@@ -19,6 +19,18 @@
     {
       "command": "bundle exec rake sitemap:refresh",
       "schedule": "30 * * * *"
+    },
+    {
+      "command": "bundle exec rake patches:sync:debian",
+      "schedule": "15 2 * * *"
+    },
+    {
+      "command": "bundle exec rake patches:sync:homebrew",
+      "schedule": "15 3 * * *"
+    },
+    {
+      "command": "bundle exec rake patches:sync:ubuntu",
+      "schedule": "15 4 * * *"
     }
   ]
 }

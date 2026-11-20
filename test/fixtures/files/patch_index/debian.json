@@ -1,0 +1,7 @@
+{
+  "summary": {"package":"rust-regex","version":"1.11.1-2","format":"3.0 (quilt)","count":1,"patches":["relax-dep.patch"]},
+  "root": {"pkg_infos":{"area":"main"},"content":[{"name":"Cargo.toml","type":"file"}]},
+  "manifest": "[package]\nname = \"regex\"\nversion = \"1.11.1\"\nrepository = \"https://github.com/rust-lang/regex\"\n\n[dependencies.aho-corasick]\nversion = \"1.0.0\"\n",
+  "detail": {"bug":"","description":"","name":"relax-dep.patch","package":"rust-regex","version":"1.11.1-2","url":"/data/main/r/rust-regex/1.11.1-2/debian/patches/relax-dep.patch"},
+  "series": "relax-dep.patch\n"
+}

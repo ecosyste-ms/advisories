@@ -1,0 +1,72 @@
+<% repository = occurrence.source_repository %>
+<% if occurrence.purl.present? %>
+  <div><span class="text-muted">Inferred package</span>
+    <% package = @packages[occurrence.upstream_package_key] %>
+    <code><%= package ? link_to(occurrence.purl, ecosystem_package_path(package.ecosystem, package.name, tab: 'patches')) : occurrence.purl %></code>
+  </div>
+<% end %>
+<% if repository %>
+  <div><%= link_to repository.fetch('purl'), patches_path(purl: repository.fetch('purl')), class: 'font-monospace' %></div>
+<% end %>
+<% if occurrence.advisory_ids.any? %>
+  <% roles = occurrence.advisory_roles %>
+  <ul class="list-unstyled mb-0">
+    <% occurrence.advisory_ids.each do |id| %>
+      <% advisories = @advisories.fetch(id, []) %>
+      <li><%= advisories.empty? ? id : safe_join(advisories.map { |record| link_to id, advisory_path(record.uuid) }, ', ') %>
+        <span class="text-muted"><%= { 'explicit_fix' => 'Identified as a fix', 'patch_name' => 'In filename', 'context' => 'Contextual mention' }.fetch(roles.fetch(id)) %></span>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+<details class="mt-2">
+  <summary><%= multiple ? occurrence.name : 'Evidence' %></summary>
+  <div class="border-start ps-3 mt-2">
+    <p class="mb-2"><%= link_to 'Release source', occurrence.patch_release.source_url %>
+      <% if downstream_package&.last_synced_at && downstream_package.registry %>
+        · <%= link_to 'Packages.ecosyste.ms', downstream_package.packages_url %>
+      <% end %>
+    </p>
+    <p class="mb-2"><%= link_to occurrence.name, occurrence.source_url %>
+      <% if (member = occurrence.declaration['member'].presence) %><br><code><%= member %></code><% end %>
+    </p>
+    <% if occurrence.purl.present? %>
+      <% if occurrence.mapping['method'] == 'nix_fetch_crate_and_manifest' %>
+        <p class="mb-2"><%= link_to 'Crate archive', occurrence.mapping.dig('evidence', 'url') %></p>
+      <% elsif occurrence.mapping['method'].present? %>
+        <p class="mb-2"><%= occurrence.mapping['method'].humanize %></p>
+      <% end %>
+      <% if (registry = occurrence.mapping.dig('evidence', 'registry_release')).is_a?(Hash) %>
+        <p class="mb-2"><%= link_to 'Registry', registry.fetch('url') %> ·
+          <%= link_to registry.fetch('version'), registry.fetch('versions_url') %> ·
+          <%= link_to 'Manifest', occurrence.mapping.dig('evidence', 'url') %></p>
+      <% end %>
+    <% elsif !repository %>
+      <p class="mb-2"><%= upstream_mapping_message(occurrence) %></p>
+    <% end %>
+    <% if repository %>
+      <ul class="list-unstyled mb-2">
+        <% repository.fetch('sources').each do |source| %>
+          <li><%= link_to source.fetch('field'), source.fetch('url') %></li>
+        <% end %>
+      </ul>
+      <% if (comparison = repository['comparison']) %>
+        <% commit = comparison.fetch('commit_checked') %>
+        <p class="mb-2"><%= comparison.fetch('identical') %> of <%= pluralize(comparison.fetch('paths'), 'changed path') %> matched at
+          <%= link_to commit.first(12), "https://github.com/#{repository.fetch('purl').delete_prefix('pkg:github/')}/commit/#{commit}" %>.
+          <% comparison.fetch('differing_or_absent').each do |path| %><code><%= path %></code> differed or was absent.<% end %>
+        </p>
+      <% end %>
+    <% end %>
+    <% if (changelog = occurrence.declaration['changelog']) %>
+      <%= link_to 'Changelog', changelog.fetch('url') %>
+      <% if changelog['member'] %><code><%= changelog['member'] %></code><% end %>
+      <% changelog.fetch('items').each do |item| %><blockquote class="mb-2"><%= item %></blockquote><% end %>
+    <% end %>
+    <% occurrence.advisory_ids.each do |id| %>
+      <% if (fields = occurrence.declaration.dig('advisory_evidence', id)).present? %>
+        <p class="mb-1"><%= id %> · <%= fields.join(', ') %></p>
+      <% end %>
+    <% end %>
+  </div>
+</details>

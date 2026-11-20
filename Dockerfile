@@ -45,6 +45,9 @@ WORKDIR $APP_ROOT
 RUN apk add --no-cache \
   bash \
   nodejs \
+  libarchive-tools \
+  zstd \
+  xz \
   postgresql-libs \
   tzdata \
   curl \

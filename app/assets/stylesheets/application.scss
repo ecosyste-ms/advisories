@@ -73,3 +73,35 @@ pre code.hljs{
 .list-group-item.active {
   background-color: $color-purple-dark;
 }
+
+.patch-diff-preview {
+  max-height: 32rem;
+  overflow: auto;
+}
+
+.patch-comparison {
+  overflow-x: auto;
+
+  code {
+    display: block;
+    min-width: 100%;
+    width: max-content;
+  }
+}
+
+.patch-comparison-line {
+  display: inline-block;
+  width: 100%;
+
+  &.addition { background-color: $color-green-transparent; }
+  &.removal { background-color: $color-orange-transparent; }
+  &.annotation { background-color: $color-grey-light; }
+}
+
+.patch-comparison-marker {
+  display: inline-block;
+  text-align: center;
+  width: 2em;
+  margin-right: .5em;
+  border-right: 1px solid $color-grey;
+}

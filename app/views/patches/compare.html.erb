@@ -1,0 +1,20 @@
+<% @meta_title = 'Compare patches' %>
+<div class="container">
+  <%= link_to 'Back to patch', patch_path(@left.sha256, anchor: 'similar-patches') %>
+  <h1 class="mt-3">Compare patches</h1>
+  <p><%= patch_similarity_label(@evidence) %></p>
+  <div class="row gy-2 mb-3">
+    <% [[@left, '−'], [@right, '+']].each do |patch, marker| %>
+      <div class="col-md-6">
+        <strong><%= marker %> <%= link_to patch.display_name, patch_path(patch.sha256), class: 'text-break' %></strong>
+        <code><%= patch.sha256.first(12) %></code>
+        <%= render 'releases', patch: patch %>
+      </div>
+    <% end %>
+  </div>
+  <% if @lines %>
+    <pre class="patch-comparison border rounded" tabindex="0" aria-label="Differences between patch files"><code><%= safe_join(@lines.map { |line| patch_comparison_line(line) }, "\n") %></code></pre>
+  <% else %>
+    <p>Both original patch files are needed for comparison. At least one has yet to be imported.</p>
+  <% end %>
+</div>

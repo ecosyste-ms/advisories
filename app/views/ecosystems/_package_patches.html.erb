@@ -1,0 +1,23 @@
+<section id="downstream-patches" aria-label="Downstream patches">
+  <% if @patches.any? %>
+    <ul class="list-unstyled">
+      <% @patches.each do |patch| %>
+        <% occurrences = @occurrences.fetch(patch.id) %>
+        <li class="border-bottom py-2">
+          <%= link_to patch.display_name(occurrences), patch_path(patch.sha256), class: 'text-break' %>
+          <% occurrences.uniq(&:patch_release_id).each do |occurrence| %>
+            <% release = occurrence.patch_release %>
+            <div class="small text-muted">
+              Declared by <%= release.distribution.humanize %> / <%= release.package_name %> <%= release.display_version %>
+              <% if occurrence.purl.present? && release.distribution != @ecosystem.downcase %>
+                · Inferred upstream package <code><%= occurrence.purl %></code>
+              <% end %>
+            </div>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p><%= @pagy.count.positive? ? 'No patches on this page.' : 'No matching patches found.' %></p>
+  <% end %>
+</section>

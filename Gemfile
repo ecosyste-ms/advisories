@@ -11,6 +11,8 @@ gem "railties", "~> 8.1.1"
 
 gem "secure_headers"
 gem "sprockets-rails"
+gem "ffi", require: false
+gem "zip_kit", require: false
 gem "pg"
 gem "puma", "~> 8.0"
 gem "puma_worker_killer"

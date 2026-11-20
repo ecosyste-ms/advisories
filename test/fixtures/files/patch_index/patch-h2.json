@@ -1,0 +1,86 @@
+{
+  "headers": {
+    "Date": "Wed Apr 12 12:23:56 2023 -0400",
+    "Author": "Sean McArthur <sean@seanmonstar.com>",
+    "commit": "5bc8e72e5fcbd8ae2d3d9bc78a1c0ef0040bcc39",
+    "Subject": "fix: limit the amount of pending-accept reset streams"
+  },
+  "sha256": "452ff94f7cb434d931c3712766265c2e07b9040f2459bb75fa3265f72c5f1b21",
+  "occurrence": {
+    "name": "limit-pending-accept-reset-streams.patch",
+    "source_url": "https://sources.debian.org/data/main/r/rust-h2/0.3.13-2/debian/patches/limit-pending-accept-reset-streams.patch",
+    "declaration": {
+      "bug": "",
+      "url": "/data/main/r/rust-h2/0.3.13-2/debian/patches/limit-pending-accept-reset-streams.patch",
+      "name": "limit-pending-accept-reset-streams.patch",
+      "package": "rust-h2",
+      "version": "0.3.13-2",
+      "position": 4,
+      "changelog": {
+        "url": "https://sources.debian.org/data/main/r/rust-h2/0.3.13-2/debian/changelog",
+        "items": [
+          "Add patch limit-pending-accept-reset-streams.patch cherry picked from\n    upstream to fix denial of service vulnerability. CVE-2023-26964\n    RUSTSEC-2023-0034 (Closes: #1034723)"
+        ]
+      },
+      "description": "---",
+      "file_deltas": " src/proto/connection.rs      |    8 \t8 +\t0 -\t0 !\n src/proto/streams/counts.rs  |   51 \t43 +\t8 -\t0 !\n src/proto/streams/mod.rs     |    4 \t4 +\t0 -\t0 !\n src/proto/streams/recv.rs    |   30 \t28 +\t2 -\t0 !\n src/proto/streams/state.rs   |    7 \t7 +\t0 -\t0 !\n src/proto/streams/streams.rs |    8 \t7 +\t1 -\t0 !\n src/server.rs                |    7 \t7 +\t0 -\t0 !\n 7 files changed, 104 insertions(+), 11 deletions(-)\n",
+      "quilt_options": [],
+      "classification": "cherry-pick",
+      "advisory_evidence": {
+        "CVE-2023-26964": [
+          "changelog"
+        ],
+        "RUSTSEC-2023-0034": [
+          "changelog"
+        ]
+      }
+    },
+    "scope_evidence": {
+      "files": [
+        "src/proto/connection.rs",
+        "src/proto/streams/counts.rs",
+        "src/proto/streams/mod.rs",
+        "src/proto/streams/recv.rs",
+        "src/proto/streams/state.rs",
+        "src/proto/streams/streams.rs",
+        "src/server.rs"
+      ]
+    },
+    "advisory_ids": [
+      "CVE-2023-26964",
+      "RUSTSEC-2023-0034"
+    ],
+    "downstream": {
+      "distribution": "debian",
+      "package_name": "rust-h2",
+      "version": "0.3.13-2",
+      "revision": "2",
+      "source_url": "https://sources.debian.org/patches/api/rust-h2/0.3.13-2/",
+      "imported_at": "2026-11-19T18:25:55.101Z"
+    },
+    "mapping": {
+      "method": "manifest_and_registry_release",
+      "evidence": {
+        "url": "https://sources.debian.org/data/main/r/rust-h2/0.3.13-2/Cargo.toml",
+        "fields": {
+          "name": "h2",
+          "version": "0.3.13",
+          "repository": "https://github.com/hyperium/h2"
+        },
+        "registry_release": {
+          "url": "https://packages.ecosyste.ms/api/v1/registries/crates.io/packages/h2",
+          "name": "h2",
+          "version": "0.3.13",
+          "synced_at": "2026-11-19T18:15:03Z",
+          "repository": "https://github.com/hyperium/h2",
+          "versions_url": "https://packages.ecosyste.ms/api/v1/registries/crates.io/packages/h2/version_numbers"
+        }
+      },
+      "candidate": {
+        "name": "h2",
+        "version": "0.3.13",
+        "ecosystem": "cargo"
+      }
+    }
+  }
+}

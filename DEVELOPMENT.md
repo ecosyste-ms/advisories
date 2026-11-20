@@ -62,6 +62,20 @@ You can then start syncing data for each source with the following command, this
 
 `rake advisories:sync`
 
+### Downstream patches
+
+The daily jobs in `app.json` import quilt series from Debian trixie and Ubuntu noble, including their security and update pockets. The Homebrew job imports default patch declarations from core formulae and stores platform overrides on the release.
+
+```sh
+bundle exec rake patches:sync:debian
+bundle exec rake patches:sync:homebrew
+bundle exec rake patches:sync:ubuntu
+```
+
+Each job skips unchanged releases and attempts up to 200 imports per run. Set `PATCH_SYNC_LIMIT` to change the batch size, or set `PATCH_SYNC_PACKAGE` to a source package name to check one package. Failed imports retain the previous declarations and are eligible for retry on the next run.
+
+Browse `/patches` to see which downstream releases declare a patch. Identical patch files share one SHA-256 page across distributions. The API accepts an upstream PURL at `GET /api/v1/patches` and returns the evidence for each association. An advisory reference records what the maintainer cited. Verifying a shipped artifact requires separate evidence.
+
 ## Tests
 
 The applications tests can be found in [test](test) and use the testing framework [minitest](https://github.com/minitest/minitest).
@@ -81,3 +95,5 @@ You can list all of the available rake tasks with the following command:
 ## Deployment
 
 A container-based deployment is highly recommended, we use [dokku.com](https://dokku.com/).
+
+To generate the similarity index, set `PATCH_CATALOG_DIR` to a local directory and run `ruby script/patch_index/patch_similarity.rb --output "$PATCH_CATALOG_DIR/similarity-pairs.jsonl.gz" BLOB_DIRECTORY`. Input files are named by SHA-256. Rails reads comparison files from that directory, or from `tmp/cache/patch-index/<environment>` by default. Restart the app after replacing a comparison file.

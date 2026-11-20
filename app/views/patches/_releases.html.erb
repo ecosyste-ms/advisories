@@ -1,0 +1,3 @@
+<% patch.patch_occurrences.map(&:patch_release).uniq.sort_by { |r| [r.distribution, r.package_name, r.version, r.revision] }.each do |release| %>
+  <div class="small"><%= release.distribution.humanize %> / <%= release.package_name %> <%= release.display_version %></div>
+<% end %>

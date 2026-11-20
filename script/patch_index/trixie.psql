@@ -1,0 +1,10 @@
+SELECT json_build_object(
+  'source', s.source, 'version', s.version::text, 'component', s.component,
+  'archive', s.file, 'sha256', s.hash, 'size', s.size,
+  'patches', json_agg(jsonb_strip_nulls(to_jsonb(p) - 'hash' - 'file') ORDER BY p.patch)
+)
+FROM sources_patches s
+JOIN patches p USING (hash, file)
+WHERE s.distribution = 'debian' AND s.release = 'trixie'
+GROUP BY s.source, s.version, s.component, s.file, s.hash, s.size
+ORDER BY s.source, s.version;

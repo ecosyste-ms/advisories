@@ -16,6 +16,42 @@ externalDocs:
 servers:
 - url: https://advisories.ecosyste.ms/api/v1
 paths:
+  /patches:
+    get:
+      summary: List downstream patches
+      operationId: getPatches
+      tags: [patches]
+      description: Each SHA-256 appears once per result set. All supplied filters apply to the same downstream declaration. Only matching declarations and their advisory references are returned.
+      parameters:
+        - {name: purl, in: query, schema: {type: string}, description: "Upstream package project or exact release PURL, or an unversioned source repository PURL."}
+        - {name: distribution, in: query, schema: {type: string}, example: debian}
+        - {name: advisory, in: query, schema: {type: string}, description: Identifier or known alias mentioned by a declaration}
+        - {name: version_range, in: query, schema: {type: string}, description: "Native range for an unversioned gem, cargo or pypi PURL. Requires an observed upstream version."}
+        - {name: page, in: query, schema: {type: integer, minimum: 1}}
+        - {name: per_page, in: query, schema: {type: integer, minimum: 1, maximum: 1000, default: 100}}
+      responses:
+        '200':
+          description: Matching patches
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/Patch'}}
+        '400':
+          description: Invalid PURL or version range
+  /patches/{id}:
+    get:
+      summary: Get a patch with all downstream declarations
+      operationId: getPatch
+      tags: [patches]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}, description: Numeric database ID returned by the list endpoint}
+      responses:
+        '200':
+          description: One patch
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Patch'}
+        '404':
+          description: Patch has no indexed declarations or does not exist
   /advisories:
     get: 
       summary: "list advisories"
@@ -228,6 +264,90 @@ paths:
                 $ref: '#/components/schemas/Source'
 components:
   schemas:
+    Patch:
+      type: object
+      properties:
+        id: {type: integer}
+        sha256: {type: string, pattern: '^[0-9a-f]{64}$', description: Digest of the exact patch bytes}
+        api_url: {type: string, format: uri, description: Patch detail with all indexed declarations}
+        html_url: {type: string, format: uri, description: Patch page identified by SHA-256}
+        download_url: {type: string, format: uri, description: Original bytes. Present when the patch body is stored.}
+        headers: {type: object, additionalProperties: {type: string}}
+        occurrences:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              source_url: {type: string, format: uri}
+              html_url: {type: string, format: uri, description: Link to this declaration on the patch page}
+              upstream_package_url: {type: string, format: uri, description: Package page for the inferred upstream registry identity when available}
+              status: {type: string, enum: [declared]}
+              downstream:
+                type: object
+                properties:
+                  distribution: {type: string}
+                  package_name: {type: string}
+                  package_url: {type: string, format: uri, description: Downstream package page}
+                  version: {type: string}
+                  revision: {type: string}
+                  source_url: {type: string, format: uri}
+                  imported_at: {type: string, format: date-time}
+              project_purl: {type: string, nullable: true}
+              purl: {type: string, nullable: true, description: Includes the upstream version when supported}
+              source_repository:
+                type: object
+                description: Present when the downstream release identifies one source repository.
+                required: [purl, kind, sources]
+                properties:
+                  purl: {type: string}
+                  patches_api_url: {type: string, format: uri, description: JSON list of patches for this repository PURL}
+                  patches_html_url: {type: string, format: uri, description: HTML list of patches for this repository PURL}
+                  kind: {type: string, enum: [release_source_declaration, changed_file_match]}
+                  archive_sha256: {type: string, description: Digest of the packaging archive containing the declaration}
+                  sources:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field: {type: string}
+                        url: {type: string, format: uri}
+                        purl: {type: string}
+                  comparison:
+                    type: object
+                    description: Comparison of original source files to a Git tree. The commit identifies the comparison tree only.
+                    properties:
+                      commit_checked: {type: string}
+                      debian_original: {type: object, description: Name, size and SHA-256 of the original source archive}
+                      paths: {type: integer}
+                      identical: {type: integer}
+                      differing_or_absent: {type: array, items: {type: string}}
+                      all_paths_corroborated: {type: boolean}
+              mapping: {type: object, description: Status and evidence for the inferred package relationship}
+              scope_evidence: {type: object, description: Changed paths and any reason to withhold attribution}
+              declaration: {type: object, description: Source metadata and fields containing each advisory identifier}
+              advisory_ids: {type: array, items: {type: string}}
+              advisory_roles:
+                type: object
+                additionalProperties: {type: string, enum: [explicit_fix, patch_name, context]}
+              assertions:
+                type: object
+                properties:
+                  declared: {type: object}
+                  attributed: {type: array, items: {type: object}}
+                  verified: {type: object, nullable: true, description: Null for these source declarations}
+        referenced_advisories:
+          type: array
+          items:
+            type: object
+            properties:
+              uuid: {type: string}
+              url: {type: string, nullable: true}
+              api_url: {type: string, format: uri}
+              html_url: {type: string, format: uri}
+              withdrawn_at: {type: string, format: date-time, nullable: true}
+              affected_packages: {type: array, items: {type: object}}
+              matched_identifiers: {type: array, items: {type: string}}
     Advisory:
       type: object
       properties:

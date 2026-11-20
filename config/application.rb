@@ -23,6 +23,7 @@ module Advisories
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 7.0
+    config.x.patch_catalog_directory = Pathname.new(ENV.fetch('PATCH_CATALOG_DIR') { Rails.root.join('tmp/cache/patch-index', Rails.env) })
     config.exceptions_app = routes
 
     config.session_store :disabled

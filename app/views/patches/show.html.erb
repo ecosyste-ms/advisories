@@ -1,0 +1,105 @@
+<% name = @patch.display_name %>
+<% description = @patch.headers['Description'].to_s.strip %>
+<% summary = description.lines.first.to_s.strip %>
+<% @meta_title = @patch.headers['Subject'].presence || (summary.presence if summary.length <= 140) || name %>
+<% declarations = @occurrences.group_by(&:patch_release) %>
+<div class="container patch-page py-3">
+  <header class="border-bottom pb-3 mb-4">
+    <%= link_to 'All patches', patches_path, class: 'small' %>
+    <h1 class="h2 mt-3 mb-2 text-break"><%= @meta_title %></h1>
+    <% if name != @meta_title %><div class="font-monospace small text-muted text-break"><%= name %></div><% end %>
+    <% if description.present? && description != @meta_title %>
+      <% if description == summary && summary.length <= 140 %>
+        <p class="mb-0"><%= description %></p>
+      <% else %>
+        <details class="small mt-2"><summary>Description</summary><p class="mt-2 text-break"><%= description %></p></details>
+      <% end %>
+    <% end %>
+    <div class="d-flex flex-wrap align-items-baseline gap-3 small mt-3">
+      <p class="mb-0"><%= link_to "Observed in #{pluralize(declarations.size, 'downstream release')}", '#releases' %></p>
+      <details><summary>SHA-256</summary><code class="text-break"><%= @patch.sha256 %></code></details>
+      <%= link_to 'JSON', api_v1_patch_path(@patch.id) %>
+    </div>
+  </header>
+
+  <div class="row gy-4 gx-lg-5">
+    <section id="patch-diff" class="col-lg-8" aria-labelledby="patch-diff-heading">
+      <div class="d-flex align-items-baseline justify-content-between gap-3 mb-2">
+        <h2 id="patch-diff-heading" class="h5 mb-0">Diff</h2>
+        <% if @body %>
+          <span class="small"><%= number_to_human_size(@body.byte_size) %> · <%= link_to 'Download', download_patch_path(@patch.sha256) %></span>
+        <% end %>
+      </div>
+      <% if @body %>
+        <% if @body.byte_size.positive? %>
+          <% header, diff = patch_preview_sections(@body) %>
+          <% if header.any? %>
+            <details class="small mb-2">
+              <summary>Patch header</summary>
+              <pre class="patch-diff-preview border rounded p-3 mt-2" tabindex="0" aria-label="Patch header"><code><%= header.join %></code></pre>
+            </details>
+          <% end %>
+          <pre class="patch-diff-preview bg-light border rounded p-3" tabindex="0" aria-labelledby="patch-diff-heading"><code><%= formatted_patch_diff(diff) %></code></pre>
+          <% if @body.truncated? %><p class="small text-muted">Preview truncated. Download for the full diff.</p><% end %>
+        <% else %>
+          <p class="text-muted">Empty file.</p>
+        <% end %>
+      <% else %>
+        <p class="text-muted">The patch contents haven’t been imported yet.</p>
+      <% end %>
+    </section>
+
+    <section id="releases" class="col-lg-4" aria-labelledby="releases-heading">
+      <h2 id="releases-heading" class="h5 mb-2">Downstream releases</h2>
+      <% declarations.each do |release, occurrences| %>
+        <section id="<%= dom_id(occurrences.first) %>" class="patch-declaration border-top py-3">
+          <h3 class="h6 mb-1 text-break">
+            <span class="text-muted"><%= release.distribution.humanize %> /</span>
+            <%= link_to release.package_name, ecosystem_package_path(release.distribution, release.package_name, tab: 'patches') %>
+            <%= release.display_version %>
+          </h3>
+          <% occurrences.each do |occurrence| %>
+            <%= tag.div(id: (dom_id(occurrence) unless occurrence == occurrences.first), class: 'small text-break mt-2') do %>
+              <%= render 'declaration', occurrence: occurrence, multiple: occurrences.many?,
+                downstream_package: @packages[Package.identity_key(release.distribution, release.package_name)] %>
+            <% end %>
+          <% end %>
+        </section>
+      <% end %>
+    </section>
+  </div>
+
+  <% if @similar.any? %>
+    <section id="similar-patches" class="mt-4">
+      <h2 class="h5">Similar patches</h2>
+      <ul class="list-unstyled">
+        <% @similar.each do |other, evidence| %>
+          <li class="border-top py-2 d-flex justify-content-between align-items-baseline gap-3">
+            <div class="text-break">
+              <%= link_to other.display_name, patch_path(other.sha256) %>
+              <span class="small text-muted"><%= patch_similarity_label(evidence) %></span>
+              <%= render 'releases', patch: other %>
+            </div>
+            <%= link_to 'Compare', compare_patch_path(@patch.sha256, other.sha256), class: 'small' %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+  <% if @observations.any? %>
+    <details id="release-history" class="border-top mt-4 pt-3">
+      <summary>Debian release history</summary>
+      <% @observations.each do |name, snapshots| %>
+        <h3 class="h6 mt-3"><%= name %></h3>
+        <ul class="list-unstyled small">
+          <% first = snapshots.find { |_, declared| declared } %>
+          <% snapshots.each do |release, declared| %>
+            <li><%= link_to release.version, release.source_url %>
+              <% if release == first.first %>First observed declaration<% elsif declared %>Declared<% else %>Absent from this release’s series<% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+    </details>
+  <% end %>
+</div>

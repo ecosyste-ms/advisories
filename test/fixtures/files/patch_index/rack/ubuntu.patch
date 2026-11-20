@@ -1,0 +1,18 @@
+Description: skip unreadable directories test
+ this test failed on reprotest due to reprotest run as root.
+ see: https://salsa.debian.org/salsa-ci-team/pipeline/-/issues/160
+Author: HIGUCHI Daisuke (VDR dai) <dai@debian.org>
+Forwarded: not-needed
+
+Index: ruby-rack/test/spec_directory.rb
+===================================================================
+--- ruby-rack.orig/test/spec_directory.rb
++++ ruby-rack/test/spec_directory.rb
+@@ -54,6 +54,7 @@ describe Rack::Directory do
+   end
+ 
+   it "return 404 for unreadable directories" do
++    skip
+     begin
+       File.write('test/cgi/unreadable', '')
+       File.chmod(0, 'test/cgi/unreadable')

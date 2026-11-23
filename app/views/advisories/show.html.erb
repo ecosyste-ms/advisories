@@ -247,6 +247,37 @@
     <% end %>
   <% end %>
 
+  <% if @downstream_releases.any? %>
+    <h3 id="downstream-releases" class="h4 mt-4">Downstream Releases</h3>
+    <p class="text-muted small">Distribution packages built from an affected package, and whether the version they ship is in the affected range.</p>
+    <div class="table-wrapper table-responsive-lg">
+      <table class="table table-bordered ecosystems-table mb-3">
+        <thead>
+          <tr>
+            <th>Release</th>
+            <th>Ships</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @downstream_releases.each do |release| %>
+            <tr>
+              <td><%= link_to patch_release_label(release), ecosystem_package_path(release.distribution, release.package_name, tab: 'patches') %></td>
+              <td><%= release.upstream_package_name %> <%= release.upstream_version %></td>
+              <td>
+                <% if @advisory.affects_release?(release) %>
+                  <span class="badge bg-danger">Affected version</span>
+                <% else %>
+                  <span class="badge bg-success">Not in affected range</span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
 	<div class="row">
 		<div class="col-lg-8">
 			<div class="page-content mt-4 pe-lg-3">

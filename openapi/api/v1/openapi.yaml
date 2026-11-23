@@ -227,6 +227,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Advisory'
+  /advisories/{advisoryUUID}/downstream_releases:
+    get:
+      summary: list downstream releases of the advisory's packages
+      operationId: getAdvisoryDownstreamReleases
+      tags:
+        - advisories
+      description: Distribution releases that name one of the advisory's packages as their upstream, at any version. `affected` says whether the upstream version a release ships is in the advisory's affected range.
+      parameters:
+        - {name: advisoryUUID, in: path, required: true, schema: {type: string}, description: uuid of the advisory}
+        - {name: page, in: query, schema: {type: integer, minimum: 1}}
+        - {name: per_page, in: query, schema: {type: integer, minimum: 1}}
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/PatchRelease'
+                    - type: object
+                      properties:
+                        affected: {type: boolean}
+                        patches_count: {type: integer, description: Patches the release carries}
   /sources:
     get:
       summary: "list advisory sources"
@@ -287,17 +312,7 @@ components:
                 type: object
                 additionalProperties: {type: string, enum: [explicit_fix, patch_name, context]}
               declaration: {type: object, description: How the release declares the patch and which fields mention each advisory}
-              release:
-                type: object
-                properties:
-                  distribution: {type: string}
-                  package_name: {type: string}
-                  version: {type: string}
-                  upstream_version: {type: string, nullable: true, description: Upstream version the release is based on}
-                  repository_url: {type: string, nullable: true, description: Upstream repository the release declares}
-                  source_url: {type: string, format: uri}
-                  imported_at: {type: string, format: date-time}
-                  package_url: {type: string, format: uri}
+              release: {$ref: '#/components/schemas/PatchRelease'}
         referenced_advisories:
           type: array
           items:
@@ -309,6 +324,20 @@ components:
               matched_identifiers: {type: array, items: {type: string}}
               api_url: {type: string, format: uri}
               html_url: {type: string, format: uri}
+    PatchRelease:
+      type: object
+      properties:
+        distribution: {type: string}
+        package_name: {type: string}
+        version: {type: string}
+        upstream_version: {type: string, nullable: true, description: Upstream version the release is based on}
+        repository_url: {type: string, nullable: true, description: Upstream repository the release declares}
+        upstream_ecosystem: {type: string, nullable: true, description: "Registry of the package the release was built from, when its packaging names one"}
+        upstream_package_name: {type: string, nullable: true}
+        upstream_purl: {type: string, nullable: true, example: "pkg:cargo/h2"}
+        source_url: {type: string, format: uri}
+        imported_at: {type: string, format: date-time}
+        package_url: {type: string, format: uri}
     Advisory:
       type: object
       properties:

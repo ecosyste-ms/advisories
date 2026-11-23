@@ -4,17 +4,39 @@ class PatchRelease < ApplicationRecord
 
   has_many :patch_occurrences, dependent: :delete_all
 
-  # A distro package matches by name. A registry package matches releases built from its repository.
+  scope :repackaging, ->(ecosystem, name) {
+    where(upstream_ecosystem: ecosystem.to_s.downcase).where('LOWER(upstream_package_name) = ?', name.to_s.downcase)
+  }
+
+  # A distro package matches by name. A registry package matches releases that name it as their upstream,
+  # and releases built from its repository that name no upstream package.
   def self.for_package(ecosystem, name, version: nil)
     ecosystem, name = Package.identity_key(ecosystem, name)
     if DISTRIBUTIONS.include?(ecosystem)
       scope = where(distribution: ecosystem, package_name: name)
       return version.present? ? scope.where(version: version) : scope
     end
+    scope = repackaging(ecosystem, name)
     repository = PatchIndex::Repository.normalize(Package.find_by_identity(ecosystem, name)&.repository_url)
-    return none unless repository
-    scope = where(repository_url: repository)
+    scope = scope.or(where(repository_url: repository, upstream_package_name: nil)) if repository
     version.present? ? scope.where(upstream_version: version) : scope
+  end
+
+  def upstream_purl
+    "pkg:#{upstream_ecosystem}/#{upstream_package_name}" if upstream_package_name
+  end
+
+  # Debian writes a pre-release as 1.0~rc1 where the registry has 1.0-rc1.
+  def registry_version
+    upstream_version&.tr('~', '-')
+  end
+
+  # Advisories for the upstream package whose affected range includes the version this release ships.
+  def upstream_advisories
+    return Advisory.none unless upstream_package_name && upstream_version
+    Advisory.not_withdrawn.affecting_version(upstream_ecosystem, upstream_package_name, registry_version)
+  rescue Advisory::InvalidVersionFilter
+    Advisory.none
   end
 
   def self.for_purl(string)

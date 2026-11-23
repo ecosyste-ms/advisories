@@ -62,7 +62,8 @@ class PatchIndex::DailySyncTest < ActiveSupport::TestCase
 
   test 'Debian rake task works through the backlog and records repository, upstream version and changelog fixes' do
     data = packaging("fix.patch -p1\n", extra: { 'debian/changelog' => CHANGELOG,
-      'debian/upstream/metadata' => "Repository: https://github.com/Example/Project.git\n" })
+      'debian/upstream/metadata' => "Repository: https://github.com/Example/Project.git\n",
+      'debian/control' => "Source: example\nSection: rust\nX-Cargo-Crate: example_crate\n\nPackage: librust-example-dev\n" })
     current = apt_record('1-2', data)
     apt_indexes('debian', { ['trixie-updates', 'main'] => current, ['trixie', 'main'] => current + apt_record('1-1', data) })
     requests = %w[1-2 1-1].map do |version|
@@ -87,6 +88,7 @@ class PatchIndex::DailySyncTest < ActiveSupport::TestCase
     release = PatchRelease.find_by!(version: '1-2')
     assert_equal ['https://github.com/example/project', '1', 'debian/upstream/metadata:Repository'],
       [release.repository_url, release.upstream_version, release.metadata['repository_field']]
+    assert_equal 'pkg:cargo/example_crate', release.upstream_purl
     occurrence = release.patch_occurrences.sole
     assert_equal ['-p1'], occurrence.declaration.fetch('quilt_options')
     assert_equal({ 'CVE-2024-0001' => 'explicit_fix' }, occurrence.advisory_roles)

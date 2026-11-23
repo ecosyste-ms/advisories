@@ -19,12 +19,15 @@ class CreatePatches < ActiveRecord::Migration[8.1]
       t.string :version, null: false
       t.string :upstream_version
       t.string :repository_url, index: true
+      t.string :upstream_ecosystem
+      t.string :upstream_package_name
       t.string :source_url, null: false
       t.string :sync_sha256
       t.string :last_error
       t.jsonb :metadata, null: false, default: {}
       t.datetime :imported_at
       t.index [:distribution, :package_name, :version], unique: true
+      t.index [:upstream_ecosystem, :upstream_package_name]
     end
 
     create_table :patch_occurrences do |t|

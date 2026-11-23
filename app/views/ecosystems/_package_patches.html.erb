@@ -1,3 +1,25 @@
+<% if @release_advisories.any? %>
+  <section id="downstream-releases" aria-label="Downstream releases" class="mb-4">
+    <h3 class="h5">Downstream releases</h3>
+    <ul class="list-unstyled">
+      <% @release_advisories.each do |release, advisories| %>
+        <li class="border-bottom py-2">
+          <%= link_to patch_release_label(release), ecosystem_package_path(release.distribution, release.package_name, tab: 'patches') %>
+          ships
+          <%= link_to "#{release.upstream_package_name} #{release.upstream_version}",
+            ecosystem_package_path(release.upstream_ecosystem, release.upstream_package_name, version: release.registry_version) %>
+          <div class="small text-muted">
+            <% if advisories.any? %>
+              Affected by <%= safe_join(advisories.map { |advisory| link_to(advisory.uuid, advisory_path(advisory.uuid)) }, ', ') %>
+            <% else %>
+              No known advisories affect this version.
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>
 <section id="downstream-patches" aria-label="Downstream patches">
   <% if @patches.any? %>
     <ul class="list-unstyled">

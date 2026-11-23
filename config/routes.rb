@@ -31,6 +31,7 @@ Rails.application.routes.draw do
         end
         member do
           get :related_packages
+          get :downstream_releases
         end
       end
       resources :sources, only: [:index, :show]

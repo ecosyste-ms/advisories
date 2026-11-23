@@ -1,4 +1,6 @@
 class EcosystemsController < ApplicationController
+  RELEASE_LIMIT = 20
+
   def index
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
@@ -114,6 +116,8 @@ class EcosystemsController < ApplicationController
     matches = PatchOccurrence.where(patch_release: releases)
     @pagy, @patches = pagy(Patch.where(id: matches.select(:patch_id)).order(:id))
     @occurrences = matches.where(patch_id: @patches.map(&:id)).preload(:patch_release).order(:id).group_by(&:patch_id)
+    repackaged = releases.where.not(upstream_package_name: nil).order(:distribution, :package_name, :version).limit(RELEASE_LIMIT)
+    @release_advisories = repackaged.index_with { |release| release.upstream_advisories.order(:uuid).to_a }
   end
 
   def load_package_advisories

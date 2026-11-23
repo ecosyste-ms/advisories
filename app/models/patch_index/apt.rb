@@ -76,9 +76,11 @@ module PatchIndex
           Document.new(bytes).entry(name: patch, position: index + 1, source_url: url, declaration: declaration)
         end
         field, repository = Repository.debian(row['homepage'], archive.metadata)
+        # debcargo records the crate a source package was generated from.
+        crate = archive.metadata['debian/control'].to_s[/^X-Cargo-Crate:[ \t]*([\w-]+)[ \t]*\r?$/, 1]
         PatchRelease.record!({ distribution: @distribution, package_name: name, version: version }, entries,
           source_url: url, sync_sha256: digest, upstream_version: self.class.upstream_version(version),
-          repository_url: repository, metadata: row.slice('suite', 'component').merge('repository_field' => field).compact)
+          repository_url: repository, upstream_ecosystem: crate && 'cargo', upstream_package_name: crate, metadata: row.slice('suite', 'component').merge('repository_field' => field).compact)
       end
     end
 

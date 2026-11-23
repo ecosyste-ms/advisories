@@ -6,11 +6,7 @@ occurrences = @occurrences.fetch(patch.id, [])
 json.occurrences occurrences do |occurrence|
   json.extract! occurrence, :name, :position, :source_url, :advisory_ids, :advisory_roles, :declaration
   json.html_url patch_url(patch, anchor: dom_id(occurrence))
-  json.release do
-    release = occurrence.patch_release
-    json.extract! release, :distribution, :package_name, :version, :upstream_version, :repository_url, :source_url, :imported_at
-    json.package_url ecosystem_package_url(release.distribution, release.package_name, tab: 'patches')
-  end
+  json.release { json.partial! 'api/v1/patches/release', release: occurrence.patch_release }
 end
 identifiers = occurrences.flat_map(&:advisory_ids).uniq
 json.referenced_advisories identifiers.flat_map { |id| @advisories.fetch(id, []) }.uniq do |advisory|

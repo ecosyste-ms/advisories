@@ -113,6 +113,35 @@ class PatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select '#downstream-patches', count: 0
   end
 
+  test 'a release that names its crate is joined to the advisories affecting the version it ships' do
+    crate = { upstream_ecosystem: 'cargo', upstream_package_name: 'hyper', repository_url: 'https://github.com/hyperium/hyper' }
+    create(:patch_release, distribution: 'debian', package_name: 'rust-hyper-0.14', version: '0.14.10-1', upstream_version: '0.14.10', **crate)
+    create(:patch_release, distribution: 'ubuntu', package_name: 'rust-hyper', version: '1.0.0~rc1-1', upstream_version: '1.0.0~rc1', **crate)
+    advisory = create(:advisory, packages: [{ 'ecosystem' => 'cargo', 'package_name' => 'hyper',
+      'versions' => [{ 'vulnerable_version_range' => '< 0.14.19' }] }])
+
+    get advisory_path(advisory.uuid)
+    assert_response :success
+    rows = css_select('#downstream-releases + p + div tbody tr').map { |row| row.text.squish }
+    assert_equal ['Debian / rust-hyper-0.14 0.14.10-1 hyper 0.14.10 Affected version',
+      'Ubuntu / rust-hyper 1.0.0~rc1-1 hyper 1.0.0~rc1 Not in affected range'], rows
+
+    get downstream_releases_api_v1_advisory_path(advisory.uuid)
+    assert_response :success
+    assert_equal [['debian', 'rust-hyper-0.14', 'pkg:cargo/hyper', '0.14.10', true, 0], ['ubuntu', 'rust-hyper', 'pkg:cargo/hyper', '1.0.0~rc1', false, 0]],
+      response.parsed_body.map { |release| release.values_at('distribution', 'package_name', 'upstream_purl', 'upstream_version', 'affected', 'patches_count') }
+
+    get ecosystem_package_path('debian', 'rust-hyper-0.14', tab: 'patches')
+    assert_select '#downstream-releases li', count: 1
+    assert_select "#downstream-releases a[href='#{advisory_path(advisory.uuid)}']"
+
+    get ecosystem_package_path('cargo', 'hyper', tab: 'patches')
+    assert_select '#downstream-releases li', count: 2
+    assert_select '#downstream-releases li', text: /No known advisories affect this version/, count: 1
+    get ecosystem_package_path('cargo', 'h2', tab: 'patches')
+    assert_select '#downstream-releases', count: 0
+  end
+
   test 'the advisory page lists the patches that name it' do
     get advisory_path(@advisory.uuid)
     assert_response :success

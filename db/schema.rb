@@ -108,6 +108,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000000) do
     t.string "version", null: false
     t.string "upstream_version"
     t.string "repository_url"
+    t.string "upstream_ecosystem"
+    t.string "upstream_package_name"
     t.string "source_url", null: false
     t.string "sync_sha256"
     t.string "last_error"
@@ -115,6 +117,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000000) do
     t.datetime "imported_at"
     t.index ["distribution", "package_name", "version"], name: "idx_on_distribution_package_name_version_a37dda4bf7", unique: true
     t.index ["repository_url"], name: "index_patch_releases_on_repository_url"
+    t.index ["upstream_ecosystem", "upstream_package_name"], name: "idx_on_upstream_ecosystem_upstream_package_name_b191baea66"
   end
 
   create_table "patches", force: :cascade do |t|

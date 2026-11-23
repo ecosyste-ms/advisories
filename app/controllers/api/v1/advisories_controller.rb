@@ -68,6 +68,13 @@ class Api::V1::AdvisoriesController < Api::V1::ApplicationController
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
   end
 
+  def downstream_releases
+    @advisory = Advisory.find_by_uuid!(params[:id])
+    @pagy, @releases = pagy(@advisory.downstream_releases.order(:distribution, :package_name, :version))
+    @patch_counts = PatchOccurrence.where(patch_release_id: @releases.map(&:id)).group(:patch_release_id).count
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+  end
+
   def lookup
     purl = params[:purl]
     repository_url = params[:repository_url]

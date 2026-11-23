@@ -17,6 +17,19 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "should filter a distribution package by a version with an epoch and a tilde, using Debian ordering" do
+    ubuntu = create(:advisory, source: @source, packages: [{ "ecosystem" => "ubuntu", "package_name" => "openssl",
+      "versions" => [{ "vulnerable_version_range" => "< 1:3.0" }] }])
+
+    get api_v1_advisories_url, params: { ecosystem: 'ubuntu', package_name: 'openssl', version: '1:3.0~rc1-1' }, as: :json
+    assert_response :success
+    assert_equal [ubuntu.uuid], response.parsed_body.pluck('uuid')
+
+    get api_v1_advisories_url, params: { ecosystem: 'ubuntu', package_name: 'openssl', version: '1:3.0-1' }, as: :json
+    assert_response :success
+    assert_empty response.parsed_body
+  end
+
   test "should get index" do
     get api_v1_advisories_url, as: :json
     assert_response :success

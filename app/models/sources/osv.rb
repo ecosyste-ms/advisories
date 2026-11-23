@@ -16,9 +16,10 @@ module Sources
     BATCH_SIZE = 500
     CVSS_TYPES = %w[CVSS_V4 CVSS_V3 CVSS_V2].freeze
 
-    def initialize(source, http: PatchIndex::Http.new(interval: 0))
+    def initialize(source, http: PatchIndex::Http.new(interval: 0), batch_size: BATCH_SIZE)
       super(source)
       @http = http
+      @batch_size = batch_size
     end
 
     def sync_advisories
@@ -45,14 +46,20 @@ module Sources
         each_archive_record(export)
       end
       known = source.advisories.pluck(:uuid, :id, :updated_at).to_h { |uuid, id, updated_at| [uuid, [id, updated_at]] }
-      saved = []
-      records.lazy.filter_map { |osv| map_advisory(osv, EXPORTS.fetch(export)) }.each_slice(BATCH_SIZE) do |batch|
-        saved.concat(save_batch(batch, known))
+      count = 0
+      enqueued = Set.new
+      mapped = records.lazy.filter_map { |osv| map_advisory(osv, EXPORTS.fetch(export)) || retire(osv, known) }
+      mapped.each_slice(@batch_size) do |batch|
+        saved = save_batch(batch, known)
+        next if saved.empty?
+        # Follow-up work runs with its batch, so a later failure cannot strand it.
+        refresh_related(saved.map(&:first))
+        packages = saved.flat_map(&:last).select { |key| enqueued.add?(key) }
+        PackageSyncWorker.perform_bulk(packages) if packages.any?
+        count += saved.size
       end
-      saved.each_slice(BATCH_SIZE) { |uuids| refresh_related(uuids) }
-      packages = saved.flat_map(&:last).uniq
-      packages.each_slice(BATCH_SIZE) { |slice| PackageSyncWorker.perform_bulk(slice) }
-      count = saved.size
+      # Bulk inserts skip the counter cache.
+      source.update_column(:advisories_count, source.advisories.count)
       synced = source.metadata.fetch('osv_synced', {}).merge(export => index.first.first.iso8601(9))
       source.update!(metadata: source.metadata.merge('osv_synced' => synced))
       Rails.logger.info "Synced #{count} OSV advisories for #{export}"
@@ -101,6 +108,7 @@ module Sources
           advisory.merge(source_id: source.id, created_at: now, packages: packages)
         end
         Advisory.insert_all(rows)
+        cache_known_packages(fresh)
       end
       changed.each do |advisory|
         record = Advisory.find(known.fetch(advisory[:uuid]).first)
@@ -110,9 +118,30 @@ module Sources
       batch.map { |advisory| [advisory[:uuid], advisory[:packages].map { |package| package.values_at(:ecosystem, :package_name) }] }
     end
 
+    # A package that has already synced will not refresh these advisories unless its version list changes.
+    def cache_known_packages(fresh)
+      keys = fresh.flat_map { |advisory| advisory[:packages].map { |package| package.values_at(:ecosystem, :package_name) } }.uniq
+      synced = Package.for_identities(keys).where.not(last_synced_at: nil).pluck(:ecosystem, :name).to_set
+      return if synced.empty?
+
+      uuids = fresh.select { |advisory| advisory[:packages].any? { |package| synced.include?(package.values_at(:ecosystem, :package_name)) } }.pluck(:uuid)
+      source.advisories.where(uuid: uuids).find_each(&:cache_affected_versions!)
+    end
+
+    # A stored advisory that no longer names a tracked package is marked withdrawn,
+    # at OSV's withdrawal time when it gives one. Always returns nil.
+    def retire(osv, known)
+      id, stored_at = known[osv[:id]]
+      modified = Time.iso8601(osv[:modified])
+      return unless id && stored_at < modified.floor(6)
+
+      Advisory.where(id: id).update_all(withdrawn_at: osv[:withdrawn] || modified, updated_at: modified)
+      nil
+    end
+
     # Rebuilds the related list of every advisory sharing a CVE with the ones just written, in one read and one write.
-    def refresh_related(saved)
-      cves = source.advisories.where(uuid: saved.map(&:first)).pluck(:identifiers).flatten.grep(/\ACVE-/).to_set
+    def refresh_related(uuids)
+      cves = source.advisories.where(uuid: uuids).pluck(:identifiers).flatten.grep(/\ACVE-/).to_set
       return if cves.empty?
 
       rows = Advisory.where('identifiers && ARRAY[?]::varchar[]', cves.to_a).order(:id)

@@ -51,6 +51,7 @@ class OsvSourceTest < ActiveSupport::TestCase
 
   test 'the first sync reads each archive and keeps only packages in the tracked release' do
     github = create(:advisory, uuid: 'GSA_h2', identifiers: %w[GHSA-f8vr-r385-rh5r CVE-2023-26964])
+    create(:package, ecosystem: 'debian', name: 'rust-h2', version_numbers: %w[0.3.13-1 0.3.13-2 0.4.4-1], last_synced_at: Time.current)
 
     Sidekiq::Testing.fake! do
       PackageSyncWorker.jobs.clear
@@ -65,6 +66,8 @@ class OsvSourceTest < ActiveSupport::TestCase
     package = debian.packages.sole
     assert_equal ['debian', 'rust-h2', [{ 'vulnerable_version_range' => '< 0.3.13-2', 'first_patched_version' => '0.3.13-2' }]],
       package.values_at('ecosystem', 'package_name', 'versions')
+    assert_equal [['0.3.13-1'], %w[0.3.13-2 0.4.4-1]], package.values_at('affected_versions', 'unaffected_versions')
+    assert_equal 2, @source.reload.advisories_count
     assert debian.affects_version?('debian', 'rust-h2', '0.3.13-1')
     assert_not debian.affects_version?('debian', 'rust-h2', '0.3.13-2')
     assert_equal ['Details of DEBIAN-CVE-2023-26964. Second line.', 'osv', 'https://security-tracker.debian.org/tracker/DEBIAN-CVE-2023-26964'],
@@ -94,6 +97,44 @@ class OsvSourceTest < ActiveSupport::TestCase
     advisory = @source.advisories.find_by!(uuid: 'DEBIAN-CVE-2023-26964')
     assert_equal '< 0.3.13-3', advisory.packages.sole.dig('versions', 0, 'vulnerable_version_range')
     assert_equal 2, @source.advisories.count
+  end
+
+  test 'a record that is withdrawn or stops naming a tracked release is marked withdrawn' do
+    @osv.sync_advisories
+    withdrawn = @debian.merge(modified: '2026-11-23T15:00:00Z', withdrawn: '2026-11-22T00:00:00Z', affected: [])
+    moved = @ubuntu.merge(modified: '2026-11-23T16:00:00Z', affected: [affected('Ubuntu:22.04:LTS', 'rust-tar', [{ introduced: '0' }])])
+    publish('Debian', [withdrawn, @old_release])
+    publish('Ubuntu', [moved])
+    stub_request(:get, "#{BASE}/Debian/DEBIAN-CVE-2023-26964.json").to_return(body: withdrawn.to_json)
+    stub_request(:get, "#{BASE}/Ubuntu/UBUNTU-CVE-2026-33055.json").to_return(body: moved.to_json)
+
+    @osv.sync_advisories
+
+    assert_equal [Time.utc(2026, 11, 22), Time.utc(2026, 11, 23, 16)], @source.advisories.order(:uuid).pluck(:withdrawn_at)
+    assert_empty Advisory.not_withdrawn.where(source: @source)
+  end
+
+  test 'a failure part way through keeps the follow-up work for the records already saved' do
+    @osv.sync_advisories
+    github = create(:advisory, uuid: 'GSA_new', identifiers: %w[GHSA-2222-3333-4444 CVE-2026-0001])
+    first = record('DEBIAN-CVE-2026-0001', '2026-11-23T15:00:00Z', upstream: ['CVE-2026-0001'], affected: [affected('Debian:13', 'zlib', [{ introduced: '0' }])])
+    second = record('DEBIAN-CVE-2026-0002', '2026-11-23T16:00:00Z', affected: [affected('Debian:13', 'curl', [{ introduced: '0' }])])
+    publish('Debian', [first, second, @debian, @old_release])
+    stub_request(:get, "#{BASE}/Debian/DEBIAN-CVE-2023-26964.json").to_return(body: @debian.to_json)
+    stub_request(:get, "#{BASE}/Debian/DEBIAN-CVE-2026-0001.json").to_return(body: first.to_json)
+    stub_request(:get, "#{BASE}/Debian/DEBIAN-CVE-2026-0002.json").to_return(status: 503)
+    watermark = @source.reload.metadata.dig('osv_synced', 'Debian')
+
+    Sidekiq::Testing.fake! do
+      PackageSyncWorker.jobs.clear
+      Sources::Osv.new(@source, http: PatchIndex::Http.new(interval: 0), batch_size: 1).sync_advisories
+      assert_includes PackageSyncWorker.jobs.map { |job| job['args'] }, %w[debian zlib]
+      PackageSyncWorker.jobs.clear
+    end
+
+    assert @source.advisories.exists?(uuid: 'DEBIAN-CVE-2026-0001')
+    assert_equal ['DEBIAN-CVE-2026-0001'], github.reload.cached_related_advisories.pluck('uuid')
+    assert_equal watermark, @source.reload.metadata.dig('osv_synced', 'Debian')
   end
 
   test 'a failed download leaves the export to be retried' do

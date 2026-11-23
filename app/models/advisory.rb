@@ -123,7 +123,9 @@ class Advisory < ApplicationRecord
     unless ecosystem.is_a?(String) && ecosystem.present? && package_name.is_a?(String) && package_name.present?
       raise InvalidVersionFilter, 'ecosystem and package_name are required when filtering by version'
     end
-    unless version.is_a?(String) && version.length <= Vers::Version::MAX_LENGTH && version.match?(/\Av?\d[0-9A-Za-z.+_!:~-]*\z/)
+    # Distribution versions can carry an epoch and a tilde.
+    pattern = SCHEMES.key?(ecosystem.downcase) ? /\A\d[0-9A-Za-z.+_!:~-]*\z/ : /\Av?\d[0-9A-Za-z.+_!-]*\z/
+    unless version.is_a?(String) && version.length <= Vers::Version::MAX_LENGTH && version.match?(pattern)
       raise InvalidVersionFilter, 'version must be a single version number'
     end
 

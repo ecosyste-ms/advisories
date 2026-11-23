@@ -11,16 +11,19 @@ class PurlParser
     'go' => 'go',
     'cargo' => 'cargo'
   }.freeze
+  # A deb PURL names its distribution in the namespace, which is the ecosystem here.
+  DEB_DISTRIBUTIONS = %w[debian ubuntu].freeze
 
   def self.parse(purl_string)
     return nil if purl_string.blank?
 
     begin
       parsed = Purl.parse(purl_string)
-      ecosystem = map_ecosystem(parsed.type)
+      distribution = parsed.namespace&.downcase if parsed.type&.downcase == 'deb'
+      ecosystem = DEB_DISTRIBUTIONS.include?(distribution) ? distribution : map_ecosystem(parsed.type)
       return nil if ecosystem.nil?
       separator = ecosystem == 'maven' ? ':' : '/'
-      package_name = [parsed.namespace.presence, parsed.name].compact.join(separator)
+      package_name = distribution ? parsed.name : [parsed.namespace.presence, parsed.name].compact.join(separator)
 
       {
         ecosystem: ecosystem,
@@ -40,7 +43,12 @@ class PurlParser
   end
 
   def self.generate_purl(ecosystem:, package_name:, version: nil, namespace: nil)
-    purl_type = reverse_map_ecosystem(ecosystem)
+    if DEB_DISTRIBUTIONS.include?(ecosystem&.downcase)
+      purl_type = 'deb'
+      namespace = ecosystem.downcase
+    else
+      purl_type = reverse_map_ecosystem(ecosystem)
+    end
     return nil if purl_type.nil?
 
     begin

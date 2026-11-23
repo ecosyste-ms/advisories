@@ -28,6 +28,26 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     get api_v1_advisories_url, params: { ecosystem: 'ubuntu', package_name: 'openssl', version: '1:3.0-1' }, as: :json
     assert_response :success
     assert_empty response.parsed_body
+
+    get api_v1_advisories_url, params: { ecosystem: 'npm', package_name: 'lodash', version: '1.0~rc1' }, as: :json
+    assert_response :bad_request
+  end
+
+  test "should look up a distribution package by its deb PURL and return that PURL" do
+    ubuntu = create(:advisory, source: @source, packages: [{ "ecosystem" => "ubuntu", "package_name" => "openssl",
+      "versions" => [{ "vulnerable_version_range" => "< 1:3.0" }] }])
+
+    get lookup_api_v1_advisories_url, params: { purl: 'pkg:deb/ubuntu/openssl' }, as: :json
+    assert_response :success
+    assert_equal [ubuntu.uuid], response.parsed_body.pluck('uuid')
+    assert_equal 'pkg:deb/ubuntu/openssl', response.parsed_body.first.dig('packages', 0, 'purl')
+
+    get lookup_api_v1_advisories_url, params: { purl: 'pkg:deb/ubuntu/openssl@1%3A3.0-1' }, as: :json
+    assert_empty response.parsed_body
+    get lookup_api_v1_advisories_url, params: { purl: 'pkg:deb/debian/openssl' }, as: :json
+    assert_empty response.parsed_body
+    get lookup_api_v1_advisories_url, params: { purl: 'pkg:deb/raspbian/openssl' }, as: :json
+    assert_response :bad_request
   end
 
   test "should get index" do

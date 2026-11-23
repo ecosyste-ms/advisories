@@ -2,20 +2,32 @@
 <div class="container">
   <h1 class="mb-4">Downstream patches</h1>
 
-  <%= form_with url: patches_path, method: :get, local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-3' do |form| %>
-    <%= form.label :purl, 'PURL' %>
-    <%= form.search_field :purl, value: @filters['purl'], placeholder: 'pkg:cargo/h2', class: 'form-control w-auto' %>
-    <%= form.label :repository_url, 'Repository' %>
-    <%= form.search_field :repository_url, value: @filters['repository_url'], placeholder: 'https://github.com/hyperium/h2', class: 'form-control w-auto' %>
-    <%= form.label :advisory, 'Advisory' %>
-    <%= form.search_field :advisory, value: @filters['advisory'], placeholder: 'CVE-2024-0001', class: 'form-control w-auto' %>
-    <%= form.label :distribution, 'Source' %>
-    <%= form.select :distribution, options_for_select(PatchRelease::DISTRIBUTIONS.map { |source| [source.humanize, source] }, @filters['distribution']),
-      { include_blank: 'All sources' }, class: 'form-select w-auto' %>
-    <%= form.label :sort, 'Sort' %>
-    <%= form.select :sort, options_for_select([['Newest indexed', 'newest'], ['Oldest indexed', 'oldest'],
-      ['Largest first', 'largest'], ['Smallest first', 'smallest']], @sort), {}, class: 'form-select w-auto' %>
-    <%= form.submit 'Apply', name: nil, class: 'btn btn-outline-primary' %>
+  <%= form_with url: patches_path, method: :get, local: true, class: 'row g-2 align-items-end mb-4' do |form| %>
+    <div class="col-12 col-md-6 col-lg">
+      <%= form.label :purl, 'PURL', class: 'form-label small text-muted mb-1' %>
+      <%= form.search_field :purl, value: @filters['purl'], placeholder: 'pkg:cargo/h2', class: 'form-control' %>
+    </div>
+    <div class="col-12 col-md-6 col-lg">
+      <%= form.label :repository_url, 'Repository', class: 'form-label small text-muted mb-1' %>
+      <%= form.search_field :repository_url, value: @filters['repository_url'], placeholder: 'https://github.com/hyperium/h2', class: 'form-control' %>
+    </div>
+    <div class="col-12 col-md-4 col-lg">
+      <%= form.label :advisory, 'Advisory', class: 'form-label small text-muted mb-1' %>
+      <%= form.search_field :advisory, value: @filters['advisory'], placeholder: 'CVE-2024-0001', class: 'form-control' %>
+    </div>
+    <div class="col-6 col-md-3 col-lg-auto">
+      <%= form.label :distribution, 'Source', class: 'form-label small text-muted mb-1' %>
+      <%= form.select :distribution, options_for_select(PatchRelease::DISTRIBUTIONS.map { |source| [source.humanize, source] }, @filters['distribution']),
+        { include_blank: 'All sources' }, class: 'form-select' %>
+    </div>
+    <div class="col-6 col-md-3 col-lg-auto">
+      <%= form.label :sort, 'Sort', class: 'form-label small text-muted mb-1' %>
+      <%= form.select :sort, options_for_select([['Newest indexed', 'newest'], ['Oldest indexed', 'oldest'],
+        ['Largest first', 'largest'], ['Smallest first', 'smallest']], @sort), {}, class: 'form-select' %>
+    </div>
+    <div class="col-12 col-md-2 col-lg-auto">
+      <%= form.submit 'Apply', name: nil, class: 'btn btn-outline-primary w-100' %>
+    </div>
   <% end %>
 
   <% if @patches.any? %>

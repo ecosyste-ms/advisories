@@ -418,7 +418,7 @@ class Advisory < ApplicationRecord
 
   def related_advisories
     return Advisory.none unless cve
-    Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
+    Advisory.where("identifiers @> ARRAY[?]::varchar[]", cve).where.not(id: id)
   end
 
   def cache_related_advisories!

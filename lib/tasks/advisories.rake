@@ -24,6 +24,16 @@ namespace :advisories do
     end
   end
 
+  desc 'Update Debian and Ubuntu advisories from OSV'
+  task :sync_osv => :environment do
+    source = Source.find_by(kind: 'osv')
+    if source
+      puts "Synced #{source.sync_advisories} advisories"
+    else
+      puts "OSV source not found. Run `rails db:seed` to create it."
+    end
+  end
+
   desc 'Update advisories from CPAN Security Advisory Database'
   task :sync_cpansa => :environment do
     source = Source.find_by(kind: 'cpansa')

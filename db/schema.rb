@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_23_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -41,6 +41,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_23_000000) do
     t.string "uuid"
     t.datetime "withdrawn_at"
     t.index ["created_at"], name: "index_advisories_on_created_at"
+    t.index ["identifiers"], name: "index_advisories_on_identifiers", using: :gin
     t.index ["packages"], name: "index_advisories_on_packages", using: :gin
     t.index ["published_at"], name: "index_advisories_on_published_at"
     t.index ["repository_url", "published_at"], name: "index_advisories_on_repository_url_and_published_at"

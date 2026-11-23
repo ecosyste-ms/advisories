@@ -91,7 +91,7 @@ paths:
             type: string
         - name: source
           in: query
-          description: "Source to filter by (e.g. github, erlef, cpansa)"
+          description: "Source to filter by (e.g. github, erlef, cpansa, osv)"
           required: false
           schema:
             type: string
@@ -279,7 +279,7 @@ paths:
           schema:
             type: string
           required: true
-          description: kind of the source (e.g. github, erlef, cpansa)
+          description: kind of the source (e.g. github, erlef, cpansa, osv)
       responses:
         200:
           description: OK

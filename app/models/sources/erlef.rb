@@ -128,26 +128,5 @@ module Sources
         ecosystem.downcase
       end
     end
-
-    def parse_cvss_score(vector)
-      return nil unless vector
-
-      cvss = CvssSuite.new(vector)
-      return nil unless cvss.valid?
-
-      cvss.overall_score
-    end
-
-    def severity_from_score(score)
-      return nil unless score
-
-      case score
-      when 9.0..10.0 then 'CRITICAL'
-      when 7.0...9.0 then 'HIGH'
-      when 4.0...7.0 then 'MEDIUM'
-      when 0.1...4.0 then 'LOW'
-      else nil
-      end
-    end
   end
 end

@@ -94,6 +94,6 @@ class AdvisoriesController < ApplicationController
     @downstream_releases = @advisory.downstream_releases.order(:distribution, :package_name, :version).limit(PATCH_LIMIT).to_a
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
     fresh_when etag: [@advisory, @patch_occurrences.map { |occurrence| [occurrence.id, occurrence.patch_id, occurrence.advisory_ids, occurrence.declaration] },
-      @downstream_releases.map { |release| [release.id, release.upstream_version] }]
+      @downstream_releases.map { |release| [release.id, release.upstream_package_name, release.upstream_version] }]
   end
 end

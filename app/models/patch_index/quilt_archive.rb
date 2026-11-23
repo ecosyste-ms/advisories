@@ -1,7 +1,7 @@
 module PatchIndex
   class QuiltArchive
     PREFIX = 'debian/patches/'
-    METADATA = %w[debian/upstream/metadata debian/copyright debian/control].freeze
+    METADATA = %w[debian/upstream/metadata debian/copyright debian/control debian/watch].freeze
     MEMBER_LIMIT = 32.megabytes
     TOTAL_LIMIT = 128.megabytes
     attr_reader :series_path, :changelog, :metadata

@@ -22,7 +22,9 @@ module PatchIndex
       sleep @interval
       body = ''.b
       response = @connection.get(url) do |request|
-        request.options.on_data = proc do |chunk, received|
+        request.options.on_data = proc do |chunk, received, env|
+          # Only the final response counts against the limit.
+          next if env&.status && !env.success?
           raise TooLarge if received > limit
           # A redirect or retry starts a new response.
           body.clear if received == chunk.bytesize

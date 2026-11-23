@@ -140,6 +140,7 @@ class PatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select '#downstream-releases li', text: /No known advisories affect this version/, count: 1
     get ecosystem_package_path('cargo', 'h2', tab: 'patches')
     assert_select '#downstream-releases', count: 0
+    assert_equal ['rust-hyper'], PatchRelease.for_purl('pkg:cargo/hyper@1.0.0-rc1').pluck(:package_name)
   end
 
   test 'the advisory page lists the patches that name it' do

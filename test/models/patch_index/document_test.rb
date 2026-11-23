@@ -23,7 +23,7 @@ class PatchIndex::DocumentTest < ActiveSupport::TestCase
 
   test 'a download stops at its byte limit and a redirect body is not kept' do
     http = PatchIndex::Http.new(interval: 0)
-    stub_request(:get, 'https://example.org/a').to_return(status: 302, body: 'moved', headers: { 'Location' => 'https://example.org/b' })
+    stub_request(:get, 'https://example.org/a').to_return(status: 302, body: 'moved elsewhere', headers: { 'Location' => 'https://example.org/b' })
     stub_request(:get, 'https://example.org/b').to_return(body: 'patch')
     assert_equal 'patch', http.get('https://example.org/a', limit: 5)
     error = assert_raises(PatchIndex::Http::Error) { http.get('https://example.org/b', limit: 4) }
@@ -67,6 +67,7 @@ class PatchIndex::DocumentTest < ActiveSupport::TestCase
     assert_equal ['debian/upstream/metadata:Repository', 'https://github.com/example/project'],
       repository.debian(nil, 'debian/upstream/metadata' => %(Repository: "https://github.com/example/project.git"\n))
     assert_equal '2.3.4', PatchIndex::Apt.upstream_version('1:2.3.4+dfsg1-2ubuntu1')
+    assert_equal '0.1.4', PatchIndex::Apt.upstream_version('0.2.0+really0.1.4-4')
   end
 
   test 'a redirect to plain HTTP is refused' do

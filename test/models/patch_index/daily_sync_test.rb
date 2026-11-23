@@ -101,11 +101,13 @@ class PatchIndex::DailySyncTest < ActiveSupport::TestCase
     sync = PatchIndex::DailySync.new('ubuntu', http: @http)
     url = "#{@apt::UBUNTU}/pool/main/e/example/example_1-1.debian.tar.gz"
     publish = ->(data) { apt_indexes('ubuntu', { ['noble-security', 'universe'] => apt_record('1-1', data, homepage: 'https://github.com/example/project') }) }
-    initial = packaging("missing.patch\n", vendor_series: "fix.patch\n")
+    watch = "version=4\nhttps://qa.debian.org/cgi-bin/fakeupstream.cgi?upstream=crates.io/example_crate .*/crates/example_crate/@ANY_VERSION@/download\n"
+    initial = packaging("missing.patch\n", vendor_series: "fix.patch\n", extra: { 'debian/watch' => watch })
     publish.call(initial)
     download = stub_request(:get, url).to_return(body: initial)
     assert_equal 1, sync.run[:imported]
     occurrence = PatchOccurrence.sole
+    assert_equal 'pkg:cargo/example_crate', occurrence.patch_release.upstream_purl
     assert_equal 'debian/patches/ubuntu.series', occurrence.declaration['series_path']
     assert_equal ['https://github.com/example/project', 'Sources:Homepage'],
       [occurrence.patch_release.repository_url, occurrence.patch_release.metadata['repository_field']]

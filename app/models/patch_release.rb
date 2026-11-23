@@ -19,14 +19,16 @@ class PatchRelease < ApplicationRecord
     scope = repackaging(ecosystem, name)
     repository = PatchIndex::Repository.normalize(Package.find_by_identity(ecosystem, name)&.repository_url)
     scope = scope.or(where(repository_url: repository, upstream_package_name: nil)) if repository
-    version.present? ? scope.where(upstream_version: version) : scope
+    version.present? ? scope.shipping(version) : scope
   end
+
+  # Debian writes a pre-release as 1.0~rc1 where the registry has 1.0-rc1.
+  scope :shipping, ->(version) { where(upstream_version: [version, version.tr('-', '~')].uniq) }
 
   def upstream_purl
     "pkg:#{upstream_ecosystem}/#{upstream_package_name}" if upstream_package_name
   end
 
-  # Debian writes a pre-release as 1.0~rc1 where the registry has 1.0-rc1.
   def registry_version
     upstream_version&.tr('~', '-')
   end
@@ -43,7 +45,7 @@ class PatchRelease < ApplicationRecord
     purl = Purl.parse(string)
     if purl.type == 'github'
       scope = where(repository_url: "https://github.com/#{purl.namespace}/#{purl.name}".downcase)
-      purl.version.present? ? scope.where(upstream_version: purl.version.delete_prefix('v')) : scope
+      purl.version.present? ? scope.shipping(purl.version.delete_prefix('v')) : scope
     elsif (distribution = PURL_DISTRIBUTIONS[[purl.type, purl.namespace]])
       for_package(distribution, purl.name, version: purl.version)
     elsif (identity = PurlParser.parse(string))

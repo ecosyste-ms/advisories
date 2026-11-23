@@ -16,6 +16,42 @@ externalDocs:
 servers:
 - url: https://advisories.ecosyste.ms/api/v1
 paths:
+  /patches:
+    get:
+      summary: List downstream patches
+      operationId: getPatches
+      tags: [patches]
+      description: Patches that distributions apply on top of upstream source. Each SHA-256 appears once. All filters apply to the same declaration, and only matching declarations are returned.
+      parameters:
+        - {name: purl, in: query, schema: {type: string}, description: "A registry package (pkg:cargo/h2), matched through its repository URL, with an optional upstream version. Also accepts pkg:github, pkg:deb/debian, pkg:deb/ubuntu and pkg:brew."}
+        - {name: repository_url, in: query, schema: {type: string}, description: Upstream repository the downstream release declares}
+        - {name: advisory, in: query, schema: {type: string}, description: Advisory identifier or any of its aliases named by a declaration}
+        - {name: distribution, in: query, schema: {type: string, enum: [debian, homebrew, ubuntu]}}
+        - {name: page, in: query, schema: {type: integer, minimum: 1}}
+        - {name: per_page, in: query, schema: {type: integer, minimum: 1, maximum: 1000, default: 100}}
+      responses:
+        '200':
+          description: Matching patches
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/Patch'}}
+        '400':
+          description: Invalid PURL
+  /patches/{sha256}:
+    get:
+      summary: Get a patch with all downstream declarations
+      operationId: getPatch
+      tags: [patches]
+      parameters:
+        - {name: sha256, in: path, required: true, schema: {type: string, pattern: '^[0-9a-f]{64}$'}}
+      responses:
+        '200':
+          description: One patch
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Patch'}
+        '404':
+          description: No release declares a patch with this digest
   /advisories:
     get: 
       summary: "list advisories"
@@ -228,6 +264,51 @@ paths:
                 $ref: '#/components/schemas/Source'
 components:
   schemas:
+    Patch:
+      type: object
+      properties:
+        sha256: {type: string, pattern: '^[0-9a-f]{64}$', description: Digest of the exact patch bytes}
+        byte_size: {type: integer}
+        headers: {type: object, additionalProperties: {type: string}, description: "Fields from the patch preamble, such as Subject, Origin, Forwarded and Applied-Upstream"}
+        api_url: {type: string, format: uri}
+        html_url: {type: string, format: uri}
+        download_url: {type: string, format: uri, description: Original bytes}
+        occurrences:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              position: {type: integer, description: Order in which the release applies it}
+              source_url: {type: string, format: uri}
+              html_url: {type: string, format: uri}
+              advisory_ids: {type: array, items: {type: string}}
+              advisory_roles:
+                type: object
+                additionalProperties: {type: string, enum: [explicit_fix, patch_name, context]}
+              declaration: {type: object, description: How the release declares the patch and which fields mention each advisory}
+              release:
+                type: object
+                properties:
+                  distribution: {type: string}
+                  package_name: {type: string}
+                  version: {type: string}
+                  upstream_version: {type: string, nullable: true, description: Upstream version the release is based on}
+                  repository_url: {type: string, nullable: true, description: Upstream repository the release declares}
+                  source_url: {type: string, format: uri}
+                  imported_at: {type: string, format: date-time}
+                  package_url: {type: string, format: uri}
+        referenced_advisories:
+          type: array
+          items:
+            type: object
+            properties:
+              uuid: {type: string}
+              url: {type: string, nullable: true}
+              withdrawn_at: {type: string, format: date-time, nullable: true}
+              matched_identifiers: {type: array, items: {type: string}}
+              api_url: {type: string, format: uri}
+              html_url: {type: string, format: uri}
     Advisory:
       type: object
       properties:

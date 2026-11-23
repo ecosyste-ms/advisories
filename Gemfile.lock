@@ -367,6 +367,7 @@ DEPENDENCIES
   faraday-multipart
   faraday-retry
   faraday-typhoeus
+  ffi
   groupdate
   jbuilder
   jquery-rails

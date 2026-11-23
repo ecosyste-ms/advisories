@@ -1,4 +1,4 @@
-<% @meta_title = "#{@package_name} Security Advisories - #{@ecosystem.humanize}" %>
+<% @meta_title = "#{@package_name} #{@patches_tab ? 'Patches' : 'Security Advisories'} - #{@ecosystem.humanize}" %>
 <% if @package&.description.present? %>
   <% @meta_description = "Security advisories for #{@package_name} (#{@ecosystem}): #{@package.description.truncate(120)}" %>
 <% else %>
@@ -6,7 +6,7 @@
 <% end %>
 
 <div class="container">
-  <div class="mb-5">
+  <div class="mb-3">
     <div class="d-flex align-items-center mb-3">
       <% if @registry&.icon_url.present? %>
         <img src="<%= @registry.icon_url %>" alt="<%= @ecosystem %>" class="me-3" style="width: 64px; height: 64px; object-fit: contain;">
@@ -36,77 +36,45 @@
     </div>
   </div>
 
+  <% filters = params.permit(:version, :severity, :repository_url, :created_after, :updated_after, :sort, :order, :per_page).to_h %>
+  <nav class="nav nav-tabs mb-4" aria-label="Package sections">
+    <%= link_to 'Advisories', ecosystem_package_path(@ecosystem, @package_name, filters),
+      class: class_names('nav-link', active: !@patches_tab), aria: { current: ('page' unless @patches_tab) } %>
+    <%= link_to 'Patches', ecosystem_package_path(@ecosystem, @package_name, filters.merge(tab: 'patches')),
+      class: class_names('nav-link', active: @patches_tab), aria: { current: ('page' if @patches_tab) } %>
+  </nav>
+
   <div class="row">
     <div class="col-lg-8">
-      <div class="listing-controls p-3 mb-5 rounded">
-
-    <div class="row">
-      <div class="col-8">
-        <p class="mb-0">
-          <% if params[:severity].present? %>
-            <strong><%= params[:severity].humanize %></strong>
-          <% end %>
-          Security Advisories
-          for <strong><%= @package_name %></strong>
-          <% if params[:version].present? %>
-            version <strong><%= params[:version] %></strong>
-          <% end %>
-          <% if params[:repository_url].present? %>
-            for <strong><%= params[:repository_url] %></strong>
-          <% end %>
-          in <strong><%= @ecosystem %></strong>
-          <% if params.slice(:repository_url, :severity, :version).values.any?(&:present?) %>
-            <%= link_to 'Clear Filters', ecosystem_package_path(@ecosystem, @package_name), class: 'btn btn-link btn-clear p-0' %>
-          <% end %>
-        </p>
-      </div>
-
-          <div class="col-4  text-end">
-            <%= render 'advisories/sort' %>
-          </div>
-        </div>
-      </div>
-      <% if params[:version].present? && @pagy.count.zero? %>
-        <p>No advisories with a matching affected version range were found.</p>
-      <% end %>
-      <% @advisories.each do |advisory| %>
-        <% related = @related_packages_by_advisory&.dig(advisory.id) %>
-        <% is_potential = related && !@direct_advisory_ids.include?(advisory.id) %>
-        <div class="position-relative">
-          <% if is_potential && related.match_kind.present? && related.match_kind != "unknown" %>
-            <% badge_class = case related.match_kind
-              when "repo_fork" then "badge bg-danger"
-              when "likely_fork" then "badge bg-warning text-dark"
-              when "repackage" then "badge bg-info text-dark"
-              end %>
-            <span class="position-absolute top-0 end-0 mt-3 me-3 <%= badge_class %>"><%= related.match_kind.humanize %></span>
-          <% elsif is_potential %>
-            <span class="position-absolute top-0 end-0 mt-3 me-3 badge bg-secondary">Potential</span>
-          <% end %>
-          <%= render advisory %>
-        </div>
+      <% if @patches_tab %>
+        <%= render 'package_patches' %>
+      <% else %>
+        <%= render 'package_advisories' %>
       <% end %>
       <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
     </div>
     <div class="col-lg-4 listing-filters">
       <%= form_with url: ecosystem_package_path(@ecosystem, @package_name), method: :get, local: true, class: 'mx-3 mb-4' do |form| %>
-        <% params.slice(:severity, :repository_url, :created_after, :updated_after, :sort, :order, :per_page).each do |key, value| %>
+        <%= hidden_field_tag :tab, 'patches' if @patches_tab %>
+        <% filters.except(:version).each do |key, value| %>
           <%= hidden_field_tag key, value if value.present? %>
         <% end %>
         <%= form.label :version, 'Filter by Version', class: 'h4' %>
         <%= form.text_field :version, value: params[:version], class: 'form-control mb-2', 'aria-describedby': 'version-filter-help' %>
-        <p id="version-filter-help" class="form-text">Match affected ranges for this package. Potential advisories inferred from related packages are excluded.</p>
+        <p id="version-filter-help" class="form-text"><%= @patches_tab ? 'Match an exact package version.' : 'Match affected ranges for this package. Potential advisories inferred from related packages are excluded.' %></p>
         <%= form.submit 'Filter', class: 'btn btn-primary' %>
       <% end %>
-      <h3 class="h4 mx-3">Filter by Severity</h3>
-      <div class="list-group list-group-flush">
-        <% @severities.each do |severity,count| %>
-          <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(request.params.merge(severity: (params[:severity] == severity ? nil : severity), page: nil)) %>">
-            <%= severity.humanize %>
-            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
-          </a>
-        <% end %>
-      </div>
+      <% unless @patches_tab %>
+        <h3 class="h4 mx-3">Filter by Severity</h3>
+        <div class="list-group list-group-flush">
+          <% @severities.each do |severity,count| %>
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if params[:severity] == severity %>" href="<%= url_for(request.params.merge(severity: (params[:severity] == severity ? nil : severity), page: nil)) %>">
+              <%= severity.humanize %>
+              <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
+            </a>
+          <% end %>
+        </div>
+      <% end %>
 
     </div>
   </div>

@@ -1,0 +1,63 @@
+<% @meta_title = 'Downstream patches' %>
+<div class="container">
+  <h1 class="mb-4">Downstream patches</h1>
+
+  <%= form_with url: patches_path, method: :get, local: true, class: 'd-flex flex-wrap align-items-center gap-2 mb-3' do |form| %>
+    <%= form.label :purl, 'PURL' %>
+    <%= form.search_field :purl, value: @filters['purl'], placeholder: 'pkg:cargo/h2', class: 'form-control w-auto' %>
+    <%= form.label :repository_url, 'Repository' %>
+    <%= form.search_field :repository_url, value: @filters['repository_url'], placeholder: 'https://github.com/hyperium/h2', class: 'form-control w-auto' %>
+    <%= form.label :advisory, 'Advisory' %>
+    <%= form.search_field :advisory, value: @filters['advisory'], placeholder: 'CVE-2024-0001', class: 'form-control w-auto' %>
+    <%= form.label :distribution, 'Source' %>
+    <%= form.select :distribution, options_for_select(PatchRelease::DISTRIBUTIONS.map { |source| [source.humanize, source] }, @filters['distribution']),
+      { include_blank: 'All sources' }, class: 'form-select w-auto' %>
+    <%= form.label :sort, 'Sort' %>
+    <%= form.select :sort, options_for_select([['Newest indexed', 'newest'], ['Oldest indexed', 'oldest'],
+      ['Largest first', 'largest'], ['Smallest first', 'smallest']], @sort), {}, class: 'form-select w-auto' %>
+    <%= form.submit 'Apply', name: nil, class: 'btn btn-outline-primary' %>
+  <% end %>
+
+  <% if @patches.any? %>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Patch</th>
+            <th scope="col" class="text-end">Size (KB)</th>
+            <th scope="col">Downstream packages</th>
+            <th scope="col">Upstream repository</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @patches.each do |patch| %>
+            <% occurrences = @occurrences.fetch(patch.id, []) %>
+            <% releases = occurrences.map(&:patch_release).uniq %>
+            <tr>
+              <th scope="row">
+                <%= link_to patch.display_name(occurrences), patch_path(patch), class: 'text-break' %>
+                <div class="small text-muted"><code><%= patch.sha256.first(12) %></code></div>
+              </th>
+              <td class="text-end"><%= number_with_precision(patch.byte_size / 1000.0, precision: 2, delimiter: ',') %></td>
+              <td>
+                <% releases.map { |release| [release.distribution, release.package_name] }.uniq.sort.each do |distribution, name| %>
+                  <div><%= distribution.humanize %> / <%= name %></div>
+                <% end %>
+              </td>
+              <td>
+                <% releases.filter_map(&:repository_url).uniq.sort.each do |url| %>
+                  <div><%= link_to url.delete_prefix('https://'), patches_path(repository_url: url), class: 'font-monospace' %></div>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% elsif @filters.any? %>
+    <p>No matching patches. <%= link_to 'Clear filters', patches_path %></p>
+  <% else %>
+    <p>No patches have been indexed.</p>
+  <% end %>
+  <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
+</div>

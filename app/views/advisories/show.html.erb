@@ -218,6 +218,35 @@
   <% end %>
   <% end %>
 
+  <% if @patch_occurrences.any? %>
+    <h3 id="downstream-patches" class="h4 mt-4">Downstream Patches</h3>
+    <p class="text-muted small">Patches carried by distributions that name this advisory.</p>
+    <div class="table-wrapper table-responsive-lg">
+      <table class="table table-bordered ecosystems-table mb-3">
+        <thead>
+          <tr>
+            <th>Patch</th>
+            <th>Declared by</th>
+            <th>Reference</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% identifiers = @advisory.patch_identifiers %>
+          <% @patch_occurrences.each do |occurrence| %>
+            <tr>
+              <td><%= link_to occurrence.name, patch_path(occurrence.patch, anchor: dom_id(occurrence)), class: 'text-break' %></td>
+              <td><%= patch_release_label(occurrence.patch_release) %></td>
+              <td><%= occurrence.advisory_roles.slice(*identifiers).values.uniq.map { |role| PatchOccurrence::ROLES.fetch(role) }.join(', ') %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <% if @patch_occurrences.size == AdvisoriesController::PATCH_LIMIT %>
+      <p class="small"><%= link_to 'All patches naming this advisory', patches_path(advisory: @advisory.uuid) %></p>
+    <% end %>
+  <% end %>
+
 	<div class="row">
 		<div class="col-lg-8">
 			<div class="page-content mt-4 pe-lg-3">

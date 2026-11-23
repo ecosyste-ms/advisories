@@ -384,6 +384,14 @@ class Advisory < ApplicationRecord
     identifiers.find{|id| id.start_with?('CVE-') }
   end
 
+  def patch_identifiers
+    [uuid, *identifiers].compact.uniq
+  end
+
+  def patch_occurrences
+    PatchOccurrence.referencing(patch_identifiers)
+  end
+
   MATCH_KIND_ORDER = %w[repo_fork likely_fork repackage].freeze
 
   def classified_related_packages

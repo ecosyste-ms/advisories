@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_04_093340) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_23_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -84,6 +84,48 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_093340) do
     t.index ["owner"], name: "index_packages_on_owner"
   end
 
+  create_table "patch_bodies", primary_key: "sha256", id: :string, force: :cascade do |t|
+    t.binary "contents", null: false
+    t.check_constraint "encode(sha256(contents), 'hex'::text) = sha256::text", name: "patch_body_matches_digest"
+  end
+
+  create_table "patch_occurrences", force: :cascade do |t|
+    t.bigint "patch_id", null: false
+    t.bigint "patch_release_id", null: false
+    t.string "name", null: false
+    t.integer "position", null: false
+    t.string "source_url", null: false
+    t.string "advisory_ids", default: [], null: false, array: true
+    t.jsonb "declaration", default: {}, null: false
+    t.index ["advisory_ids"], name: "index_patch_occurrences_on_advisory_ids", using: :gin
+    t.index ["patch_id"], name: "index_patch_occurrences_on_patch_id"
+    t.index ["patch_release_id", "name"], name: "index_patch_occurrences_on_patch_release_id_and_name", unique: true
+  end
+
+  create_table "patch_releases", force: :cascade do |t|
+    t.string "distribution", null: false
+    t.string "package_name", null: false
+    t.string "version", null: false
+    t.string "upstream_version"
+    t.string "repository_url"
+    t.string "source_url", null: false
+    t.string "sync_sha256"
+    t.string "last_error"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "imported_at"
+    t.index ["distribution", "package_name", "version"], name: "idx_on_distribution_package_name_version_a37dda4bf7", unique: true
+    t.index ["repository_url"], name: "index_patch_releases_on_repository_url"
+  end
+
+  create_table "patches", force: :cascade do |t|
+    t.string "sha256", null: false
+    t.integer "byte_size", null: false
+    t.jsonb "headers", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sha256"], name: "index_patches_on_sha256", unique: true
+  end
+
   create_table "registries", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "default", default: false
@@ -122,6 +164,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_093340) do
   end
 
   add_foreign_key "advisories", "sources"
+  add_foreign_key "patch_bodies", "patches", column: "sha256", primary_key: "sha256", on_delete: :cascade
+  add_foreign_key "patch_occurrences", "patch_releases"
+  add_foreign_key "patch_occurrences", "patches"
   add_foreign_key "related_packages", "advisories"
   add_foreign_key "related_packages", "packages"
 end

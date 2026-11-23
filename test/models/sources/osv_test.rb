@@ -166,6 +166,26 @@ class OsvSourceTest < ActiveSupport::TestCase
     assert_equal watermark, @source.reload.metadata.dig('osv_synced', 'Debian')
   end
 
+  test 'a batch whose jobs could not be queued is written again on the next run' do
+    github = create(:advisory, uuid: 'GSA_h2', identifiers: %w[GHSA-f8vr-r385-rh5r CVE-2023-26964])
+    PackageSyncWorker.stubs(:perform_bulk).raises(RedisClient::CannotConnectError)
+    assert_raises(RedisClient::CannotConnectError) { @osv.sync_advisories }
+    PackageSyncWorker.unstub(:perform_bulk)
+
+    advisory = @source.advisories.find_by!(uuid: 'DEBIAN-CVE-2023-26964')
+    assert_equal Time.at(0), advisory.updated_at
+    assert_equal [advisory.uuid], github.reload.cached_related_advisories.pluck('uuid')
+    assert_nil @source.reload.metadata['osv_synced']
+
+    Sidekiq::Testing.fake! do
+      PackageSyncWorker.jobs.clear
+      assert_equal 2, @osv.sync_advisories
+      assert_equal [%w[debian rust-h2], %w[ubuntu rust-tar]], PackageSyncWorker.jobs.map { |job| job['args'] }.sort
+      PackageSyncWorker.jobs.clear
+    end
+    assert_equal Time.iso8601(@debian[:modified]).floor(6), advisory.reload.updated_at
+  end
+
   test 'a failed download leaves the export to be retried' do
     stub_request(:get, "#{BASE}/Debian/all.zip").to_return(status: 503)
 

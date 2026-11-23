@@ -55,8 +55,7 @@ module Sources
         next if saved.empty?
         # Follow-up work runs with its batch, so a later failure cannot strand it.
         refresh_related(saved.map(&:first))
-        packages = saved.flat_map(&:last).select { |key| enqueued.add?(key) }
-        PackageSyncWorker.perform_bulk(packages) if packages.any?
+        enqueue_follow_up(saved, enqueued)
         count += saved.size
       end
       # Bulk inserts skip the counter cache.
@@ -96,8 +95,22 @@ module Sources
       end
     end
 
+    # Queues the package and related-package syncs. If the queue cannot be reached, the batch is
+    # marked stale so the next run writes it again and repeats its follow-up work.
+    def enqueue_follow_up(saved, enqueued)
+      packages = saved.flat_map { |_, keys, _| keys }.select { |key| enqueued.add?(key) }
+      PackageSyncWorker.perform_bulk(packages) if packages.any?
+      with_repository = saved.select(&:last).map(&:first)
+      if with_repository.any?
+        RelatedPackagesSyncWorker.perform_bulk(source.advisories.where(uuid: with_repository).pluck(:id).zip)
+      end
+    rescue StandardError
+      source.advisories.where(uuid: saved.map(&:first)).update_all(updated_at: Time.at(0))
+      raise
+    end
+
     # Inserts new advisories in one statement and updates changed ones.
-    # Returns [uuid, package keys] for each advisory written.
+    # Returns [uuid, package keys, whether it names a repository] for each advisory written.
     def save_batch(batch, known)
       batch = batch.reject { |advisory| (stored = known[advisory[:uuid]]) && stored.last >= advisory[:updated_at].floor(6) }
       fresh, changed = batch.partition { |advisory| known[advisory[:uuid]].nil? }
@@ -116,11 +129,10 @@ module Sources
         record.update_columns(advisory.except(:uuid))
         record.cache_affected_versions!
       end
-      with_repository = batch.select { |advisory| advisory[:repository_url] }.pluck(:uuid)
-      if with_repository.any?
-        RelatedPackagesSyncWorker.perform_bulk(source.advisories.where(uuid: with_repository).pluck(:id).zip)
+      batch.map do |advisory|
+        keys = advisory[:packages].map { |package| package.values_at(:ecosystem, :package_name) }
+        [advisory[:uuid], keys, advisory[:repository_url].present?]
       end
-      batch.map { |advisory| [advisory[:uuid], advisory[:packages].map { |package| package.values_at(:ecosystem, :package_name) }] }
     end
 
     # A package that has already synced will not refresh these advisories unless its version list changes.

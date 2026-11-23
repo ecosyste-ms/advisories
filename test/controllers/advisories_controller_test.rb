@@ -203,4 +203,11 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href*='#{@advisory.uuid}']"
   end
 
+  test "should show an advisory without a description" do
+    advisory = FactoryBot.create(:advisory, description: nil)
+
+    get advisory_url(advisory.uuid)
+    assert_response :success
+  end
+
 end

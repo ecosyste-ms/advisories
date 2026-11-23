@@ -111,7 +111,7 @@ class PatchIndex::DailySyncTest < ActiveSupport::TestCase
     emptied = packaging('')
     publish.call(emptied)
     _, err = capture_io { assert_equal 1, sync.run[:failed] }
-    assert_match(/SHA-256 mismatch/, err)
+    assert_match(/exceeds #{emptied.bytesize} bytes/, err)
     assert_nil PatchRelease.sole.last_error
 
     broken = packaging("missing.patch\n")
@@ -206,6 +206,7 @@ class PatchIndex::DailySyncTest < ActiveSupport::TestCase
 
     one, named = PatchOccurrence.order(:id).to_a
     assert_equal ['patches/one.diff', 'bundle-1/patches/one.diff', []], [one.name, one.declaration['member'], one.advisory_ids]
+    assert_equal [1, 2], [one.position, named.position]
     assert_equal [{ 'type' => 'security', 'id' => 'CVE-2024-0001' }], one.declaration['bundle_resolves']
     assert_equal({ 'CVE-2024-0002' => 'patch_name' }, named.advisory_roles)
   end

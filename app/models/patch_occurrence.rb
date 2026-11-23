@@ -17,9 +17,11 @@ class PatchOccurrence < ApplicationRecord
       scope = scope.where(patch_release: PatchRelease.where(distribution: filters[:distribution].to_s.downcase))
     end
     return scope if filters[:advisory].blank?
-    identifier = PatchIndex::Document.identifier(filters[:advisory].to_s.strip)
-    advisory = Advisory.where('uuid = ? OR identifiers && ARRAY[?]::varchar[]', identifier, identifier).first
-    scope.referencing(advisory ? advisory.patch_identifiers : identifier)
+    given = filters[:advisory].to_s.strip
+    # Advisory UUIDs keep their case; identifiers named by patches are normalised.
+    ids = [given, PatchIndex::Document.identifier(given)].uniq
+    advisories = Advisory.where('uuid IN (?) OR identifiers && ARRAY[?]::varchar[]', ids, ids)
+    scope.referencing((ids + advisories.flat_map(&:patch_identifiers)).uniq)
   end
 
   # Says how each advisory identifier relates to this patch.

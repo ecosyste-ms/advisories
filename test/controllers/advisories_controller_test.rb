@@ -215,6 +215,11 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     occurrence.update!(patch: FactoryBot.create(:patch))
     get advisory_url(advisory), headers: { "If-None-Match" => etag }
     assert_response :success
+
+    etag = response.headers["ETag"]
+    occurrence.update!(declaration: { "advisory_evidence" => { "CVE-2024-27308" => ["name"] } })
+    get advisory_url(advisory), headers: { "If-None-Match" => etag }
+    assert_response :success
   end
 
   test "should show an advisory without a description" do

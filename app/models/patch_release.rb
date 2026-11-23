@@ -20,7 +20,8 @@ class PatchRelease < ApplicationRecord
   def self.for_purl(string)
     purl = Purl.parse(string)
     if purl.type == 'github'
-      where(repository_url: "https://github.com/#{purl.namespace}/#{purl.name}".downcase)
+      scope = where(repository_url: "https://github.com/#{purl.namespace}/#{purl.name}".downcase)
+      purl.version.present? ? scope.where(upstream_version: purl.version.delete_prefix('v')) : scope
     elsif (distribution = PURL_DISTRIBUTIONS[[purl.type, purl.namespace]])
       for_package(distribution, purl.name, version: purl.version)
     elsif (identity = PurlParser.parse(string))

@@ -14,6 +14,22 @@ class PatchIndex::DocumentTest < ActiveSupport::TestCase
     assert_equal Digest::SHA256.hexdigest(bytes), entry[:sha256]
   end
 
+  test 'an advisory at the start of a continuation line or inside a structured declaration is found' do
+    document = PatchIndex::Document.new("Fixes: https://example.org/1\n CVE-2024-0001\n\n--- a/x\n+++ b/x\n")
+    entry = document.entry(name: 'fix.patch', position: 1, source_url: 'https://example.org/a',
+      declaration: { 'resolves' => [{ 'type' => 'security', 'id' => 'CVE-2024-0002' }] })
+    assert_equal({ 'CVE-2024-0001' => ['header.Fixes'], 'CVE-2024-0002' => ['resolves'] }, entry.dig(:declaration, 'advisory_evidence'))
+  end
+
+  test 'a download stops at its byte limit and a redirect body is not kept' do
+    http = PatchIndex::Http.new(interval: 0)
+    stub_request(:get, 'https://example.org/a').to_return(status: 302, body: 'moved', headers: { 'Location' => 'https://example.org/b' })
+    stub_request(:get, 'https://example.org/b').to_return(body: 'patch')
+    assert_equal 'patch', http.get('https://example.org/a', limit: 5)
+    error = assert_raises(PatchIndex::Http::Error) { http.get('https://example.org/b', limit: 4) }
+    assert_match(/exceeds 4 bytes/, error.message)
+  end
+
   test 'a git commit patch supplies its commit and subject, and binary bytes do not break parsing' do
     document = PatchIndex::Document.new("From #{'a' * 40} Mon Sep 17 00:00:00 2001\nSubject: [PATCH] Fix \xFF thing\n\n---\n".b)
     assert_equal 'a' * 40, document.headers['commit']

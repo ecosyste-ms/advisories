@@ -92,6 +92,6 @@ class AdvisoriesController < ApplicationController
     @advisory = Advisory.find_by!(uuid: params[:id])
     @patch_occurrences = @advisory.patch_occurrences.preload(:patch, :patch_release).order(:id).limit(PATCH_LIMIT).to_a
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
-    fresh_when etag: [@advisory, @patch_occurrences.map { |occurrence| [occurrence.id, occurrence.patch_id] }]
+    fresh_when etag: [@advisory, @patch_occurrences.map { |occurrence| [occurrence.id, occurrence.patch_id, occurrence.advisory_ids, occurrence.declaration] }]
   end
 end

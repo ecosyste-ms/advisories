@@ -2,6 +2,9 @@ module PatchIndex
   class Http
     # Transport failures are worth retrying on the next run.
     class Error < IOError; end
+    # Raised inside the download callback, where the adapter would wrap an IOError.
+    class TooLarge < StandardError; end
+    LIMIT = 256.megabytes
 
     def initialize(interval: 0.4)
       @interval = interval
@@ -14,18 +17,28 @@ module PatchIndex
       end
     end
 
-    def get(url)
+    def get(url, limit: LIMIT)
       require_https!(URI.parse(url))
       sleep @interval
-      response = @connection.get(url)
+      body = ''.b
+      response = @connection.get(url) do |request|
+        request.options.on_data = proc do |chunk, received|
+          raise TooLarge if received > limit
+          # A redirect or retry starts a new response.
+          body.clear if received == chunk.bytesize
+          body << chunk
+        end
+      end
       raise Error, "HTTP #{response.status} for #{url}" unless response.success?
-      response.body.b
+      body
+    rescue TooLarge
+      raise Error, "response exceeds #{limit} bytes for #{url}"
     rescue Faraday::Error => e
       raise Error, "#{e.class} for #{url}"
     end
 
-    def verified(url, sha256)
-      body = get(url)
+    def verified(url, sha256, limit: LIMIT)
+      body = get(url, limit: limit)
       raise Error, "SHA-256 mismatch for #{url}" unless Digest::SHA256.hexdigest(body) == sha256
       body
     end

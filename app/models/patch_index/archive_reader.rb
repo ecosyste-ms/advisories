@@ -67,13 +67,18 @@ module PatchIndex
       while (status = Native.archive_read_next_header(@handle, @header)) != EOF
         check status
         entry = @header.read_pointer
-        @name = Native.archive_entry_pathname(entry).to_s.delete_prefix('./')
-        @symlink = Native.archive_entry_symlink(entry)
-        @hardlink = Native.archive_entry_hardlink(entry)
+        @name = text(Native.archive_entry_pathname(entry).to_s).delete_prefix('./')
+        @symlink = text(Native.archive_entry_symlink(entry))
+        @hardlink = text(Native.archive_entry_hardlink(entry))
         @size = Native.archive_entry_size(entry)
         @regular = Native.archive_entry_filetype(entry) == REGULAR_FILE && !hardlink
         yield self
       end
+    end
+
+    # libarchive hands back binary strings, which never equal UTF-8 names read from a series file.
+    def text(value)
+      value&.dup&.force_encoding('UTF-8')&.scrub
     end
 
     def regular?

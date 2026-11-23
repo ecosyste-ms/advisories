@@ -28,6 +28,12 @@ class PatchIndex::QuiltArchiveTest < ActiveSupport::TestCase
     assert_equal ['debian/copyright'], quilt.metadata.keys
   end
 
+  test 'a patch with a non-ASCII name is found through the series and through a link' do
+    path = archive({ 'debian/patches/series' => "fürther.patch\nlinked.patch\n", 'debian/patches/fürther.patch' => 'one' },
+      { 'debian/patches/linked.patch' => 'fürther.patch' })
+    assert_equal [['fürther.patch', [], 'one'], ['linked.patch', [], 'one']], PatchIndex::QuiltArchive.new(path, vendor: 'debian').patches
+  end
+
   test 'a vendor series wins and a series that escapes the archive or repeats a patch is rejected' do
     vendor = archive({ 'debian/patches/series' => "a.patch\n", 'debian/patches/debian.series' => "b.patch\n",
       'debian/patches/a.patch' => 'a', 'debian/patches/b.patch' => 'b' })

@@ -2,7 +2,7 @@ module PatchIndex
   class DailySync
     SOURCES = %w[debian homebrew ubuntu].freeze
     # Worth retrying on the next run without remembering the digest.
-    TRANSIENT = [Http::Error, ActiveRecord::TransactionRollbackError, ActiveRecord::ConnectionNotEstablished,
+    TRANSIENT = [Http::Error, SystemCallError, ActiveRecord::TransactionRollbackError, ActiveRecord::ConnectionNotEstablished,
       ActiveRecord::QueryAborted, ActiveRecord::LockWaitTimeout].freeze
 
     def initialize(source, http: Http.new)

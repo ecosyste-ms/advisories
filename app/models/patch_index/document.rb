@@ -34,7 +34,15 @@ module PatchIndex
     # Maps each advisory identifier to the fields that mention it.
     def self.references(sources)
       sources.each_with_object({}) do |(field, value), ids|
-        value.to_json.scan(ADVISORY).map { |id| identifier(id) }.uniq.each { |id| (ids[id] ||= []) << field }
+        strings(value).flat_map { |text| text.scan(ADVISORY) }.map { |id| identifier(id) }.uniq.each { |id| (ids[id] ||= []) << field }
+      end
+    end
+
+    def self.strings(value)
+      case value
+      when Hash then value.values.flat_map { |item| strings(item) }
+      when Array then value.flat_map { |item| strings(item) }
+      else [value.to_s]
       end
     end
 

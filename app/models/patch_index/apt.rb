@@ -65,7 +65,7 @@ module PatchIndex
       name, version = key
       url = row.fetch('url')
       Tempfile.create('quilt', binmode: true) do |file|
-        file.write(@http.verified(url, digest))
+        file.write(@http.verified(url, digest, limit: row.fetch('size')))
         file.flush
         archive = QuiltArchive.new(file.path, vendor: @distribution)
         patches = archive.patches

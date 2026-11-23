@@ -37,6 +37,8 @@ module PatchIndex
       name, version = key
       raise IOError, 'unexpected formula' unless formula.values_at('name', 'tap') == [name, 'homebrew/core']
       entries = formula.fetch('patches').each_with_index.flat_map { |patch, index| declarations(formula, patch, index + 1) }
+      # Bundle members apply in order, so positions run across the flattened list.
+      entries.each_with_index { |entry, index| entry[:position] = index + 1 }
       # Two declarations can share a file name, so a repeated name carries its position.
       repeated = entries.pluck(:name).tally.select { |_, count| count > 1 }
       entries.each { |entry| entry[:name] = "#{entry[:position]}-#{entry[:name]}" if repeated.key?(entry[:name]) }
@@ -54,7 +56,7 @@ module PatchIndex
       else
         patch.fetch('url')
       end
-      bytes = @http.get(url)
+      bytes = @http.get(url, limit: BUNDLE_LIMIT)
       bytes = bytes.split(/^__END__\r?\n/, 2)[1] || raise(IOError, "no DATA patch in #{url}") if patch['data']
       checksum = patch['sha256'] || formula.dig('local_patch_checksums', patch['file'])
       raise Http::Error, "SHA-256 mismatch for #{url}" if checksum && Digest::SHA256.hexdigest(bytes) != checksum

@@ -167,7 +167,7 @@ class Package < ApplicationRecord
   end
 
   def affected_versions(range)
-    version_map = build_version_map(version_numbers)
+    version_map = build_version_map(version_numbers, ecosystem)
 
     original_affected = version_map.select do |original, cleaned|
       version_satisfies_range?(cleaned, range, ecosystem)
@@ -177,15 +177,17 @@ class Package < ApplicationRecord
   end
 
   def fixed_versions(range)
-    version_map = build_version_map(version_numbers)
+    version_map = build_version_map(version_numbers, ecosystem)
 
     affected_originals = version_map.select do |original, cleaned|
       version_satisfies_range?(cleaned, range, ecosystem)
     end.keys
 
     original_fixed = version_map.keys - affected_originals
+    # A hyphen marks a pre-release in a registry version, and the revision in a distribution one.
+    original_fixed = original_fixed.reject { |v| v.include?('-') } unless SCHEMES.key?(ecosystem)
 
-    sort_versions_with_originals original_fixed.reject {|v| v.include?('-') }
+    sort_versions_with_originals original_fixed
   end
 
   def sort_versions(versions)
@@ -221,6 +223,10 @@ class Package < ApplicationRecord
   end
 
   def sort_versions_with_originals(versions)
+    if (scheme = SCHEMES[ecosystem])
+      return versions.select { |v| Vers.clean(v, scheme) }.sort { |a, b| Vers.compare_with_scheme(a, b, scheme) }
+    end
+
     version_map = {}
     versions.each do |v|
       cleaned = Vers.clean(v)

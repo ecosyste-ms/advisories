@@ -9,6 +9,7 @@ module PatchIndex
       attach_function :archive_read_new, [], :pointer
       attach_function :archive_read_support_filter_all, [:pointer], :int
       attach_function :archive_read_support_format_tar, [:pointer], :int
+      attach_function :archive_read_support_format_zip, [:pointer], :int
       attach_function :archive_read_open_filename, [:pointer, :string, :size_t], :int
       attach_function :archive_read_next_header, [:pointer, :pointer], :int
       attach_function :archive_read_data, [:pointer, :pointer, :size_t], :ssize_t
@@ -57,6 +58,7 @@ module PatchIndex
       @header = FFI::MemoryPointer.new(:pointer)
       Native.archive_read_support_filter_all(@handle)
       check Native.archive_read_support_format_tar(@handle)
+      check Native.archive_read_support_format_zip(@handle)
       check Native.archive_read_open_filename(@handle, path.to_s, CHUNK)
     rescue StandardError
       close

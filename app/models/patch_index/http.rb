@@ -18,21 +18,28 @@ module PatchIndex
     end
 
     def get(url, limit: LIMIT)
+      download(url, StringIO.new(''.b), limit: limit).string
+    end
+
+    # Streams the body into io, so a large file never sits in memory.
+    def download(url, io, limit: LIMIT)
       require_https!(URI.parse(url))
       sleep @interval
-      body = ''.b
       response = @connection.get(url) do |request|
         request.options.on_data = proc do |chunk, received, env|
           # Only the final response counts against the limit.
           next if env&.status && !env.success?
           raise TooLarge if received > limit
           # A redirect or retry starts a new response.
-          body.clear if received == chunk.bytesize
-          body << chunk
+          if received == chunk.bytesize
+            io.rewind
+            io.truncate(0)
+          end
+          io.write(chunk)
         end
       end
       raise Error, "HTTP #{response.status} for #{url}" unless response.success?
-      body
+      io
     rescue TooLarge
       raise Error, "response exceeds #{limit} bytes for #{url}"
     rescue Faraday::Error => e

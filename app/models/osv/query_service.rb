@@ -102,7 +102,7 @@ module Osv
 
       # Try finding by CVE identifier
       if id.start_with?('CVE-')
-        Advisory.where("? = ANY(identifiers)", id).first
+        Advisory.where("identifiers @> ARRAY[?]::varchar[]", id).first
       end
     end
   end

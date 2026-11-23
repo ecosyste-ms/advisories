@@ -62,6 +62,14 @@ You can then start syncing data for each source with the following command, this
 
 `rake advisories:sync`
 
+### Distribution advisories
+
+The OSV source imports the advisories that [OSV](https://osv.dev) publishes for Debian trixie and Ubuntu noble, the releases the patch index tracks. Each one names a distribution source package and the version that fixes it, and carries the upstream CVE as an identifier.
+
+`rake advisories:sync_osv`
+
+The first run downloads the full Debian and Ubuntu archives, about 900 MB together. Later runs read OSV's change index and fetch only the records modified since. `Sources::Osv::EXPORTS` lists which releases are kept.
+
 ### Downstream patches
 
 The daily jobs in `app.json` import the patches that Debian trixie, Ubuntu noble and Homebrew core apply on top of upstream source. Debian and Ubuntu patches come from the quilt series in each source package, including the security and updates pockets. Homebrew patches come from each formula's default `patch` declarations.

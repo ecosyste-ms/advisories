@@ -123,7 +123,9 @@ class Advisory < ApplicationRecord
     unless ecosystem.is_a?(String) && ecosystem.present? && package_name.is_a?(String) && package_name.present?
       raise InvalidVersionFilter, 'ecosystem and package_name are required when filtering by version'
     end
-    unless version.is_a?(String) && version.length <= Vers::Version::MAX_LENGTH && version.match?(/\Av?\d[0-9A-Za-z.+_!-]*\z/)
+    # Distribution versions can carry an epoch and a tilde.
+    pattern = SCHEMES.key?(ecosystem.downcase) ? /\A\d[0-9A-Za-z.+_!:~-]*\z/ : /\Av?\d[0-9A-Za-z.+_!-]*\z/
+    unless version.is_a?(String) && version.length <= Vers::Version::MAX_LENGTH && version.match?(pattern)
       raise InvalidVersionFilter, 'version must be a single version number'
     end
 
@@ -168,7 +170,7 @@ class Advisory < ApplicationRecord
 
   def affected_versions(package, range)
     originals = version_numbers(package)
-    version_map = build_version_map(originals)
+    version_map = build_version_map(originals, package['ecosystem'])
 
     version_map.select do |original, cleaned|
       version_satisfies_range?(cleaned, range, package['ecosystem'])
@@ -190,7 +192,7 @@ class Advisory < ApplicationRecord
   end
 
   def latest_resolved_version(package, version_numbers, range)
-    version_map = build_version_map(version_numbers)
+    version_map = build_version_map(version_numbers, package['ecosystem'])
 
     matching_versions = version_map.select do |original, cleaned|
       version_satisfies_range?(cleaned, range, package['ecosystem'])
@@ -418,7 +420,7 @@ class Advisory < ApplicationRecord
 
   def related_advisories
     return Advisory.none unless cve
-    Advisory.where("? = ANY(identifiers)", cve).where.not(id: id)
+    Advisory.where("identifiers @> ARRAY[?]::varchar[]", cve).where.not(id: id)
   end
 
   def cache_related_advisories!

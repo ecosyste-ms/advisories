@@ -70,6 +70,8 @@ The OSV source imports the advisories that [OSV](https://osv.dev) publishes for 
 
 The first run downloads the full Debian and Ubuntu archives, about 900 MB together. Later runs read OSV's change index and fetch only the records modified since. `Sources::Osv::EXPORTS` lists which releases are kept.
 
+The same source imports OSV's opam advisories, which the OCaml security team publishes. opam versions are compared with Debian ordering, which is the algorithm opam uses, and an advisory takes its repository from the git range OSV records for it.
+
 ### Downstream patches
 
 The daily jobs in `app.json` import the patches that Debian trixie, Ubuntu noble and Homebrew core apply on top of upstream source. Debian and Ubuntu patches come from the quilt series in each source package, including the security and updates pockets. Homebrew patches come from each formula's default `patch` declarations.

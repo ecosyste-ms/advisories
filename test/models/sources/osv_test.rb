@@ -18,6 +18,7 @@ class OsvSourceTest < ActiveSupport::TestCase
       ])
     publish('Debian', [@debian, @old_release])
     publish('Ubuntu', [@ubuntu])
+    publish('opam', [])
   end
 
   def record(id, modified, affected:, **rest)
@@ -82,10 +83,38 @@ class OsvSourceTest < ActiveSupport::TestCase
     assert_equal({ 'Debian' => '2026-10-26T18:02:13.076151954Z', 'Ubuntu' => '2026-11-20T06:00:00.000000000Z' }, @source.reload.metadata['osv_synced'])
   end
 
+  test 'an opam advisory keeps its repository and compares versions the way opam orders them' do
+    opam = record('OSEC-2026-04', '2026-11-19T10:30:06Z', summary: 'Buffer overflow in the parser', aliases: ['CVE-2026-0002'], affected: [
+      affected('opam', 'ocaml', [{ introduced: '0' }, { fixed: '4.03.0' }, { introduced: '5.0.0~alpha1' }, { fixed: '5.0.1' }]),
+      { ranges: [{ type: 'GIT', repo: 'https://github.com/ocaml/ocaml', events: [{ introduced: '0' }, { fixed: 'abc123' }] }], versions: ['flambda_fork_point'] }
+    ])
+    publish('opam', [opam])
+
+    Sidekiq::Testing.fake! do
+      [PackageSyncWorker, RelatedPackagesSyncWorker].each { |worker| worker.jobs.clear }
+      assert_equal 3, @osv.sync_advisories
+      advisory = @source.advisories.find_by!(uuid: 'OSEC-2026-04')
+      assert_includes PackageSyncWorker.jobs.map { |job| job['args'] }, %w[opam ocaml]
+      assert_equal [[advisory.id]], RelatedPackagesSyncWorker.jobs.map { |job| job['args'] }
+      [PackageSyncWorker, RelatedPackagesSyncWorker].each { |worker| worker.jobs.clear }
+    end
+
+    advisory = @source.advisories.find_by!(uuid: 'OSEC-2026-04')
+    assert_equal ['Buffer overflow in the parser', 'https://github.com/ocaml/ocaml', %w[OSEC-2026-04 CVE-2026-0002]],
+      [advisory.title, advisory.repository_url, advisory.identifiers]
+    package = advisory.packages.sole
+    assert_equal ['opam', 'ocaml', ['< 4.03.0', '>= 5.0.0~alpha1, < 5.0.1']],
+      [package['ecosystem'], package['package_name'], package['versions'].pluck('vulnerable_version_range')]
+    assert advisory.affects_version?('opam', 'ocaml', '5.0.0~beta1')
+    assert_not advisory.affects_version?('opam', 'ocaml', '5.0.0~alpha0')
+    assert_not advisory.affects_version?('opam', 'ocaml', '4.14.0')
+    assert_nil @source.advisories.find_by!(uuid: 'DEBIAN-CVE-2023-26964').repository_url
+  end
+
   test 'later syncs fetch only the records modified since the last one' do
     @osv.sync_advisories
     assert_equal 0, @osv.sync_advisories
-    @archives.each_value { |archive| assert_requested archive, times: 1 }
+    @archives.slice('Debian', 'Ubuntu').each_value { |archive| assert_requested archive, times: 1 }
 
     fixed = @debian.merge(modified: '2026-11-23T15:00:06Z', affected: [affected('Debian:13', 'rust-h2', [{ introduced: '0' }, { fixed: '0.3.13-3' }])])
     publish('Debian', [fixed, @old_release])

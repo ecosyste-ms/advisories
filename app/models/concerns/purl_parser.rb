@@ -9,7 +9,8 @@ class PurlParser
     'nuget' => 'nuget',
     'golang' => 'go',
     'go' => 'go',
-    'cargo' => 'cargo'
+    'cargo' => 'cargo',
+    'opam' => 'opam'
   }.freeze
   # A deb PURL names its distribution in the namespace, which is the ecosystem here.
   DEB_DISTRIBUTIONS = %w[debian ubuntu].freeze

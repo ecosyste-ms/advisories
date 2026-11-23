@@ -3,11 +3,12 @@ require 'tempfile'
 module Sources
   class Osv < Base
     BASE_URL = 'https://storage.googleapis.com/osv-vulnerabilities'.freeze
-    # Each export covers every release of a distribution. Only packages in the listed
+    # A distribution's export covers every release. Only packages in the listed
     # OSV ecosystem are kept, stored under the ecosystem it maps to.
     EXPORTS = {
       'Debian' => { 'Debian:13' => 'debian' },
-      'Ubuntu' => { 'Ubuntu:24.04:LTS' => 'ubuntu' }
+      'Ubuntu' => { 'Ubuntu:24.04:LTS' => 'ubuntu' },
+      'opam' => { 'opam' => 'opam' }
     }.freeze
     ARCHIVE_LIMIT = 4.gigabytes
     RECORD_LIMIT = 64.megabytes
@@ -71,7 +72,7 @@ module Sources
 
     # Newest first, as published.
     def modified_index(export)
-      @http.get("#{BASE_URL}/#{export}/modified_id.csv").each_line(chomp: true).map do |line|
+      @http.get("#{BASE_URL}/#{export}/modified_id.csv").each_line(chomp: true).reject(&:blank?).map do |line|
         modified, id = line.split(',', 2)
         [Time.iso8601(modified), id]
       end
@@ -114,6 +115,10 @@ module Sources
         record = Advisory.find(known.fetch(advisory[:uuid]).first)
         record.update_columns(advisory.except(:uuid))
         record.cache_affected_versions!
+      end
+      with_repository = batch.select { |advisory| advisory[:repository_url] }.pluck(:uuid)
+      if with_repository.any?
+        RelatedPackagesSyncWorker.perform_bulk(source.advisories.where(uuid: with_repository).pluck(:id).zip)
       end
       batch.map { |advisory| [advisory[:uuid], advisory[:packages].map { |package| package.values_at(:ecosystem, :package_name) }] }
     end
@@ -181,8 +186,16 @@ module Sources
         references: (osv[:references] || []).filter_map { |reference| reference[:url] },
         source_kind: 'osv',
         identifiers: [osv[:id], *osv[:aliases], *osv[:upstream]].compact.uniq,
+        repository_url: git_repository(osv[:affected] || []),
         packages: packages
       }
+    end
+
+    # The repository the record's GIT ranges name, when they agree on one.
+    def git_repository(affected)
+      ranges = affected.flat_map { |entry| entry[:ranges] || [] }.select { |range| range[:type] == 'GIT' }
+      repositories = ranges.filter_map { |range| URLParser.try_all(range[:repo]) }.uniq
+      repositories.first if repositories.one?
     end
 
     # Returns the first vector the scorer accepts, newest CVSS version first.

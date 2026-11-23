@@ -26,7 +26,7 @@ module PatchIndex
       candidates = fields.flat_map do |file, keys|
         text = files.fetch(file, '')
         text = text.split(/\r?\n\s*\r?\n/, 2).first.to_s if file == 'debian/copyright'
-        keys.flat_map { |key| text.scan(/^#{key}:[ \t]*(\S+)[ \t]*\r?$/i).flatten.map { |url| ["#{file}:#{key}", url] } }
+        keys.flat_map { |key| text.scan(/^#{key}:[ \t]*["']?([^\s"']+)["']?[ \t]*\r?$/i).flatten.map { |url| ["#{file}:#{key}", url] } }
       end
       first(candidates + [['Sources:Homepage', homepage]])
     end

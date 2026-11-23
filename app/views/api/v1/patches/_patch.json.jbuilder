@@ -9,7 +9,7 @@ json.occurrences occurrences do |occurrence|
   json.release do
     release = occurrence.patch_release
     json.extract! release, :distribution, :package_name, :version, :upstream_version, :repository_url, :source_url, :imported_at
-    json.package_url ecosystem_package_url(release.distribution, release.package_name)
+    json.package_url ecosystem_package_url(release.distribution, release.package_name, tab: 'patches')
   end
 end
 identifiers = occurrences.flat_map(&:advisory_ids).uniq

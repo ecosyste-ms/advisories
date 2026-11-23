@@ -27,6 +27,17 @@ class PatchIndex::DocumentTest < ActiveSupport::TestCase
     assert_empty PatchIndex::Changelog.items(text, 'example', '1-3', %w[a.patch])
   end
 
+  test 'changelog bullets can name a patch by its packaging path' do
+    text = "example (1-2) unstable; urgency=medium\n\n  * debian/patches/a.patch: Fix CVE-2024-0001.\n  * d/p/b.patch: new.\n" \
+      "  * other/c.patch: unrelated.\n\n -- M <m@example.org>  Mon, 01 Jan 2024 00:00:00 +0000\n"
+    assert_equal %w[a.patch b.patch], PatchIndex::Changelog.items(text, 'example', '1-2', %w[a.patch b.patch c.patch]).keys
+  end
+
+  test 'opening a missing archive frees the reader' do
+    PatchIndex::ArchiveReader::Native.expects(:archive_read_free).once
+    assert_raises(IOError) { PatchIndex::ArchiveReader.open('/nonexistent/archive.tar') { flunk } }
+  end
+
   test 'repository URLs normalise to one form and unsupported hosts or nested groups are ignored' do
     repository = PatchIndex::Repository
     assert_equal 'https://github.com/rack/rack', repository.normalize('git://github.com/Rack/rack.git')
@@ -37,6 +48,8 @@ class PatchIndex::DocumentTest < ActiveSupport::TestCase
     assert_equal ['debian/copyright:Source', 'https://github.com/example/project'],
       repository.debian('https://example.org', 'debian/upstream/metadata' => "Repository: https://example.org/git\n",
         'debian/copyright' => "Format: x\nSource: https://github.com/example/project\n\nFiles: *\nSource: https://github.com/other/thing\n")
+    assert_equal ['debian/upstream/metadata:Repository', 'https://github.com/example/project'],
+      repository.debian(nil, 'debian/upstream/metadata' => %(Repository: "https://github.com/example/project.git"\n))
     assert_equal '2.3.4', PatchIndex::Apt.upstream_version('1:2.3.4+dfsg1-2ubuntu1')
   end
 

@@ -160,6 +160,39 @@ class PatchIndex::DailySyncTest < ActiveSupport::TestCase
     assert_requested request, times: 1
   end
 
+  test 'a database error is retried on the next run instead of being remembered' do
+    data = packaging("fix.patch\n")
+    apt_indexes('debian', { ['trixie', 'main'] => apt_record('1-1', data) })
+    stub_request(:get, "#{@apt::DEBIAN}/pool/main/e/example/example_1-1.debian.tar.gz").to_return(body: data)
+    sync = PatchIndex::DailySync.new('debian', http: @http)
+
+    PatchRelease.stubs(:record!).raises(ActiveRecord::Deadlocked)
+    _, err = capture_io { assert_equal 1, sync.run[:failed] }
+    assert_match(/Deadlocked/, err)
+    assert_empty PatchRelease.all
+
+    PatchRelease.unstub(:record!)
+    assert_equal 1, sync.run[:imported]
+  end
+
+  test 'Homebrew keeps going past a formula it cannot describe and stores patches that share a file name' do
+    url = 'https://example.org/fix.diff'
+    formula = { name: 'example', tap: 'homebrew/core', tap_git_head: '1' * 40, revision: 0, versions: { stable: '1.0' },
+      ruby_source_path: 'Formula/e/example.rb', urls: {},
+      patches: [{ strip: 'p1', url: url, directory: 'a' }, { strip: 'p1', url: url, directory: 'b' }] }
+    broken = formula.merge(name: 'broken', tap_git_head: nil, patches: [{ strip: 'p1', file: 'Patches/e.patch' }])
+    stub_request(:get, PatchIndex::Homebrew::INDEX).to_return(body: [broken, formula].to_json)
+    stub_request(:get, url).to_return(body: @bytes)
+
+    _, err = capture_io do
+      assert_equal({ imported: 1, unchanged: 0, deferred: 0, failed: 1 }, PatchIndex::DailySync.new('homebrew', http: @http).run)
+    end
+    assert_match(/broken 1.0: failure not recorded/, err)
+    assert_equal ['example'], PatchRelease.pluck(:package_name)
+    assert_equal [['1-fix.diff', 'a'], ['2-fix.diff', 'b']], PatchOccurrence.order(:position).map { |o| [o.name, o.declaration['directory']] }
+    assert_equal 1, Patch.count
+  end
+
   test 'a Homebrew patch bundle keeps its security reference on the bundle and names each member' do
     bundle = tarball({ 'bundle-1/patches/one.diff' => @bytes, 'bundle-1/patches/CVE-2024-0002.diff' => "#{@bytes}\n" })
     url = 'https://example.org/bundle-1.tar.gz'

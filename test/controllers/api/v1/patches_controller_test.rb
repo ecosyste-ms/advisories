@@ -22,6 +22,7 @@ class Api::V1::PatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal ['CVE-2024-27308.patch', 2, { 'CVE-2024-27308' => 'patch_name' }], occurrence.values_at('name', 'position', 'advisory_roles')
     assert_equal ['debian', 'rust-h2', '0.4.4-1', '0.4.4', 'https://github.com/hyperium/h2'],
       occurrence.fetch('release').values_at('distribution', 'package_name', 'version', 'upstream_version', 'repository_url')
+    assert_equal ecosystem_package_url('debian', 'rust-h2', tab: 'patches'), occurrence.dig('release', 'package_url')
     advisory = patch.fetch('referenced_advisories').sole
     assert_equal ['GHSA-8r5v-vm4m-4g25', ['CVE-2024-27308']], advisory.values_at('uuid', 'matched_identifiers')
   end

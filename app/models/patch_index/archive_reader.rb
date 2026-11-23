@@ -58,6 +58,9 @@ module PatchIndex
       Native.archive_read_support_filter_all(@handle)
       check Native.archive_read_support_format_tar(@handle)
       check Native.archive_read_open_filename(@handle, path.to_s, CHUNK)
+    rescue StandardError
+      close
+      raise
     end
 
     def each

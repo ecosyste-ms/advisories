@@ -76,7 +76,7 @@ Each job skips releases it has already seen and attempts up to 200 imports per r
 
 Each release stores the upstream repository URL its distribution declares. Looking up a registry package PURL at `/patches` or `GET /api/v1/patches` returns the releases whose repository matches that package's `repository_url`. Identical patch files share one SHA-256 page across distributions.
 
-The importer reads source packages with libarchive and the `xz` command. macOS ships libarchive; on Debian or Ubuntu install `libarchive-tools`.
+The importer reads source packages with libarchive and the `xz` command. macOS ships libarchive; on Debian or Ubuntu install `libarchive-tools` and `xz-utils`.
 
 ## Tests
 

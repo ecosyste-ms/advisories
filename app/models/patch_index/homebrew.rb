@@ -37,6 +37,9 @@ module PatchIndex
       name, version = key
       raise IOError, 'unexpected formula' unless formula.values_at('name', 'tap') == [name, 'homebrew/core']
       entries = formula.fetch('patches').each_with_index.flat_map { |patch, index| declarations(formula, patch, index + 1) }
+      # Two declarations can share a file name, so a repeated name carries its position.
+      repeated = entries.pluck(:name).tally.select { |_, count| count > 1 }
+      entries.each { |entry| entry[:name] = "#{entry[:position]}-#{entry[:name]}" if repeated.key?(entry[:name]) }
       field, repository = Repository.homebrew(formula)
       PatchRelease.record!({ distribution: 'homebrew', package_name: name, version: version }, entries,
         source_url: source_url(formula), sync_sha256: digest, upstream_version: formula.fetch('versions').fetch('stable'),

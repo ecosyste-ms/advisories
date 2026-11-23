@@ -1,6 +1,9 @@
 module PatchIndex
   class DailySync
     SOURCES = %w[debian homebrew ubuntu].freeze
+    # Worth retrying on the next run without remembering the digest.
+    TRANSIENT = [Http::Error, ActiveRecord::TransactionRollbackError, ActiveRecord::ConnectionNotEstablished,
+      ActiveRecord::QueryAborted, ActiveRecord::LockWaitTimeout].freeze
 
     def initialize(source, http: Http.new)
       raise ArgumentError, "unknown distribution #{source}" unless SOURCES.include?(source)
@@ -12,11 +15,13 @@ module PatchIndex
       raise ArgumentError, 'limit must be positive' unless limit.positive?
       PatchRelease.connection_pool.with_connection do |db|
         lock = db.quote("patches:sync:#{@source}")
-        raise IOError, "#{@source} sync already running" unless db.select_value("SELECT pg_try_advisory_lock(hashtext(#{lock}))")
+        # A cached answer would report a lock that was never taken.
+        locked = db.uncached { db.select_value("SELECT pg_try_advisory_lock(hashtext(#{lock}))") }
+        raise IOError, "#{@source} sync already running" unless locked
         begin
           sync_catalog(limit, package, retry_failed)
         ensure
-          db.select_value("SELECT pg_advisory_unlock(hashtext(#{lock}))")
+          db.uncached { db.select_value("SELECT pg_advisory_unlock(hashtext(#{lock}))") }
         end
       end
     end
@@ -47,15 +52,21 @@ module PatchIndex
     def attempt(key, digest, row)
       @catalog.import(key, digest, row)
       :imported
-    rescue Http::Error => error
-      warn "#{@source} #{key.join(' ')}: #{error.message}"
+    rescue *TRANSIENT => error
+      warn "#{@source} #{key.join(' ')}: #{error.class}: #{error.message}"
       :failed
     rescue StandardError => error
       warn "#{@source} #{key.join(' ')}: #{error.class}: #{error.message}"
-      # The same bytes would fail the same way, so wait for the catalog to change.
+      record_failure(key, digest, row, error)
+      :failed
+    end
+
+    # The same bytes would fail the same way, so wait for the catalog to change.
+    def record_failure(key, digest, row, error)
       PatchRelease.record_failure!({ distribution: @source, package_name: key.first, version: key.last },
         source_url: @catalog.source_url(row), sync_sha256: digest, last_error: "#{error.class}: #{error.message}".first(250))
-      :failed
+    rescue StandardError => failure
+      warn "#{@source} #{key.join(' ')}: failure not recorded: #{failure.class}: #{failure.message}"
     end
   end
 end

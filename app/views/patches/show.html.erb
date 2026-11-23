@@ -1,0 +1,61 @@
+<% name = @patch.display_name(@occurrences) %>
+<% description = @patch.headers['Description'].to_s.strip %>
+<% @meta_title = name %>
+<% releases = @occurrences.group_by(&:patch_release) %>
+<div class="container patch-page py-3">
+  <header class="border-bottom pb-3 mb-4">
+    <%= link_to 'All patches', patches_path, class: 'small' %>
+    <h1 class="h2 mt-3 mb-2 text-break"><%= name %></h1>
+    <% if description.present? && description != name %>
+      <details class="small mt-2"><summary>Description</summary><p class="mt-2 text-break"><%= description %></p></details>
+    <% end %>
+    <div class="d-flex flex-wrap align-items-baseline gap-3 small mt-3">
+      <p class="mb-0"><%= link_to "Declared by #{pluralize(releases.size, 'downstream release')}", '#releases' %></p>
+      <details><summary>SHA-256</summary><code class="text-break"><%= @patch.sha256 %></code></details>
+      <%= link_to 'JSON', api_v1_patch_path(@patch) %>
+    </div>
+  </header>
+
+  <div class="row gy-4 gx-lg-5">
+    <section class="col-lg-8" aria-labelledby="patch-diff-heading">
+      <div class="d-flex align-items-baseline justify-content-between gap-3 mb-2">
+        <h2 id="patch-diff-heading" class="h5 mb-0">Diff</h2>
+        <span class="small"><%= number_to_human_size(@patch.byte_size) %> · <%= link_to 'Download', download_patch_path(@patch) %></span>
+      </div>
+      <% if @patch.byte_size.positive? %>
+        <% header, diff = patch_preview_sections(@body) %>
+        <% if header.any? %>
+          <details class="small mb-2">
+            <summary>Patch header</summary>
+            <pre class="patch-diff-preview border rounded p-3 mt-2" tabindex="0" aria-label="Patch header"><code><%= header.join %></code></pre>
+          </details>
+        <% end %>
+        <pre class="patch-diff-preview bg-light border rounded p-3" tabindex="0" aria-labelledby="patch-diff-heading"><code><%= formatted_patch_diff(diff) %></code></pre>
+        <% if @body.truncated? %><p class="small text-muted">Preview truncated. Download for the full diff.</p><% end %>
+      <% else %>
+        <p class="text-muted">Empty file.</p>
+      <% end %>
+    </section>
+
+    <section id="releases" class="col-lg-4" aria-labelledby="releases-heading">
+      <h2 id="releases-heading" class="h5 mb-2">Downstream releases</h2>
+      <% releases.each do |release, occurrences| %>
+        <section class="border-top py-3 small text-break">
+          <h3 class="h6 mb-1">
+            <span class="text-muted"><%= release.distribution.humanize %> /</span>
+            <%= link_to release.package_name, ecosystem_package_path(release.distribution, release.package_name, tab: 'patches') %>
+            <%= release.version %>
+          </h3>
+          <% if release.repository_url %>
+            <div>Upstream <%= link_to release.repository_url.delete_prefix('https://'), release.repository_url, class: 'font-monospace' %>
+              <%= release.upstream_version %> · <%= link_to 'all patches', patches_path(repository_url: release.repository_url) %>
+            </div>
+          <% end %>
+          <% occurrences.each do |occurrence| %>
+            <%= render 'declaration', occurrence: occurrence, release: release %>
+          <% end %>
+        </section>
+      <% end %>
+    </section>
+  </div>
+</div>

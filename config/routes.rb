@@ -23,6 +23,7 @@ Rails.application.routes.draw do
 
   namespace :api, :defaults => {:format => :json} do
     namespace :v1 do
+      resources :patches, only: [:index, :show], param: :sha256, constraints: { sha256: /[0-9a-f]{64}/ }
       resources :advisories, only: [:index, :show] do
         collection do
           get :packages
@@ -30,6 +31,7 @@ Rails.application.routes.draw do
         end
         member do
           get :related_packages
+          get :downstream_releases
         end
       end
       resources :sources, only: [:index, :show]
@@ -37,6 +39,9 @@ Rails.application.routes.draw do
   end
 
   resources :advisories, only: [:index, :show]
+  resources :patches, only: [:index, :show], param: :sha256, constraints: { sha256: /[0-9a-f]{64}/ } do
+    get :download, on: :member
+  end
 
   get 'ecosystems', to: 'ecosystems#index', as: 'ecosystems'
   get 'ecosystems/:ecosystem_id', to: 'ecosystems#show', as: 'ecosystem'

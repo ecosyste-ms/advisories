@@ -1,4 +1,6 @@
 class EcosystemsController < ApplicationController
+  RELEASE_LIMIT = 20
+
   def index
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
 
@@ -98,6 +100,27 @@ class EcosystemsController < ApplicationController
     @package_name = params[:package_name]
     @registry = Registry.find_by_ecosystem(@ecosystem)
     @package = Package.find_by_identity(@ecosystem, @package_name)
+    @patches_tab = params[:tab] == 'patches'
+    if @patches_tab
+      load_package_patches
+    else
+      load_package_advisories
+    end
+    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
+  rescue Advisory::InvalidVersionFilter => error
+    render plain: error.message, status: :bad_request
+  end
+
+  def load_package_patches
+    releases = PatchRelease.for_package(@ecosystem, @package_name, version: params[:version])
+    matches = PatchOccurrence.where(patch_release: releases)
+    @pagy, @patches = pagy(Patch.where(id: matches.select(:patch_id)).order(:id))
+    @occurrences = matches.where(patch_id: @patches.map(&:id)).preload(:patch_release).order(:id).group_by(&:patch_id)
+    repackaged = releases.where.not(upstream_package_name: nil).order(:distribution, :package_name, :version).limit(RELEASE_LIMIT)
+    @release_advisories = repackaged.index_with { |release| release.upstream_advisories.order(:uuid).to_a }
+  end
+
+  def load_package_advisories
     package_matches = Package.for_identities([[@ecosystem, @package_name]])
 
     direct_scope = Advisory.not_withdrawn.for_package(@ecosystem, @package_name)
@@ -155,8 +178,5 @@ class EcosystemsController < ApplicationController
     if @package
       @related_packages_by_advisory = RelatedPackage.where(package_id: package_matches.select(:id)).order(:id).index_by(&:advisory_id)
     end
-    expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
-  rescue Advisory::InvalidVersionFilter => error
-    render plain: error.message, status: :bad_request
   end
 end

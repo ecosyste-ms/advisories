@@ -1,0 +1,18 @@
+<div id="<%= dom_id(occurrence) %>" class="mt-2">
+  <%= link_to occurrence.name, occurrence.source_url %>
+  <% if occurrence.advisory_ids.any? %>
+    <ul class="list-unstyled mb-0"><%= patch_advisory_links(occurrence, @advisories) %></ul>
+  <% end %>
+  <details class="mt-1">
+    <summary>Evidence</summary>
+    <div class="border-start ps-3 mt-2">
+      <p class="mb-2"><%= link_to 'Release source', release.source_url %></p>
+      <% if (member = occurrence.declaration['member']) %><p class="mb-2"><code><%= member %></code></p><% end %>
+      <% if (field = release.metadata['repository_field']) %><p class="mb-2">Repository from <code><%= field %></code></p><% end %>
+      <% Array(occurrence.declaration['changelog']).each do |item| %><blockquote class="mb-2"><%= item %></blockquote><% end %>
+      <% occurrence.declaration.fetch('advisory_evidence', {}).each do |id, fields| %>
+        <p class="mb-1"><%= id %> · <%= fields.join(', ') %></p>
+      <% end %>
+    </div>
+  </details>
+</div>

@@ -384,6 +384,26 @@ class Advisory < ApplicationRecord
     identifiers.find{|id| id.start_with?('CVE-') }
   end
 
+  def patch_identifiers
+    [uuid, *identifiers].compact.uniq
+  end
+
+  def patch_occurrences
+    PatchOccurrence.referencing(patch_identifiers)
+  end
+
+  # Downstream releases that repackage one of this advisory's packages, at any version.
+  def downstream_releases
+    packages.map { |package| package.values_at('ecosystem', 'package_name') }.uniq.reduce(PatchRelease.none) do |scope, (ecosystem, name)|
+      scope.or(PatchRelease.repackaging(ecosystem, name))
+    end
+  end
+
+  def affects_release?(release)
+    release.upstream_version.present? &&
+      affects_version?(release.upstream_ecosystem, release.upstream_package_name, release.registry_version)
+  end
+
   MATCH_KIND_ORDER = %w[repo_fork likely_fork repackage].freeze
 
   def classified_related_packages

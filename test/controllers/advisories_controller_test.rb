@@ -203,4 +203,30 @@ class AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href*='#{@advisory.uuid}']"
   end
 
+  test "should change the etag when a downstream patch is replaced" do
+    advisory = FactoryBot.create(:advisory, source: @source, identifiers: ["CVE-2024-27308"])
+    occurrence = FactoryBot.create(:patch_occurrence, advisory_ids: ["CVE-2024-27308"])
+
+    get advisory_url(advisory)
+    etag = response.headers["ETag"]
+    get advisory_url(advisory), headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+
+    occurrence.update!(patch: FactoryBot.create(:patch))
+    get advisory_url(advisory), headers: { "If-None-Match" => etag }
+    assert_response :success
+
+    etag = response.headers["ETag"]
+    occurrence.update!(declaration: { "advisory_evidence" => { "CVE-2024-27308" => ["name"] } })
+    get advisory_url(advisory), headers: { "If-None-Match" => etag }
+    assert_response :success
+  end
+
+  test "should show an advisory without a description" do
+    advisory = FactoryBot.create(:advisory, description: nil)
+
+    get advisory_url(advisory.uuid)
+    assert_response :success
+  end
+
 end

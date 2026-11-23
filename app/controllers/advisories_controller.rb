@@ -1,4 +1,6 @@
 class AdvisoriesController < ApplicationController
+  PATCH_LIMIT = 100
+
   def index
     # Redirect to new ecosystem and package routes
     package_name = params[:package_name] || params[:name]
@@ -88,7 +90,10 @@ class AdvisoriesController < ApplicationController
 
   def show
     @advisory = Advisory.find_by!(uuid: params[:id])
+    @patch_occurrences = @advisory.patch_occurrences.preload(:patch, :patch_release).order(:id).limit(PATCH_LIMIT).to_a
+    @downstream_releases = @advisory.downstream_releases.order(:distribution, :package_name, :version).limit(PATCH_LIMIT).to_a
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
-    fresh_when @advisory
+    fresh_when etag: [@advisory, @patch_occurrences.map { |occurrence| [occurrence.id, occurrence.patch_id, occurrence.advisory_ids, occurrence.declaration] },
+      @downstream_releases.map { |release| [release.id, release.upstream_package_name, release.upstream_version] }]
   end
 end

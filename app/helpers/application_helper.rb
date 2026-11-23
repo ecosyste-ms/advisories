@@ -17,7 +17,7 @@ module ApplicationHelper
   end
 
   def render_markdown(str)
-    Commonmarker.to_html(str)
+    Commonmarker.to_html(str || '')
   end
 
   def meta_title

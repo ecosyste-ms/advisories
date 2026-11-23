@@ -73,3 +73,8 @@ pre code.hljs{
 .list-group-item.active {
   background-color: $color-purple-dark;
 }
+
+.patch-diff-preview {
+  max-height: 32rem;
+  overflow: auto;
+}

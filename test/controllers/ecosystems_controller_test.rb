@@ -61,6 +61,74 @@ class EcosystemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.list-group-item", { text: /pandas/, count: 0 }
   end
 
+  context "related advisories on the ecosystem page" do
+    setup do
+      @conda_package = FactoryBot.create(:package, ecosystem: "conda", name: "tensorflow")
+      @conda_advisory = FactoryBot.create(:advisory, source: @source, title: "Direct conda advisory", packages: [
+        { "ecosystem" => "conda", "package_name" => "numpy", "versions" => [] }
+      ])
+      @advisory.update!(title: "Pypi tensorflow advisory")
+      FactoryBot.create(:related_package, package: @conda_package, advisory: @advisory, match_kind: "repackage")
+    end
+
+    should "list related advisories alongside direct ones" do
+      get ecosystem_url("conda")
+      assert_response :success
+      assert_select "h3.listing__title", /Direct conda advisory/
+      assert_select "h3.listing__title", /Pypi tensorflow advisory/
+      assert_select "span.badge", /Repackage/
+      assert_select "p.small a[href=?]", ecosystem_package_path("conda", "tensorflow")
+    end
+
+    should "show related package names in the package filter" do
+      get ecosystem_url("conda")
+      assert_select ".listing-filters a.list-group-item", /tensorflow/
+      assert_select ".listing-filters a.list-group-item", /numpy/
+    end
+
+    should "show match counts" do
+      get ecosystem_url("conda")
+      assert_select ".listing-filters a.list-group-item", /Directly listed\s*1/
+      assert_select ".listing-filters a.list-group-item", /Potentially affected\s*1/
+    end
+
+    should "filter to directly listed advisories" do
+      get ecosystem_url("conda"), params: { match: "direct" }
+      assert_response :success
+      assert_select "h3.listing__title", /Direct conda advisory/
+      assert_select "h3.listing__title", { text: /Pypi tensorflow advisory/, count: 0 }
+      assert_select ".listing-filters a.list-group-item", { text: /tensorflow/, count: 0 }
+    end
+
+    should "filter to potentially affected advisories" do
+      get ecosystem_url("conda"), params: { match: "potential" }
+      assert_response :success
+      assert_select "h3.listing__title", /Pypi tensorflow advisory/
+      assert_select "h3.listing__title", { text: /Direct conda advisory/, count: 0 }
+    end
+
+    should "include related advisories when filtering by package name" do
+      get ecosystem_url("conda"), params: { package_name: "tensorflow" }
+      assert_response :success
+      assert_select "h3.listing__title", /Pypi tensorflow advisory/
+      assert_select "h3.listing__title", { text: /Direct conda advisory/, count: 0 }
+    end
+
+    should "ignore unknown match values" do
+      get ecosystem_url("conda"), params: { match: "bogus" }
+      assert_response :success
+      assert_select "h3.listing__title", /Direct conda advisory/
+      assert_select "h3.listing__title", /Pypi tensorflow advisory/
+    end
+
+    should "not badge direct advisories in the source ecosystem" do
+      get ecosystem_url("pypi")
+      assert_response :success
+      assert_select "h3.listing__title", /Pypi tensorflow advisory/
+      assert_select "p.small", { text: /Potentially affects/, count: 0 }
+    end
+  end
+
   test "should render ecosystem page with nil severity advisories" do
     FactoryBot.create(:advisory, source: @source, severity: nil, packages: [
       { "ecosystem" => "pypi", "package_name" => "tensorflow", "versions" => [{"vulnerable_version_range" => "< 1.0"}] }

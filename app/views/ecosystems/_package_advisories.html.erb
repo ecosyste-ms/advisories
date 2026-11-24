@@ -32,16 +32,7 @@
   <% related = @related_packages_by_advisory&.dig(advisory.id) %>
   <% is_potential = related && !@direct_advisory_ids.include?(advisory.id) %>
   <div class="position-relative">
-    <% if is_potential && related.match_kind.present? && related.match_kind != "unknown" %>
-      <% badge_class = case related.match_kind
-        when "repo_fork" then "badge bg-danger"
-        when "likely_fork" then "badge bg-warning text-dark"
-        when "repackage" then "badge bg-info text-dark"
-        end %>
-      <span class="position-absolute top-0 end-0 mt-3 me-3 <%= badge_class %>"><%= related.match_kind.humanize %></span>
-    <% elsif is_potential %>
-      <span class="position-absolute top-0 end-0 mt-3 me-3 badge bg-secondary">Potential</span>
-    <% end %>
+    <%= render 'ecosystems/related_badge', related_packages: [related] if is_potential %>
     <%= render advisory %>
   </div>
 <% end %>

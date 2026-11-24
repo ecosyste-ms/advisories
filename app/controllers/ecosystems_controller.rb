@@ -1,5 +1,6 @@
 class EcosystemsController < ApplicationController
   RELEASE_LIMIT = 20
+  MATCH_FILTERS = %w[direct potential].freeze
 
   def index
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
@@ -33,16 +34,31 @@ class EcosystemsController < ApplicationController
 
     @ecosystem = params[:ecosystem_id]
     @registry = Registry.find_by_ecosystem(@ecosystem)
-    scope = Advisory.not_withdrawn.ecosystem(@ecosystem)
+    @match = params[:match] if MATCH_FILTERS.include?(params[:match])
+
+    @match_counts = Rails.cache.fetch("ecosystem_#{@ecosystem}_match_counts", expires_in: 1.hour) do
+      {
+        'direct' => Advisory.not_withdrawn.ecosystem(@ecosystem).count,
+        'potential' => Advisory.not_withdrawn.potentially_affecting_ecosystem(@ecosystem).count
+      }
+    end
+
+    scope = case @match
+            when 'direct' then Advisory.not_withdrawn.ecosystem(@ecosystem)
+            when 'potential' then Advisory.not_withdrawn.potentially_affecting_ecosystem(@ecosystem)
+            else Advisory.not_withdrawn.affecting_ecosystem(@ecosystem)
+            end
 
     @severities = scope.where.not(severity: nil).group(:severity).count.to_a.sort_by{|a| a[1]}.reverse
     scope = scope.severity(params[:severity]) if params[:severity].present?
 
     cache_key = "ecosystem_#{@ecosystem}_package_counts_#{scope.to_sql.hash}"
     @packages = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
-      scope.package_counts
+      scope.ecosystem_package_counts(@ecosystem, include_related: @match != 'direct')
     end
-    scope = scope.for_package(@ecosystem, params[:package_name]) if params[:package_name].present?
+    if params[:package_name].present?
+      scope = @match == 'direct' ? scope.for_package(@ecosystem, params[:package_name]) : scope.affecting_package(@ecosystem, params[:package_name])
+    end
 
     cache_key = "ecosystem_#{@ecosystem}_repository_urls_#{scope.to_sql.hash}"
     @repository_urls = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
@@ -78,6 +94,7 @@ class EcosystemsController < ApplicationController
     end
 
     @pagy, @advisories = pagy(scope.includes(:source))
+    load_related_packages_for_page unless @match == 'direct'
   end
 
   def packages
@@ -109,6 +126,17 @@ class EcosystemsController < ApplicationController
     expires_in 1.hour, public: true, stale_while_revalidate: 1.hour
   rescue Advisory::InvalidVersionFilter => error
     render plain: error.message, status: :bad_request
+  end
+
+  def load_related_packages_for_page
+    advisory_ids = @advisories.map(&:id)
+    @direct_advisory_ids = @advisories.select { |advisory| advisory.ecosystems.any? { |e| e.to_s.casecmp?(@ecosystem) } }.map(&:id).to_set
+    potential_ids = advisory_ids.reject { |id| @direct_advisory_ids.include?(id) }
+    @related_packages_by_advisory = RelatedPackage.joins(:package)
+      .where(packages: { ecosystem: @ecosystem.downcase }, advisory_id: potential_ids)
+      .includes(:package)
+      .order('packages.name')
+      .group_by(&:advisory_id)
   end
 
   def load_package_patches

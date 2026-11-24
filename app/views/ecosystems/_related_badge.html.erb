@@ -1,0 +1,9 @@
+<% kinds = related_packages.map(&:match_kind) %>
+<% match_kind = %w[repo_fork likely_fork repackage].find { |kind| kinds.include?(kind) } %>
+<% badge_class = case match_kind
+  when "repo_fork" then "badge bg-danger"
+  when "likely_fork" then "badge bg-warning text-dark"
+  when "repackage" then "badge bg-info text-dark"
+  else "badge bg-secondary"
+  end %>
+<span class="position-absolute top-0 end-0 mt-3 me-3 <%= badge_class %>"><%= match_kind ? match_kind.humanize : "Potential" %></span>

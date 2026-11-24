@@ -31,6 +31,11 @@
           <% if params[:severity].present? %>
             <strong><%= params[:severity].humanize %></strong>
           <% end %>
+          <% if @match == 'direct' %>
+            <strong>Direct</strong>
+          <% elsif @match == 'potential' %>
+            <strong>Potential</strong>
+          <% end %>
           Security Advisories
           <% if params[:package_name].present? %>
             for <strong><%= params[:package_name] %></strong>
@@ -39,7 +44,7 @@
             for <strong><%= params[:repository_url] %></strong>
           <% end %>
           in <strong><%= @ecosystem %></strong>
-          <% if params.slice(:package_name, :repository_url, :severity).values.any?(&:present?) %>
+          <% if params.slice(:package_name, :repository_url, :severity, :match).values.any?(&:present?) %>
             <%= link_to 'Clear Filters', ecosystem_path(@ecosystem), class: 'btn btn-link btn-clear p-0' %>
           <% end %>
         </p>
@@ -50,10 +55,38 @@
           </div>
         </div>
       </div>
-      <%= render @advisories %>
+      <% if @pagy.count.zero? %>
+        <p>No advisories found.</p>
+      <% end %>
+      <% @advisories.each do |advisory| %>
+        <% related = @related_packages_by_advisory&.dig(advisory.id) %>
+        <% if related.present? %>
+          <div class="position-relative">
+            <%= render 'ecosystems/related_badge', related_packages: related %>
+            <p class="small text-muted mb-1">
+              Potentially affects
+              <%= safe_join(related.first(5).map { |rp| link_to rp.package.name, ecosystem_package_path(@ecosystem, rp.package.name) }, ', ') %><% if related.size > 5 %> and <%= related.size - 5 %> more<% end %>
+              through a shared source repository
+            </p>
+            <%= render advisory %>
+          </div>
+        <% else %>
+          <%= render advisory %>
+        <% end %>
+      <% end %>
       <%== pagy_bootstrap_nav(@pagy) if @pagy.pages > 1 %>
     </div>
     <div class="col-lg-4 listing-filters">
+      <h3 class="h4 mx-3">Filter by Match</h3>
+      <div class="list-group list-group-flush mb-5">
+        <% [['direct', 'Directly listed'], ['potential', 'Potentially affected']].each do |match, label| %>
+          <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center <%= 'active' if @match == match %>" href="<%= url_for(request.params.merge(match: (@match == match ? nil : match), page: nil)) %>">
+            <%= label %>
+            <span class="badge bg-primary rounded-pill"><%= number_with_delimiter @match_counts[match] %></span>
+          </a>
+        <% end %>
+      </div>
+
       <h3 class="h4 mx-3">Filter by Severity</h3>
       <div class="list-group list-group-flush">
         <% @severities.each do |severity,count| %>
@@ -67,8 +100,8 @@
       <h3 class="h4 mt-5 mx-3">Filter by Package</h3>
       <div class="list-group list-group-flush">
         <% @packages.first(200).each do |package,count| %>
-          <%= link_to ecosystem_package_path(@ecosystem, package['package_name']), class: "list-group-item list-group-item-action d-flex justify-content-between align-items-center #{'active' if params[:package_name] == package['package_name']}" do %>
-            <%= package['package_name'] %>
+          <%= link_to ecosystem_package_path(@ecosystem, package), class: "list-group-item list-group-item-action d-flex justify-content-between align-items-center #{'active' if params[:package_name] == package}" do %>
+            <%= package %>
             <span class="badge bg-primary rounded-pill"><%= number_with_delimiter count %></span>
           <% end %>
         <% end %>

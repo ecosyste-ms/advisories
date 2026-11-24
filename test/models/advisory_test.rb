@@ -241,6 +241,64 @@ class AdvisoryTest < ActiveSupport::TestCase
     end
   end
 
+  context "related package ecosystem scopes" do
+    setup do
+      @conda_requests = create(:package, ecosystem: "conda", name: "requests")
+      @direct = create(:advisory, packages: [
+        { "ecosystem" => "conda", "package_name" => "urllib3", "versions" => [] }
+      ])
+      @related = create(:advisory, packages: [
+        { "ecosystem" => "pypi", "package_name" => "requests", "versions" => [] }
+      ])
+      @both = create(:advisory, packages: [
+        { "ecosystem" => "conda", "package_name" => "requests", "versions" => [] }
+      ])
+      @unrelated = create(:advisory, packages: [
+        { "ecosystem" => "npm", "package_name" => "left-pad", "versions" => [] }
+      ])
+      create(:related_package, advisory: @related, package: @conda_requests, match_kind: "repackage")
+      create(:related_package, advisory: @both, package: @conda_requests, match_kind: "likely_fork")
+    end
+
+    should "include direct and related advisories in affecting_ecosystem" do
+      assert_equal [@direct, @related, @both].map(&:id).sort, Advisory.affecting_ecosystem("conda").pluck(:id).sort
+    end
+
+    should "match the ecosystem case insensitively in affecting_ecosystem" do
+      assert_equal 3, Advisory.affecting_ecosystem("Conda").count
+    end
+
+    should "only include advisories not listing the ecosystem in potentially_affecting_ecosystem" do
+      assert_equal [@related.id], Advisory.potentially_affecting_ecosystem("conda").pluck(:id)
+    end
+
+    should "combine with other scopes" do
+      @related.update_column(:withdrawn_at, Time.current)
+      assert_equal [@direct, @both].map(&:id).sort, Advisory.not_withdrawn.affecting_ecosystem("conda").pluck(:id).sort
+      assert_empty Advisory.not_withdrawn.potentially_affecting_ecosystem("conda")
+    end
+
+    should "include direct and related advisories in affecting_package" do
+      assert_equal [@related, @both].map(&:id).sort, Advisory.affecting_package("conda", "requests").pluck(:id).sort
+    end
+
+    should "count packages in one ecosystem with related packages" do
+      counts = Advisory.affecting_ecosystem("conda").ecosystem_package_counts("conda")
+      assert_equal [["requests", 2], ["urllib3", 1]], counts
+    end
+
+    should "count only listed packages when related packages are excluded" do
+      counts = Advisory.ecosystem("conda").ecosystem_package_counts("conda", include_related: false)
+      assert_equal [["requests", 1], ["urllib3", 1]], counts
+    end
+
+    should "ignore packages from other ecosystems listed on the same advisory" do
+      @both.update!(packages: @both.packages + [{ "ecosystem" => "pypi", "package_name" => "requests", "versions" => [] }])
+      counts = Advisory.ecosystem("conda").ecosystem_package_counts("conda", include_related: false)
+      assert_equal [["requests", 1], ["urllib3", 1]], counts
+    end
+  end
+
   context "#ecosystems_repo_url" do
     should "generate ecosyste.ms URL from GitHub repository" do
       advisory = build(:advisory, repository_url: "https://github.com/erlang/otp")

@@ -25,6 +25,22 @@ class Advisory < ApplicationRecord
       ecosystem.downcase, package_name
     )
   }
+  # Advisories that list a package in the ecosystem, plus advisories linked to
+  # one of the ecosystem's packages through a shared source repository.
+  scope :affecting_ecosystem, ->(ecosystem) {
+    direct = unscoped.ecosystem(ecosystem).select(:id)
+    where("advisories.id IN (#{direct.to_sql} UNION #{Advisory.related_advisory_ids(ecosystem).to_sql})")
+  }
+  # Advisories linked to the ecosystem only through related packages.
+  scope :potentially_affecting_ecosystem, ->(ecosystem) {
+    where(id: Advisory.related_advisory_ids(ecosystem))
+      .where.not("packages @> ?::jsonb", [{ecosystem: ecosystem.downcase}].to_json)
+  }
+  scope :affecting_package, ->(ecosystem, package_name) {
+    direct = unscoped.for_package(ecosystem, package_name).select(:id)
+    related = RelatedPackage.where(package_id: Package.for_identities([[ecosystem, package_name]]).select(:id)).select(:advisory_id)
+    where("advisories.id IN (#{direct.to_sql} UNION #{related.to_sql})")
+  }
   scope :severity, ->(severity) { where(severity: severity) }
   scope :repository_url, ->(repository_url) { where(repository_url: repository_url) }
   scope :source_kind, ->(source_kind) { joins(:source).where(sources: { kind: source_kind }) }
@@ -105,6 +121,40 @@ class Advisory < ApplicationRecord
       GROUP BY package_element->>'ecosystem', package_element->>'package_name'
       ORDER BY count DESC
     SQL
+  end
+
+  def self.related_advisory_ids(ecosystem)
+    RelatedPackage.joins(:package).where(packages: { ecosystem: ecosystem.downcase }).select(:advisory_id)
+  end
+
+  # Advisory counts per package name within one ecosystem, counting each
+  # advisory once per name. Related packages are included unless disabled.
+  def self.ecosystem_package_counts(ecosystem, include_related: true)
+    quoted_ecosystem = connection.quote(ecosystem.downcase)
+    scoped = unscope(:order).select(:id, :packages)
+    related_rows = if include_related
+      <<~SQL
+        UNION ALL
+        SELECT packages.name, related_packages.advisory_id
+        FROM related_packages
+        INNER JOIN packages ON packages.id = related_packages.package_id
+        WHERE packages.ecosystem = #{quoted_ecosystem}
+          AND related_packages.advisory_id IN (#{unscope(:order).select(:id).to_sql})
+      SQL
+    end
+    sql = <<~SQL
+      SELECT package_name, COUNT(DISTINCT advisory_id) AS count
+      FROM (
+        SELECT package_element->>'package_name' AS package_name, scoped_advisories.id AS advisory_id
+        FROM (#{scoped.to_sql}) AS scoped_advisories
+        CROSS JOIN LATERAL jsonb_array_elements(scoped_advisories.packages) AS package_element
+        WHERE package_element->>'ecosystem' = #{quoted_ecosystem}
+        #{related_rows}
+      ) AS package_rows
+      GROUP BY package_name
+      ORDER BY count DESC, package_name
+    SQL
+    connection.select_rows(sql).map { |name, count| [name, count.to_i] }
   end
 
   def self.repositories

@@ -50,6 +50,19 @@ class Api::V1::AdvisoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
+  test "should look up an opam package by PURL with a tilde version" do
+    opam = create(:advisory, source: @source, packages: [{ "ecosystem" => "opam", "package_name" => "ocaml",
+      "versions" => [{ "vulnerable_version_range" => ">= 5.0.0~alpha1, < 5.0.1" }] }])
+
+    get lookup_api_v1_advisories_url, params: { purl: 'pkg:opam/ocaml@5.0.0~beta1' }, as: :json
+    assert_response :success
+    assert_equal [opam.uuid], response.parsed_body.pluck('uuid')
+    assert_equal 'pkg:opam/ocaml', response.parsed_body.first.dig('packages', 0, 'purl')
+
+    get lookup_api_v1_advisories_url, params: { purl: 'pkg:opam/ocaml@5.0.1' }, as: :json
+    assert_empty response.parsed_body
+  end
+
   test "should get index" do
     get api_v1_advisories_url, as: :json
     assert_response :success

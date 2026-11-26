@@ -1,8 +1,8 @@
 module VersionNormalization
   extend ActiveSupport::Concern
 
-  # Ubuntu versions follow Debian ordering.
-  SCHEMES = { 'debian' => 'deb', 'ubuntu' => 'deb' }.freeze
+  # Ubuntu versions follow Debian ordering, and opam orders versions with the same algorithm.
+  SCHEMES = { 'debian' => 'deb', 'ubuntu' => 'deb', 'opam' => 'deb' }.freeze
 
   def version_scheme(ecosystem)
     SCHEMES[ecosystem&.downcase] || PurlParser.reverse_map_ecosystem(ecosystem) || ecosystem&.downcase

@@ -3,11 +3,12 @@ require 'tempfile'
 module Sources
   class Osv < Base
     BASE_URL = 'https://storage.googleapis.com/osv-vulnerabilities'.freeze
-    # Each export covers every release of a distribution. Only packages in the listed
+    # A distribution's export covers every release. Only packages in the listed
     # OSV ecosystem are kept, stored under the ecosystem it maps to.
     EXPORTS = {
       'Debian' => { 'Debian:13' => 'debian' },
-      'Ubuntu' => { 'Ubuntu:24.04:LTS' => 'ubuntu' }
+      'Ubuntu' => { 'Ubuntu:24.04:LTS' => 'ubuntu' },
+      'opam' => { 'opam' => 'opam' }
     }.freeze
     ARCHIVE_LIMIT = 4.gigabytes
     RECORD_LIMIT = 64.megabytes
@@ -54,8 +55,7 @@ module Sources
         next if saved.empty?
         # Follow-up work runs with its batch, so a later failure cannot strand it.
         refresh_related(saved.map(&:first))
-        packages = saved.flat_map(&:last).select { |key| enqueued.add?(key) }
-        PackageSyncWorker.perform_bulk(packages) if packages.any?
+        enqueue_follow_up(saved, enqueued)
         count += saved.size
       end
       # Bulk inserts skip the counter cache.
@@ -71,7 +71,7 @@ module Sources
 
     # Newest first, as published.
     def modified_index(export)
-      @http.get("#{BASE_URL}/#{export}/modified_id.csv").each_line(chomp: true).map do |line|
+      @http.get("#{BASE_URL}/#{export}/modified_id.csv").each_line(chomp: true).reject(&:blank?).map do |line|
         modified, id = line.split(',', 2)
         [Time.iso8601(modified), id]
       end
@@ -95,8 +95,22 @@ module Sources
       end
     end
 
+    # Queues the package and related-package syncs. If the queue cannot be reached, the batch is
+    # marked stale so the next run writes it again and repeats its follow-up work.
+    def enqueue_follow_up(saved, enqueued)
+      packages = saved.flat_map { |_, keys, _| keys }.select { |key| enqueued.add?(key) }
+      PackageSyncWorker.perform_bulk(packages) if packages.any?
+      with_repository = saved.select(&:last).map(&:first)
+      if with_repository.any?
+        RelatedPackagesSyncWorker.perform_bulk(source.advisories.where(uuid: with_repository).pluck(:id).zip)
+      end
+    rescue StandardError
+      source.advisories.where(uuid: saved.map(&:first)).update_all(updated_at: Time.at(0))
+      raise
+    end
+
     # Inserts new advisories in one statement and updates changed ones.
-    # Returns [uuid, package keys] for each advisory written.
+    # Returns [uuid, package keys, whether it names a repository] for each advisory written.
     def save_batch(batch, known)
       batch = batch.reject { |advisory| (stored = known[advisory[:uuid]]) && stored.last >= advisory[:updated_at].floor(6) }
       fresh, changed = batch.partition { |advisory| known[advisory[:uuid]].nil? }
@@ -115,7 +129,10 @@ module Sources
         record.update_columns(advisory.except(:uuid))
         record.cache_affected_versions!
       end
-      batch.map { |advisory| [advisory[:uuid], advisory[:packages].map { |package| package.values_at(:ecosystem, :package_name) }] }
+      batch.map do |advisory|
+        keys = advisory[:packages].map { |package| package.values_at(:ecosystem, :package_name) }
+        [advisory[:uuid], keys, advisory[:repository_url].present?]
+      end
     end
 
     # A package that has already synced will not refresh these advisories unless its version list changes.
@@ -181,8 +198,16 @@ module Sources
         references: (osv[:references] || []).filter_map { |reference| reference[:url] },
         source_kind: 'osv',
         identifiers: [osv[:id], *osv[:aliases], *osv[:upstream]].compact.uniq,
+        repository_url: git_repository(osv[:affected] || []),
         packages: packages
       }
+    end
+
+    # The repository the record's GIT ranges name, when they agree on one.
+    def git_repository(affected)
+      ranges = affected.flat_map { |entry| entry[:ranges] || [] }.select { |range| range[:type] == 'GIT' }
+      repositories = ranges.filter_map { |range| URLParser.try_all(range[:repo]) }.uniq
+      repositories.first if repositories.one?
     end
 
     # Returns the first vector the scorer accepts, newest CVSS version first.
